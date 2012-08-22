@@ -1,9 +1,9 @@
 Janosh
 ======
 
-A small command line tool for manipulation of json files
+A small command line tool for quering/manipulating json files
 
-Janosh is written in cpp and only uses json_spirit as it's only build dependency. It is used in the [ScreenInvader](https://github.com/Metalab/ScreenInvader) project which needed a tool for manipulating json files in bash script without dragging in more library dependencies.
+Janosh is written in c++ with json_spirit as its only build dependency. It is used in the [ScreenInvader](https://github.com/Metalab/ScreenInvader) project which needed a tool for manipulating json files in bash script without dragging in more library dependencies.
 
 ## Usage
 
@@ -13,7 +13,7 @@ janosh [-s <value>]  <json-file> <path>
 <path>         the json path (uses / as separator)
 
 Options:
--s <value>     instead of querieng for a path set it's value
+-s <value>     instead of querieng for a path set its value
 
 ## Build
 
