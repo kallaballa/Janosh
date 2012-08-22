@@ -20,7 +20,7 @@ Options:
 Install json_spirit (header only library).
 
 Build:
-<pre>;
+<pre>
   cd Janosh
   make
-</pre>;
+</pre>
