@@ -7,7 +7,7 @@ Janosh is written in c++ with json_spirit as its only build dependency. It is us
 
 ## Usage
 
-JANOSH [-s &lt;value&gt;]  &lt;json-file&gt; &lt;path&gt;
+janosh [-s &lt;value&gt;]  &lt;json-file&gt; &lt;path&gt;
 
 &lt;json-file&gt;    the json file to query/manipulate
 &lt;path&gt;         the json path (uses / as separator)
