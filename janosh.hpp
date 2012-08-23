@@ -1,26 +1,60 @@
 #include "json_spirit.h"
-#include <deque>
 #include <stack>
+#include <map>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <boost/foreach.hpp>
+#include <boost/unordered_map.hpp>
 #include <boost/tokenizer.hpp>
+#include <boost/function.hpp>
 
 using namespace json_spirit;
 using std::cerr;
 using std::cout;
 using std::endl;
 using std::string;
+using boost::function;
 
-class Janosh {
-
+class Path : public std::stack<string> {
+  string strPath;
 public:
-  Janosh(const string& filename) : filename(filename) {
+  Path(const string& strPath) : std::stack<string>(), strPath(strPath) {
+    using namespace boost;
+
+    char_separator<char> sep("/");
+    tokenizer<char_separator<char> > tokens(strPath, sep);
+
+    BOOST_FOREACH (const string& t, tokens){
+      this->c.push_front(t);
+    }
+  }
+
+  Path() : std::stack<string>() {
+  }
+
+  string str() const {
+    std::stringstream ss;
+    BOOST_FOREACH (const string& t, this->c){
+      ss << t;
+    }
+    return ss.str();
+  }
+};
+
+template<class map_type = std::map<string, Value *> >
+class Janosh {
+  typedef map_type Index;
+public:
+  Janosh(const string& filename) :
+      filename(filename) {
   }
 
   void load() {
     std::ifstream is(filename.c_str());
     read(is, rootValue);
+    Path path;
+    buildIndex(rootValue, path);
   }
 
   void save() {
@@ -28,110 +62,41 @@ public:
     write(rootValue, os);
   }
 
-  bool get(const string& strPath, string& strValue) {
-    Path p = parsePath(strPath);
-    return get(rootValue.get_array(), p, strValue);
+  const string& get(const Path& path) {
+    return idx[path.str()]->get_str();
   }
 
-  bool set(const string& strPath, const string& strValue) {
-    Path p = parsePath(strPath);
-    return set(p, strValue, rootValue.get_array());
+  void set(Path path, const string& strValue) {
+    idx[path.str()]->operator =(Value(strValue));
   }
 
 private:
+  Index idx;
   string filename;
   Value rootValue;
-  typedef std::stack<string, std::deque<string> > Path;
 
-  Path parsePath(const string& strPath) {
-      using namespace boost;
+  void buildIndex(Value& v, Path& path) {
+    idx[path.str()] = &v;
 
-      char_separator<char> sep("/");
-      tokenizer<char_separator<char> > tokens(strPath, sep);
-      std::deque<string> components;
-
-      BOOST_FOREACH (const string& t, tokens) {
-        components.push_front(t);
-      }
-      reverse(components.begin(), components.end());
-
-      return Path(components);
+    if (v.type() == obj_type) {
+      buildIndex(v.get_obj(), path);
+    } else if (v.type() == array_type) {
+      buildIndex(v.get_array(), path);
     }
-
-  bool set(Path p, const string& strValue, Object& obj) {
-    string component = p.top();
-    p.pop();
-
-    for (Object::size_type i = 0; i != obj.size(); ++i) {
-      Pair& pair = obj[i];
-      string& name = pair.name_;
-      Value& value = pair.value_;
-      if (name == component) {
-        if(p.empty()) {
-          obj[i].value_ = Value(strValue);
-          return true;
-        } else if ((value.type() == obj_type && set(p, strValue, value.get_obj()))
-            || (value.type() == array_type && set(p, strValue,value.get_array()))) {
-          return true;
-        }
-        return false;
-      }
-    }
-
-    return false;
   }
 
-  bool set(Path p, const string& strValue, Array& array) {
-	  for(Array::iterator it = array.begin(); it != array.end(); it++) {
-		  if (!p.empty()) {
-			if(set(p, strValue, (*it).get_obj()))
-				return true;
-		  }
-		  else {
-			*it = Value(strValue);
-			return true;
-		  }
-		}
-
-    return false;
+  void buildIndex(Object& obj, Path& path) {
+    BOOST_FOREACH(Pair& p, obj) {
+        path.push(p.name_);
+        buildIndex(p.value_, path);
+        path.pop();
+    }
   }
 
-  bool get(const Object& obj, Path p, string& strValue) {
-    string component = p.top();
-    p.pop();
-
-    for (Object::size_type i = 0; i != obj.size(); ++i) {
-      const Pair& pair = obj[i];
-      const string& name = pair.name_;
-      const Value& value = pair.value_;
-      if (name == component) {
-        if(p.empty()) {
-          strValue = value.get_str();
-          return true;
-        } else if ((value.type() == obj_type && get(value.get_obj(), p, strValue))
-            || (value.type() == array_type && get(value.get_array(), p, strValue))) {
-          return true;
-        }
-        return false;
-      }
+  void buildIndex(Array& array, Path& path) {
+    BOOST_FOREACH(Value& v, array) {
+      buildIndex(v, path);
     }
-
-    return false;
-  }
-
-  bool get(const Array& array, Path p, string& strValue) {
-    BOOST_FOREACH(const Value& v, array)
-    {
-      if (!p.empty()) {
-        if(get(v.get_obj(), p, strValue))
-        	return true;
-      }
-      else {
-        strValue = v.get_str();
-        return true;
-      }
-    }
-
-    return false;
   }
 };
+

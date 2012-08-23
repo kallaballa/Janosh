@@ -1,15 +1,31 @@
 #include "janosh.hpp"
+#include <map>
+#include <boost/unordered_map.hpp>
 
 using std::cerr;
 using std::cout;
 using std::endl;
 using std::string;
 
+void printUsage() {
+	std::cerr << "janosh [-s <value>] <json-file> <path>" << endl
+			<< endl
+			<< "<json-file>    the json file to query/manipulate" << endl
+			<< "<path>         the json path (uses / as separator)" << endl
+			<< endl
+			<< "Options:" << endl
+			<< endl
+			<< "-s <value>     instead of querying for a path set its value" << endl
+			<< endl;
+	exit(1);
+}
+
+
 int main(int argc, char** argv) {
 	using namespace std;
-
 	int c;
 	bool set_value = false;
+
 	string key;
 	string value;
 	string filename;
@@ -21,30 +37,28 @@ int main(int argc, char** argv) {
 			value = optarg;
 			break;
 		case ':':
+			printUsage();
 			break;
 		case '?':
+			printUsage();
 			break;
 		}
 	}
 
+	if((argc - optind) != 2) {
+		printUsage();
+	}
+
 	filename = argv[optind];
 	key = argv[optind + 1];
-	Janosh janosh(filename);
+
+  Janosh<std::map<string, Value *> > janosh(filename);
 	janosh.load();
 
 	if(set_value) {
-		if (janosh.set(key, value)) {
-			janosh.save();
-	        return 0;
-		} else {
-			cerr << "Not found: " << key << endl;
-			return 1;
-		}
-	} else if (janosh.get(key, value)) {
-		cout << value << endl;
-		return 0;
+	  janosh.set(key, value);
+	  janosh.save();
 	} else {
-		cerr << "Not found: " << key << endl;
-		return 1;
+		cout << janosh.get(key)<< endl;
 	}
 }
