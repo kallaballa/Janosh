@@ -1,6 +1,8 @@
 #include "janosh.hpp"
-#include <map>
-#include <boost/unordered_map.hpp>
+#include <kcpolydb.h>
+
+using namespace std;
+using namespace kyotocabinet;
 
 using std::cerr;
 using std::cout;
@@ -20,45 +22,45 @@ void printUsage() {
 	exit(1);
 }
 
-
 int main(int argc, char** argv) {
-	using namespace std;
-	int c;
-	bool set_value = false;
+  using namespace std;
+  int c;
+  bool set_value = false;
 
-	string key;
-	string value;
-	string filename;
+  string key;
+  string value;
+  string filename;
 
-	while ((c = getopt(argc, argv, "s:")) != -1) {
-		switch (c) {
-		case 's':
-			set_value = true;
-			value = optarg;
-			break;
-		case ':':
-			printUsage();
-			break;
-		case '?':
-			printUsage();
-			break;
-		}
-	}
+  while ((c = getopt(argc, argv, "s:")) != -1) {
+    switch (c) {
+    case 's':
+      set_value = true;
+      value = optarg;
+      break;
+    case ':':
+      printUsage();
+      break;
+    case '?':
+      printUsage();
+      break;
+    }
+  }
 
-	if((argc - optind) != 2) {
-		printUsage();
-	}
+  if((argc - optind) != 2) {
+    printUsage();
+  }
 
-	filename = argv[optind];
-	key = argv[optind + 1];
+  filename = argv[optind];
+  key = argv[optind + 1];
 
   Janosh<std::map<string, Value *> > janosh(filename);
-	janosh.load();
-
-	if(set_value) {
-	  janosh.set(key, value);
-	  janosh.save();
-	} else {
-		cout << janosh.get(key)<< endl;
-	}
+  janosh.load();
+  janosh.dump();
+  if(set_value) {
+    janosh.set(key, value);
+    janosh.save();
+  } else {
+    janosh.get(key,value);
+    cout << value << endl;
+  }
 }
