@@ -3,9 +3,9 @@
     OBJS    := ${SRCS:.cpp=.o} 
     DEPS    := ${SRCS:.cpp=.dep} 
 
-    CXXFLAGS = -std=c++0x -I/usr/local/include/ -O3 -Wall 
+    CXXFLAGS = -std=c++0x -I/usr/local/include/ -Os -Wall 
     LDFLAGS = -s 
-    LIBS    = -lboost_system -lboost_filesystem -lkyotocabinet -L/usr/local/lib  -rdynamic /usr/local/lib/libjson_spirit.a
+    LIBS    = -lboost_system -lboost_filesystem -lkyotocabinet -L/usr/local/lib  -rdynamic /usr/local/lib64/libjson_spirit.a
 
     .PHONY: all clean distclean 
     all:: ${TARGET} 

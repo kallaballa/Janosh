@@ -22,121 +22,6 @@ using std::string;
 namespace fs = boost::filesystem;
 
 namespace janosh {
-  namespace js = json_spirit;
-  namespace fs = boost::filesystem;
-
-  class TriggerBase {
-    struct Target {
-      string name;
-      string command;
-
-      Target(const string& name) :
-        name(name) {
-      }
-
-      Target(const string& name, const string& command) :
-        name(name),
-        command(command) {
-      }
-
-      int operator()() const {
-        return system(command.c_str());
-      }
-
-      bool operator<(const Target& other) const {
-        return this->name < other.name;
-      }
-    };
-
-    vector<fs::path> targetDirs;
-    map<DBPath, set<Target> > triggers;
-    set<Target> targets;
-public:
-    TriggerBase(const fs::path& config, const vector<fs::path>& targetDirs) :
-      targetDirs(targetDirs) {
-      load(config);
-    }
-
-    void executeTarget(const string& name) {
-      auto it = targets.find(name);
-      if(it == targets.end())
-        error("Target not found", name);
-
-      janosh::verbose("target", name);
-      (*it)();
-    }
-
-    void executeTrigger(const DBPath p) {
-      auto it = triggers.find(p);
-      if(it != triggers.end()) {
-        BOOST_FOREACH(const Target& t, (*it).second) {
-          janosh::verbose("trigger " + t.name, t.command);
-          t();
-        }
-      }
-    }
-
-    Target makeTarget(const string& name, const string& command) {
-      bool found = false;
-      string absCommand;
-      string base;
-      istringstream(command) >> base;
-
-      BOOST_FOREACH(const fs::path& dir, targetDirs) {
-        fs::path entryPath;
-        fs::directory_iterator end_iter;
-
-        for(fs::directory_iterator dir_iter(dir);
-            !found && (dir_iter != end_iter); ++dir_iter) {
-
-          entryPath = (*dir_iter).path();
-          if (entryPath.filename().string() == base) {
-            found = true;
-            absCommand = dir.string() + command;
-          }
-        }
-      }
-
-      if(!found) {
-        error("Target not found",command);
-      }
-
-      return Target(name, absCommand);
-    }
-
-    void load(const fs::path& config) {
-      ifstream is(config.string().c_str());
-      load(is);
-      is.close();
-    }
-
-    void load(std::ifstream& is) {
-      try {
-        js::Value triggerConf;
-        js::read(is, triggerConf);
-
-        BOOST_FOREACH(js::Pair& p, triggerConf.get_obj()) {
-          string name = p.name_;
-          js::Array arrCmdToTrigger = p.value_.get_array();
-
-          if(arrCmdToTrigger.size() < 2)
-            error("Illegal target", name);
-
-          string command = arrCmdToTrigger[0].get_str();
-          js::Array arrTriggers = arrCmdToTrigger[1].get_array();
-
-          Target target = makeTarget(name, command);
-          targets.insert(target);
-          BOOST_FOREACH(const js::Value& v, arrTriggers) {
-            triggers[v.get_str()].insert(target);
-          }
-        }
-      } catch (exception& e) {
-        error("Unable to load trigger configuration", e.what());
-      }
-    }
-  };
-
   class Settings {
   public:
     fs::path janoshFile;
@@ -221,6 +106,7 @@ int main(int argc, char** argv) {
 
   bool load = false;
   bool set = false;
+  bool dump = false;
   bool runTriggers = false;
   bool execTriggers = false;
 
@@ -242,6 +128,9 @@ int main(int argc, char** argv) {
       break;
     case 'j':
       f=janosh::Json;
+      break;
+    case 'd':
+      dump=true;
       break;
     case 'b':
       f=janosh::Bash;
@@ -276,6 +165,10 @@ int main(int argc, char** argv) {
   janosh::Janosh janosh;
 
   janosh.open(settings.databaseFile.string());
+  if(dump) {
+    janosh.dump();
+    exit(0);
+  }
 
   if(load) {
     janosh.loadJson(std::cin);

@@ -9,6 +9,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <kcpolydb.h>
+#include <boost/filesystem.hpp>
 
 #include "dbpath.hpp"
 #include "json.hpp"
@@ -20,6 +21,102 @@ using std::endl;
 using std::string;
 
 namespace janosh {
+  namespace js = json_spirit;
+  namespace fs = boost::filesystem;
+
+  class TriggerBase {
+    typedef std::map<string,string> TargetMap;
+    typedef typename TargetMap::value_type Target;
+
+    vector<fs::path> targetDirs;
+    map<DBPath, std::set<string> > triggers;
+    TargetMap targets;
+public:
+    TriggerBase(const fs::path& config, const vector<fs::path>& targetDirs) :
+      targetDirs(targetDirs) {
+      load(config);
+    }
+
+    int executeTarget(const string& name) {
+      auto it = targets.find(name);
+      if(it == targets.end())
+        error("Target not found", name);
+
+      janosh::verbose("target", name);
+      return system((*it).second.c_str());
+    }
+
+    void executeTrigger(const DBPath p) {
+      auto it = triggers.find(p);
+      if(it != triggers.end()) {
+        BOOST_FOREACH(const string& name, (*it).second) {
+          janosh::verbose("trigger" + name);
+          executeTarget(name);
+        }
+      }
+    }
+
+    bool findAbsoluteCommand(const string& cmd, string& abs) {
+      bool found = false;
+      string base;
+      istringstream(cmd) >> base;
+
+      BOOST_FOREACH(const fs::path& dir, targetDirs) {
+        fs::path entryPath;
+        fs::directory_iterator end_iter;
+
+        for(fs::directory_iterator dir_iter(dir);
+            !found && (dir_iter != end_iter); ++dir_iter) {
+
+          entryPath = (*dir_iter).path();
+          if (entryPath.filename().string() == base) {
+            found = true;
+            abs = dir.string() + cmd;
+          }
+        }
+      }
+
+      return found;
+    }
+
+    void load(const fs::path& config) {
+      ifstream is(config.string().c_str());
+      load(is);
+      is.close();
+    }
+
+    void load(std::ifstream& is) {
+      try {
+        js::Value triggerConf;
+        js::read(is, triggerConf);
+
+        BOOST_FOREACH(js::Pair& p, triggerConf.get_obj()) {
+          string name = p.name_;
+          js::Array arrCmdToTrigger = p.value_.get_array();
+
+          if(arrCmdToTrigger.size() < 2)
+            error("Illegal target", name);
+
+          string cmd = arrCmdToTrigger[0].get_str();
+          js::Array arrTriggers = arrCmdToTrigger[1].get_array();
+          string abs;
+
+          if(!findAbsoluteCommand(cmd, abs)) {
+            error("Target not found in search path", cmd);
+          }
+
+          targets[name] = abs;
+
+          BOOST_FOREACH(const js::Value& v, arrTriggers) {
+            triggers[v.get_str()].insert(name);
+          }
+        }
+      } catch (exception& e) {
+        error("Unable to load trigger configuration", e.what());
+      }
+    }
+  };
+
   enum Format {
     Bash,
     Json,
@@ -62,7 +159,7 @@ namespace janosh {
   namespace kc = kyotocabinet;
   namespace js = json_spirit;
 
-  bool VERBOSE = true;
+  bool VERBOSE = false;
 
   template<typename printable>
   void error(const string& message, printable p) {
@@ -105,6 +202,17 @@ namespace janosh {
 
       DBPath path;
       load(rootValue, path);
+    }
+
+    void dump() {
+      kc::DB::Cursor* cur;
+      cur = db.cursor();
+      cur->jump();
+      string key, value;
+      while(cur->get(&key, &value, true)) {
+        cout << "key: " << key << " value: " << value << endl;
+      }
+      delete cur;
     }
 
     template<typename Tvisitor>
@@ -253,7 +361,27 @@ namespace janosh {
       }
     }
 
-    void set(const string& path, const string& value) {
+    void set(const string& path, const string& value, bool check=true) {
+      DBPath dbPath(path);
+      DBPath dbParent = dbPath.parent();
+      string parent = dbParent.str();
+
+      if(check && db.check(path) == -1) {
+        if(db.check(parent) == -1) {
+          error("Unkown key", path);
+        } else {
+          string value;
+          kc::DB::Cursor* cur = db.cursor();
+          cur->jump(parent);
+          cur->get(&parent, &value,false);
+          char t = value.at(0);
+          value.erase(value.begin());
+          size_t len = boost::lexical_cast<size_t>(value);
+          this->set(parent, (boost::format("%c%d") % t % ++len).str());
+          delete cur;
+        }
+      }
+
       db.set(path, value);
     }
 
@@ -289,13 +417,13 @@ namespace janosh {
       } else if (v.type() == js::array_type) {
         load(v.get_array(), path);
       } else {
-        this->set(path.str(), v.get_str());
+        this->set(path.str(), v.get_str(), false);
       }
     }
 
     void load(js::Object& obj, DBPath& path) {
       path.pushMember(".");
-      this->set(path.str(), (boost::format("O%d") % obj.size()).str());
+      this->set(path.str(), (boost::format("O%d") % obj.size()).str(), false);
       path.pop();
 
       BOOST_FOREACH(js::Pair& p, obj) {
@@ -308,7 +436,7 @@ namespace janosh {
     void load(js::Array& array, DBPath& path) {
       int index = 0;
       path.pushMember(".");
-      this->set(path.str(), (boost::format("A%d") % array.size()).str());
+      this->set(path.str(), (boost::format("A%d") % array.size()).str(), false);
       path.pop();
 
       BOOST_FOREACH(js::Value& v, array){
