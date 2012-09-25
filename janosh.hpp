@@ -133,6 +133,8 @@ public:
     void close();
     size_t remove(const DBPath& path, kc::DB::Cursor* cur = NULL);
     void move(const DBPath& from, const DBPath& to);
+    void append(const DBPath& to, const string& value);
+    void size(const DBPath& path);
     void dump();
   private:
     kc::TreeDB db;
@@ -148,7 +150,7 @@ public:
 
     template<typename Tvisitor>
      void recurse(Tvisitor vis, kc::DB::Cursor* cur = NULL) {
-       std::stack<std::pair<const string&, const EntryType&> > hierachy;
+       std::stack<std::pair<const string, const EntryType> > hierachy;
 
        string key;
        string value;
@@ -178,7 +180,9 @@ public:
              break;
            }
 
-           if(!last.above(p) && p.parentName() != last.parentName()) {
+           if(!last.above(p) && (
+               (!last.isContainer() && p.parentName() != last.parentName()) ||
+               (last.isContainer() && p.parentName() != last.name()))){
              while(!hierachy.empty() && hierachy.top().first != p.parentName()) {
                if (hierachy.top().second == EntryType::Array) {
                  vis.endArray(key);

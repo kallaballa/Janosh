@@ -25,7 +25,7 @@ namespace janosh {
     virtual ~Command() {
     }
 
-    virtual Result operator()(boost::iterator_range<const char**> params) {
+    virtual Result operator()(const vector<string>& params) {
       return {-1, "Not implemented" };
     };
   };
@@ -36,7 +36,7 @@ namespace janosh {
         Command(janosh) {
     }
 
-    virtual Result operator()(boost::iterator_range<const char**> params) {
+    virtual Result operator()(const vector<string>& params) {
       if (!params.empty()) {
         int cnt = 0;
         BOOST_FOREACH(const string& path, params) {
@@ -62,13 +62,15 @@ namespace janosh {
         Command(janosh) {
     }
 
-    virtual Result operator()(boost::iterator_range<const char**> params) {
+    virtual Result operator()(const vector<string>& params) {
       if (params.empty()) {
         janosh->loadJson(std::cin);
-        return {0, "Successful"};
       } else {
-        return {-1, "Unexpected parameters"};
+        BOOST_FOREACH(const string& p, params) {
+          janosh->loadJson(p);
+        }
       }
+      return {0, "Successful"};
     }
   };
 
@@ -78,7 +80,7 @@ namespace janosh {
         Command(janosh) {
     }
 
-    virtual Result operator()(boost::iterator_range<const char**> params) {
+    virtual Result operator()(const vector<string>& params) {
       if (params.empty() || params.size() % 2 != 0) {
         return {-1, "Expected a list of path/value pairs"};
       } else {
@@ -97,11 +99,31 @@ namespace janosh {
         Command(janosh) {
     }
 
-    virtual Result operator()(boost::iterator_range<const char**> params) {
+    virtual Result operator()(const vector<string>& params) {
       if (params.size() != 2) {
         return {-1, "Expected two paths"};
       } else {
-        janosh->move(DBPath(params.front()), DBPath(params.back()));
+        janosh->move(params.front(), params.back());
+        return {1, "Successful"};
+      }
+    }
+  };
+
+
+  class AppendCommand: public Command {
+  public:
+    AppendCommand(janosh::Janosh* janosh) :
+        Command(janosh) {
+    }
+
+    virtual Result operator()(const vector<string>& params) {
+      if (params.size() < 2) {
+        return {-1, "Expected a path and a list of values"};
+      } else {
+        for(auto it = params.begin() + 1; it != params.end(); ++it) {
+          janosh->append(params.front(), *it);
+        }
+
         return {1, "Successful"};
       }
     }
@@ -113,11 +135,27 @@ namespace janosh {
         Command(janosh) {
     }
 
-    virtual Result operator()(boost::iterator_range<const char**> params) {
+    virtual Result operator()(const vector<string>& params) {
       if (!params.empty()) {
         return {-1, "Dump doesn't take any parameters"};
       } else {
         janosh->dump();
+      }
+      return {0, "Successful"};
+    }
+  };
+
+  class SizeCommand: public Command {
+  public:
+    SizeCommand(janosh::Janosh* janosh) :
+        Command(janosh) {
+    }
+
+    virtual Result operator()(const vector<string>& params) {
+      if (params.size() != 1) {
+        return {-1, "Expected a path"};
+      } else {
+        janosh->size(params.front());
       }
       return {0, "Successful"};
     }
@@ -129,7 +167,7 @@ namespace janosh {
         Command(janosh) {
     }
 
-    virtual Result operator()(boost::iterator_range<const char**> params) {
+    virtual Result operator()(const vector<string>& params) {
       if (params.empty()) {
         return {-1, "Expected a list of triggers"};
       } else {
@@ -148,7 +186,7 @@ namespace janosh {
       Command(janosh) {
     }
 
-    Result operator()(boost::iterator_range<const char**> params) {
+    Result operator()(const vector<string>& params) {
       if (params.empty()) {
         return {-1, "Expected a list of keys"};
       } else {
@@ -171,7 +209,7 @@ namespace janosh {
         Command(janosh) {
     }
 
-    virtual Result operator()(boost::iterator_range<const char**> params) {
+    virtual Result operator()(const vector<string>& params) {
       size_t cnt = 0;
       if(params.empty())
         return {-1, "Expected a list of targets"};

@@ -340,6 +340,33 @@ namespace janosh {
     }
   }
 
+  void Janosh::size(const DBPath& path) {
+    string value;
+    if(!path.isContainer())
+      error("size is limited to containers", path.str());
+
+    this->get(path.str(),&value);
+    cout << path.getSize(value) << std::endl;
+  }
+
+  void Janosh::append(const DBPath& to, const string& value) {
+    string toKey = to.str();
+    string parentValue;
+
+    kc::DB::Cursor* cur = db.cursor();
+    cur->jump(toKey);
+    cur->get_value(&parentValue,false);
+
+    if(!to.isContainer() || to.getType(parentValue) != Array)
+      error("append is limited to arrays", to.str());
+
+    size_t s = to.getSize(parentValue);
+    DBPath appendee = to;
+    appendee.pop();
+    appendee.pushIndex(s);
+    this->set(appendee, value);
+  }
+
   void Janosh::move(const DBPath& from, const DBPath& to) {
     string fromKey = from.str();
     string toKey = to.str();
@@ -520,7 +547,9 @@ CommandMap makeCommandMap(jh::Janosh* janosh) {
   cm.insert({"get", new jh::GetCommand(janosh) });
   cm.insert({"remove", new jh::RemoveCommand(janosh) });
   cm.insert({"move", new jh::MoveCommand(janosh) });
+  cm.insert({"append", new jh::AppendCommand(janosh) });
   cm.insert({"dump", new jh::DumpCommand(janosh) });
+  cm.insert({"size", new jh::SizeCommand(janosh) });
   cm.insert({"triggers", new jh::TriggerCommand(janosh) });
   cm.insert({"targets", new jh::TargetCommand(janosh) });
 
@@ -539,7 +568,7 @@ int main(int argc, char** argv) {
 
   string key;
   string value;
-  string triggerList;
+  string targetList;
 
   while ((c = getopt(argc, argv, "vfjbrte:")) != -1) {
     switch (c) {
@@ -570,7 +599,7 @@ int main(int argc, char** argv) {
       break;
     case 'e':
       execTargets = true;
-      triggerList = optarg;
+      targetList = optarg;
       break;
     case ':':
       printUsage();
@@ -580,50 +609,55 @@ int main(int argc, char** argv) {
       break;
     }
   }
+  jh::Janosh janosh;
+  janosh.setFormat(f);
+
+  if(verbose)
+    Logger::init(LogLevel::DEBUG);
+  else
+    Logger::init(LogLevel::INFO);
+
+  janosh.open();
+  CommandMap cm = makeCommandMap(&janosh);
 
   if(argc - optind >= 1) {
-    jh::Janosh janosh;
-    janosh.setFormat(f);
-
-    if(verbose)
-      Logger::init(LogLevel::DEBUG);
-    else
-      Logger::init(LogLevel::INFO);
-
-    janosh.open();
     string strCmd = string(argv[optind]);
-    CommandMap cm = makeCommandMap(&janosh);
     jh::Command* cmd = cm[strCmd];
     if(!cmd)
       janosh.error("Unknown command", strCmd);
 
-    jh::Command::Result r = (*cmd)(make_iterator_range(argv+optind+1, argv+argc));
+    vector<string> vecParams;
+    for(size_t i = optind+1; i < argc; ++i) {
+      vecParams.push_back(argv[i]);
+    }
+
+    jh::Command::Result r = (*cmd)(vecParams);
     LOG_INFO_MSG(r.second, r.first);
 
+    janosh.close();
     if(strCmd == "set" && execTriggers) {
-      vector<const char *> vecTriggers;
+      vector<string> vecTriggers;
 
       for(size_t i = optind+1; i < argc; i+=2) {
         vecTriggers.push_back(argv[i]);
       }
-      (*cm["triggers"])(make_iterator_range(vecTriggers.data(), vecTriggers.data() + vecTriggers.size()));
+      (*cm["triggers"])(vecTriggers);
     }
-
-    if(execTargets) {
-      vector<const char *> vecTargets;
-      tokenizer<char_separator<char> > tok(triggerList, char_separator<char>(","));
-
-      BOOST_FOREACH (const string& t, tok) {
-        vecTargets.push_back(t.c_str());
-      }
-
-      (*cm["targets"])(make_iterator_range(vecTargets.data(), vecTargets.data() + vecTargets.size()));
-    }
-
-    janosh.close();
-  } else {
+  } else if(!execTargets){
     printUsage();
   }
+
+  janosh.close();
+  if(execTargets) {
+     vector<string> vecTargets;
+     tokenizer<char_separator<char> > tok(targetList, char_separator<char>(","));
+
+     BOOST_FOREACH (const string& t, tok) {
+       vecTargets.push_back(t);
+     }
+
+     (*cm["targets"])(vecTargets);
+   }
 
   return 0;
 }

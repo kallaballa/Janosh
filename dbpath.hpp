@@ -21,7 +21,6 @@ namespace janosh {
   class DBPath {
   public:
     std::vector<string> components;
-    bool container;
 
     DBPath(const string& strPath) {
       using namespace boost;
@@ -40,11 +39,6 @@ namespace janosh {
         }
         this->components.push_back((boost::format("/%s") % c).str());
       }
-
-      this->container = false;
-
-      if(this->components.size() > 0 && this->name() == "/.")
-        this->container = true;
     }
 
     DBPath(const DBPath& other) {
@@ -55,7 +49,7 @@ namespace janosh {
     }
 
     bool isContainer() const {
-      return container;
+      return !this->components.empty() && this->components.back() == "/.";
     }
 
     bool operator<(const DBPath& other) const {
@@ -141,7 +135,7 @@ namespace janosh {
         } else if(c == 'O') {
           return Object;
         } else {
-          assert(!"unknown container descriptor");
+          assert(!"Unknown container descriptor");
         }
       }
 
