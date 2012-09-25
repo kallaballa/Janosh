@@ -4,25 +4,39 @@
 #include "json_spirit.h"
 #include <fstream>
 #include <iostream>
+#include <sstream>
+#include <exception>
 #include <boost/format.hpp>
 #include <boost/foreach.hpp>
+#include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <kcpolydb.h>
-#include <boost/filesystem.hpp>
 
 #include "dbpath.hpp"
 #include "json.hpp"
 #include "bash.hpp"
 
-using std::cerr;
-using std::cout;
-using std::endl;
-using std::string;
-
 namespace janosh {
+  namespace kc = kyotocabinet;
   namespace js = json_spirit;
   namespace fs = boost::filesystem;
+
+  using std::cerr;
+  using std::cout;
+  using std::endl;
+  using std::string;
+  using std::vector;
+  using std::map;
+  using std::istringstream;
+  using std::ifstream;
+  using std::exception;
+
+  enum Format {
+    Bash,
+    Json,
+    Raw
+  };
 
   class TriggerBase {
     typedef std::map<string,string> TargetMap;
@@ -32,95 +46,34 @@ namespace janosh {
     map<DBPath, std::set<string> > triggers;
     TargetMap targets;
 public:
-    TriggerBase(const fs::path& config, const vector<fs::path>& targetDirs) :
-      targetDirs(targetDirs) {
-      load(config);
-    }
+    TriggerBase(const fs::path& config, const vector<fs::path>& targetDirs);
 
-    int executeTarget(const string& name) {
-      auto it = targets.find(name);
-      if(it == targets.end())
-        error("Target not found", name);
+    int executeTarget(const string& name);
 
-      janosh::verbose("target", name);
-      return system((*it).second.c_str());
-    }
-
-    void executeTrigger(const DBPath p) {
-      auto it = triggers.find(p);
-      if(it != triggers.end()) {
-        BOOST_FOREACH(const string& name, (*it).second) {
-          janosh::verbose("trigger" + name);
-          executeTarget(name);
-        }
-      }
-    }
-
-    bool findAbsoluteCommand(const string& cmd, string& abs) {
-      bool found = false;
-      string base;
-      istringstream(cmd) >> base;
-
-      BOOST_FOREACH(const fs::path& dir, targetDirs) {
-        fs::path entryPath;
-        fs::directory_iterator end_iter;
-
-        for(fs::directory_iterator dir_iter(dir);
-            !found && (dir_iter != end_iter); ++dir_iter) {
-
-          entryPath = (*dir_iter).path();
-          if (entryPath.filename().string() == base) {
-            found = true;
-            abs = dir.string() + cmd;
-          }
-        }
-      }
-
-      return found;
-    }
-
-    void load(const fs::path& config) {
-      ifstream is(config.string().c_str());
-      load(is);
-      is.close();
-    }
-
-    void load(std::ifstream& is) {
-      try {
-        js::Value triggerConf;
-        js::read(is, triggerConf);
-
-        BOOST_FOREACH(js::Pair& p, triggerConf.get_obj()) {
-          string name = p.name_;
-          js::Array arrCmdToTrigger = p.value_.get_array();
-
-          if(arrCmdToTrigger.size() < 2)
-            error("Illegal target", name);
-
-          string cmd = arrCmdToTrigger[0].get_str();
-          js::Array arrTriggers = arrCmdToTrigger[1].get_array();
-          string abs;
-
-          if(!findAbsoluteCommand(cmd, abs)) {
-            error("Target not found in search path", cmd);
-          }
-
-          targets[name] = abs;
-
-          BOOST_FOREACH(const js::Value& v, arrTriggers) {
-            triggers[v.get_str()].insert(name);
-          }
-        }
-      } catch (exception& e) {
-        error("Unable to load trigger configuration", e.what());
-      }
+    void executeTrigger(const DBPath p);
+    bool findAbsoluteCommand(const string& cmd, string& abs);
+    void load(const fs::path& config);
+    void load(std::ifstream& is);
+    template<typename T> void error(const string& msg, T t, int exitcode=1) {
+      LOG_ERR_MSG(msg, t);
+      exit(exitcode);
     }
   };
 
-  enum Format {
-    Bash,
-    Json,
-    Raw
+  class Settings {
+  public:
+    fs::path janoshFile;
+    fs::path databaseFile;
+    fs::path triggerFile;
+    vector<fs::path> triggerDirs;
+
+    Settings();
+    template<typename T> void error(const string& msg, T t, int exitcode=1) {
+      LOG_ERR_MSG(msg, t);
+      exit(exitcode);
+    }
+  private:
+    bool find(const js::Object& obj, const string& name, js::Value& value);
   };
 
   class RawPrintVisitor {
@@ -156,295 +109,118 @@ public:
     }
   };
 
-  namespace kc = kyotocabinet;
-  namespace js = json_spirit;
-
-  bool VERBOSE = false;
-
-  template<typename printable>
-  void error(const string& message, printable p) {
-    cerr << message << ": " << p << endl;
-    exit(3);
-  }
-
-  template<typename printable>
-  void verbose(const string& message, printable p) {
-    if(VERBOSE)
-      cerr << message << ": " << p << endl;
-  }
-
-  void verbose(const string& message) {
-    if(VERBOSE)
-      cerr << message << endl;
-  }
-
   class Janosh {
   public:
-    Janosh() {
+    Settings settings;
+    TriggerBase triggers;
+    Format format;
+    Janosh();
+
+    void setFormat(Format f) ;
+    Format getFormat();
+
+    template<typename T> void error(const string& msg, T t, int exitcode=1) {
+      LOG_ERR_MSG(msg, t);
+      close();
+      exit(exitcode);
     }
 
-    void open(const string& dbfile) {
-      // open the database
-      if (!db.open(dbfile, kc::PolyDB::OREADER | kc::PolyDB::OWRITER | kc::PolyDB::OCREATE)) {
-        error("open error", db.error().name());
-      }
-    }
-
-    void loadJson(const string& jsonfile) {
-      std::ifstream is(jsonfile.c_str());
-      this->loadJson(is);
-      is.close();
-    }
-
-    void loadJson(std::istream& is) {
-      js::Value rootValue;
-      js::read(is, rootValue);
-
-      DBPath path;
-      load(rootValue, path);
-    }
-
-    void dump() {
-      kc::DB::Cursor* cur;
-      cur = db.cursor();
-      cur->jump();
-      string key, value;
-      while(cur->get(&key, &value, true)) {
-        cout << "key: " << key << " value: " << value << endl;
-      }
-      delete cur;
-    }
-
-    template<typename Tvisitor>
-    void traverseDeep(Tvisitor vis, kc::DB::Cursor* cur = NULL) {
-      string key;
-      string value;
-      bool delete_cursor = false;
-
-      if (!cur) {
-        cur = db.cursor();
-        cur->jump();
-        delete_cursor = true;
-      }
-
-      enum container_type {
-        Object, Array, None
-      };
-
-      struct Frame {
-        string name;
-        container_type type;
-
-        Frame(string name, container_type type) :
-            name(name), type(type) {
-        }
-      };
-
-      std::stack<Frame> hierachy;
-
-      vis.begin();
-      cur->get(&key, &value, false);
-      DBPath travRoot(key);
-      DBPath last;
-
-      while (cur->get(&key, &value, true)) {
-        if(key == "/.") {
-          continue;
-        }
-        DBPath p(key);
-        string name = p.name();
-        string parent = p.parentName();
-
-        if (!hierachy.empty()) {
-          if (!travRoot.above(p)) {
-            //cout << endl;
-            break;
-          }
-
-          if(!last.above(p) && parent != last.parentName()) {
-            while(hierachy.size() > 0 && hierachy.top().name != p.parentName()) {
-              if (hierachy.top().type == Array) {
-                vis.endArray(key);
-              } else if (hierachy.top().type == Object) {
-                vis.endObject(key);
-              }
-              hierachy.pop();
-            }
-          }
-        }
-
-        if (p.isContainer()) {
-          if (value.at(0) == 'A') {
-            hierachy.push(Frame(name, Array));
-            vis.beginArray(key, last.str().empty() || last == p.parent());
-          } else if (value.at(0) == 'O') {
-            hierachy.push(Frame(name, Object));
-            vis.beginObject(key, last.str().empty() || last == p.parent());
-          }
-        } else {
-
-          bool first = last.str().empty() || last == p.parent();
-          vis.record(key, value, hierachy.top().type == Array, first);
-        }
-
-        last = p;
-      }
-
-      while (!hierachy.empty()) {
-          if (hierachy.top().type == Array) {
-            vis.endArray("");
-          } else if (hierachy.top().type == Object) {
-            vis.endObject("");
-          }
-          hierachy.pop();
-      }
-
-      if (delete_cursor)
-        delete cur;
-
-      vis.close();
-    }
-
-    bool get(const DBPath& path, string& value, Format f=Bash) {
-      std::stringstream ss;
-      bool found = get(path,ss, f);
-      value = ss.str();
-      return found;
-    }
-
-    bool get(const DBPath& path, std::ostream& out, Format f=Bash) {
-      verbose("get", path.str());
-      string key = path.str();
-      string cvalue;
-
-      if (path.isContainer()) {
-        verbose("traverse", path.str());
-        kc::DB::Cursor* cur = db.cursor();
-        cur->jump(key.c_str());
-        bool found = cur->get(&key, &cvalue);
-
-        if(found) {
-          switch(f) {
-            case Json:
-              traverseDeep(JsonPrintVisitor(out), cur);
-              break;
-            case Bash:
-              traverseDeep(BashPrintVisitor(out), cur);
-              break;
-            case Raw:
-              traverseDeep(RawPrintVisitor(out), cur);
-              break;
-          }
-
-        }
-
-        delete cur;
-        return found;
-      } else {
-        verbose("db.get", path.str());
-        string value;
-        bool found = db.get(path.str().c_str(), &value);
-
-        if(found) {
-          switch(f) {
-          case Raw:
-          case Json:
-            out << value << endl;
-            break;
-          case Bash:
-            out << "\"( [" << key << "]='" << value << "' )\"" << endl;
-            break;
-          }
-        }
-
-        return found;
-      }
-    }
-
-    void set(const string& path, const string& value, bool check=true) {
-      DBPath dbPath(path);
-      DBPath dbParent = dbPath.parent();
-      string parent = dbParent.str();
-
-      if(check && db.check(path) == -1) {
-        if(db.check(parent) == -1) {
-          error("Unkown key", path);
-        } else {
-          string value;
-          kc::DB::Cursor* cur = db.cursor();
-          cur->jump(parent);
-          cur->get(&parent, &value,false);
-          char t = value.at(0);
-          value.erase(value.begin());
-          size_t len = boost::lexical_cast<size_t>(value);
-          this->set(parent, (boost::format("%c%d") % t % ++len).str());
-          delete cur;
-        }
-      }
-
-      db.set(path, value);
-    }
-
-    void close() {
-      db.close();
-    }
+    void open();
+    void loadJson(const string& jsonfile);
+    void loadJson(std::istream& is);
+    bool print(const DBPath& path, std::ostream& out, Format f=Bash);
+    void set(DBPath dbPath, const string& value, bool check=true);
+    void close();
+    size_t remove(const DBPath& path, kc::DB::Cursor* cur = NULL);
+    void move(const DBPath& from, const DBPath& to);
+    void dump();
   private:
     kc::TreeDB db;
     string filename;
     js::Value rootValue;
 
-    bool skipSubElements(kc::DB::Cursor* cur) {
-      string key;
-      cur->get_key(&key);
+    bool get(const string& key, string* value, bool check = true);
+    void setContainerSize(const DBPath& container, const size_t& s, kc::DB::Cursor* cur = NULL);
+    void changeContainerSize(const DBPath& container, const size_t& by, kc::DB::Cursor* cur = NULL);
+    void load(js::Value& v, DBPath& path);
+    void load(js::Object& obj, DBPath& path);
+    void load(js::Array& array, DBPath& path);
 
-      if (boost::algorithm::ends_with(key, "/.")) {
-        string subval;
-        cur->get_value(&subval);
-        size_t sublen = boost::lexical_cast<size_t>(subval.erase(0, 1));
-        for (size_t j = 0; j < sublen; ++j) {
-          cur->step();
-          skipSubElements(cur);
-        }
-        return true;
-      } else {
-        return false;
-      }
-    }
+    template<typename Tvisitor>
+     void recurse(Tvisitor vis, kc::DB::Cursor* cur = NULL) {
+       std::stack<std::pair<const string&, const EntryType&> > hierachy;
 
-    void load(js::Value& v, DBPath& path) {
-      if (v.type() == js::obj_type) {
-        load(v.get_obj(), path);
-      } else if (v.type() == js::array_type) {
-        load(v.get_array(), path);
-      } else {
-        this->set(path.str(), v.get_str(), false);
-      }
-    }
+       string key;
+       string value;
+       bool delete_cursor = false;
 
-    void load(js::Object& obj, DBPath& path) {
-      path.pushMember(".");
-      this->set(path.str(), (boost::format("O%d") % obj.size()).str(), false);
-      path.pop();
+       if (!cur) {
+         cur = db.cursor();
+         cur->jump();
+         delete_cursor = true;
+       }
 
-      BOOST_FOREACH(js::Pair& p, obj) {
-        path.pushMember(p.name_);
-        load(p.value_, path);
-        path.pop();
-      }
-    }
+       vis.begin();
+       cur->get(&key, &value, true);
+       const DBPath travRoot(key);
+       DBPath last;
 
-    void load(js::Array& array, DBPath& path) {
-      int index = 0;
-      path.pushMember(".");
-      this->set(path.str(), (boost::format("A%d") % array.size()).str(), false);
-      path.pop();
+       do {
+         if(key == "/.") {
+           continue;
+         }
+         const DBPath p(key);
+         const EntryType& t = p.getType(value);
+         const string& name = p.name();
 
-      BOOST_FOREACH(js::Value& v, array){
-        path.pushIndex(index++);
-        load(v, path);
-        path.pop();
-      }
-    }
+         if (!hierachy.empty()) {
+           if (!travRoot.above(p)) {
+             break;
+           }
+
+           if(!last.above(p) && p.parentName() != last.parentName()) {
+             while(!hierachy.empty() && hierachy.top().first != p.parentName()) {
+               if (hierachy.top().second == EntryType::Array) {
+                 vis.endArray(key);
+               } else if (hierachy.top().second == EntryType::Object) {
+                 vis.endObject(key);
+               }
+               hierachy.pop();
+             }
+           }
+         }
+
+         if (t == EntryType::Array) {
+           hierachy.push({name, EntryType::Array});
+           vis.beginArray(key, last.str().empty() || last == p.parent());
+         } else if (t == EntryType::Object) {
+           hierachy.push({name, EntryType::Object});
+           vis.beginObject(key, last.str().empty() || last == p.parent());
+         } else {
+           bool first = last.str().empty() || last == p.parent();
+           if(!hierachy.empty()){
+             vis.record(key, value, hierachy.top().second == EntryType::Array, first);
+           } else {
+             vis.record(key, value, false, first);
+           }
+         }
+         last = p;
+       } while (cur->get(&key, &value, true));
+
+       while (!hierachy.empty()) {
+           if (hierachy.top().second == EntryType::Array) {
+             vis.endArray("");
+           } else if (hierachy.top().second == EntryType::Object) {
+             vis.endObject("");
+           }
+           hierachy.pop();
+       }
+
+       if (delete_cursor)
+         delete cur;
+
+       vis.close();
+     }
   };
 }
 #endif

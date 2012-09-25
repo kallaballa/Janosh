@@ -7,10 +7,17 @@
 #include <boost/format.hpp>
 #include <boost/foreach.hpp>
 #include <boost/tokenizer.hpp>
+#include "Logger.hpp"
 
 using std::string;
 
 namespace janosh {
+  enum EntryType {
+    Array,
+    Object,
+    Value
+  };
+
   class DBPath {
   public:
     std::vector<string> components;
@@ -18,17 +25,20 @@ namespace janosh {
 
     DBPath(const string& strPath) {
       using namespace boost;
+      if(strPath.empty() || strPath.at(0) != '/') {
+        LOG_ERR_MSG("Illegal Path", strPath);
+        exit(1);
+      }
+      string s  = strPath.substr(1);
+      char_separator<char> ssep("/[", "", boost::keep_empty_tokens);
+      tokenizer<char_separator<char> > tokComponents(s, ssep);
 
-      char_separator<char> ssep("/");
-      tokenizer<char_separator<char> > slashes(strPath, ssep);
-
-      BOOST_FOREACH (const string& s, slashes) {
-        char_separator<char> asep("[");
-        tokenizer<char_separator<char> > arrays(s, asep);
-
-        BOOST_FOREACH (const string& a, arrays) {
-          this->components.push_back((boost::format("/%s") % a).str());
+      BOOST_FOREACH (const string& c, tokComponents) {
+        if(c.empty()) {
+          LOG_ERR_MSG("Illegal Path", strPath);
+          exit(1);
         }
+        this->components.push_back((boost::format("/%s") % c).str());
       }
 
       this->container = false;
@@ -81,7 +91,7 @@ namespace janosh {
       components.erase(components.end() - 1);
     }
 
-    const string name() const {
+    string name() const {
       size_t d = 1;
 
       if(isContainer())
@@ -91,6 +101,10 @@ namespace janosh {
         return *(components.end() - d);
       else
         return "";
+    }
+
+    size_t parseIndex() const {
+      return boost::lexical_cast<size_t>(this->name().substr(1));
     }
 
     DBPath parent() const {
@@ -104,7 +118,7 @@ namespace janosh {
       return parent;
     }
 
-    const string parentName() const {
+    string parentName() const {
       size_t d = 2;
       if(isContainer())
         ++d;
@@ -115,8 +129,31 @@ namespace janosh {
         return "";
     }
 
-    const string& root() const {
+    string root() const {
       return components.front();
+    }
+
+    const EntryType getType(string& value)  const {
+      if(this->isContainer()) {
+        char c = value.at(0);
+        if(c == 'A') {
+          return Array;
+        } else if(c == 'O') {
+          return Object;
+        } else {
+          assert(!"unknown container descriptor");
+        }
+      }
+
+      return Value;
+    }
+
+    const size_t getSize(string& value) const {
+      if(this->isContainer()) {
+        return boost::lexical_cast<size_t>(value.substr(1,value.size() - 1));
+      } else {
+        return 0;
+      }
     }
 
     bool above(const DBPath& other) const {
