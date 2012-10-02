@@ -39,9 +39,10 @@ namespace janosh {
     virtual Result operator()(const vector<string>& params) {
       if (!params.empty()) {
         int cnt = 0;
-        BOOST_FOREACH(const string& path, params) {
-          LOG_DEBUG_MSG("Removing", path);
+        BOOST_FOREACH(const string& p, params) {
+          LOG_DEBUG_MSG("Removing", p);
 //FIXME use cursors for batch operations
+          DBPath path(p);
           cnt += janosh->remove(path);
           LOG_DEBUG(cnt);
         }
@@ -93,9 +94,9 @@ namespace janosh {
     }
   };
 
-  class MoveCommand: public Command {
+  class ShiftCommand: public Command {
   public:
-    MoveCommand(janosh::Janosh* janosh) :
+    ShiftCommand(janosh::Janosh* janosh) :
         Command(janosh) {
     }
 
@@ -103,12 +104,41 @@ namespace janosh {
       if (params.size() != 2) {
         return {-1, "Expected two paths"};
       } else {
-        janosh->move(params.front(), params.back());
+        DBPath src(params.front());
+        DBPath dest(params.back());
+        src.prune();
+
+        if(!src.exists())
+          return {-1, "Source path doesn't exist"};
+
+        janosh->shift(src, dest);
         return {1, "Successful"};
       }
     }
   };
 
+  class CopyCommand: public Command {
+  public:
+    CopyCommand(janosh::Janosh* janosh) :
+        Command(janosh) {
+    }
+
+    virtual Result operator()(const vector<string>& params) {
+      if (params.size() != 2) {
+        return {-1, "Expected two paths"};
+      } else {
+        DBPath src(params.front());
+        DBPath dest(params.back());
+        src.prune();
+
+        if(!src.exists())
+          return {-1, "Source path doesn't exist"};
+
+        janosh->copy(src, dest);
+        return {1, "Successful"};
+      }
+    }
+  };
 
   class AppendCommand: public Command {
   public:
@@ -120,11 +150,9 @@ namespace janosh {
       if (params.size() < 2) {
         return {-1, "Expected a path and a list of values"};
       } else {
-        for(auto it = params.begin() + 1; it != params.end(); ++it) {
-          janosh->append(params.front(), *it);
-        }
-
-        return {1, "Successful"};
+        DBPath target(params.front());
+        size_t cnt = janosh->append(params.begin() + 1, params.end(), target);
+        return {cnt, "Successful"};
       }
     }
   };
@@ -155,7 +183,8 @@ namespace janosh {
       if (params.size() != 1) {
         return {-1, "Expected a path"};
       } else {
-        janosh->size(params.front());
+        DBPath p(params.front());
+        std::cout << janosh->size(p) << std::endl;
       }
       return {0, "Successful"};
     }
@@ -191,9 +220,9 @@ namespace janosh {
         return {-1, "Expected a list of keys"};
       } else {
         bool found_all = true;
-        Format f = janosh->getFormat();
         BOOST_FOREACH(const string& p, params) {
-          found_all = found_all && janosh->print(p, std::cout, f);
+          DBPath path(p);
+          found_all = found_all && janosh->print(path, std::cout);
         }
 
         if (!found_all)

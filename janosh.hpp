@@ -126,54 +126,63 @@ public:
     }
 
     void open();
+    void close();
     void loadJson(const string& jsonfile);
     void loadJson(std::istream& is);
-    bool print(const DBPath& path, std::ostream& out, Format f=Bash);
-    void set(DBPath dbPath, const string& value, bool check=true);
-    void close();
-    size_t remove(const DBPath& path, kc::DB::Cursor* cur = NULL);
-    void move(const DBPath& from, const DBPath& to);
-    void append(const DBPath& to, const string& value);
-    void size(const DBPath& path);
-    void dump();
+
+    size_t makeArray(DBPath target, size_t size = 0);
+    size_t makeObject(DBPath target, size_t size = 0);
+    size_t makeDirectory(DBPath target, EntryType type, size_t size = 0);
+    size_t print(DBPath path, std::ostream& out);
+    size_t print(Cursor cur, std::ostream& out);
+
+    size_t add(DBPath path, const string& value);
+    size_t replace(DBPath path, const string& value);
+    size_t set(Cursor cur, const string& value);
+    size_t set(DBPath path, const string& value);
+    size_t remove(DBPath cur);
+    size_t remove(Cursor cur, size_t n);
+    size_t removeChildren(Cursor cur);
+    size_t dump();
+    size_t size(DBPath path);
+    size_t size(Cursor cur);
+    size_t append(const string& value, Cursor dest);
+    size_t append(vector<string>::const_iterator begin, vector<string>::const_iterator end, Cursor dest);
+    size_t append(Cursor srcCur, Cursor destCur, size_t n);
+    size_t appendChildren(Cursor srcCur, Cursor destCur);
+    size_t copy(Cursor srcCursor, Cursor destCursor);
+    size_t shift(Cursor srcCur, Cursor destCur);
   private:
-    kc::TreeDB db;
     string filename;
     js::Value rootValue;
 
-    bool get(const string& key, string* value, bool check = true);
-    void setContainerSize(const DBPath& container, const size_t& s, kc::DB::Cursor* cur = NULL);
-    void changeContainerSize(const DBPath& container, const size_t& by, kc::DB::Cursor* cur = NULL);
+    void setContainerSize(Cursor cur, const size_t s);
+    void changeContainerSize(Cursor cur, const size_t by);
+
+    size_t load(DBPath path, const string& value);
     void load(js::Value& v, DBPath& path);
     void load(js::Object& obj, DBPath& path);
     void load(js::Array& array, DBPath& path);
 
     template<typename Tvisitor>
-     void recurse(Tvisitor vis, kc::DB::Cursor* cur = NULL) {
+     size_t recurse(Cursor cur, Tvisitor vis)  {
+       size_t cnt = 0;
        std::stack<std::pair<const string, const EntryType> > hierachy;
-
-       string key;
-       string value;
-       bool delete_cursor = false;
-
-       if (!cur) {
-         cur = db.cursor();
-         cur->jump();
-         delete_cursor = true;
-       }
+       DBPath travRoot(cur);
+       DBPath root("/.");
+       if(travRoot == DBPath("/."))
+         cur.step();
 
        vis.begin();
-       cur->get(&key, &value, true);
-       const DBPath travRoot(key);
+
        DBPath last;
 
        do {
-         if(key == "/.") {
-           continue;
-         }
-         const DBPath p(key);
-         const EntryType& t = p.getType(value);
+         const DBPath p(cur);
+         const EntryType& t = p.getType();
          const string& name = p.name();
+         const DBPath& parent = p.parent();
+         const string& parentName = parent.name();
 
          if (!hierachy.empty()) {
            if (!travRoot.above(p)) {
@@ -181,13 +190,13 @@ public:
            }
 
            if(!last.above(p) && (
-               (!last.isContainer() && p.parentName() != last.parentName()) ||
-               (last.isContainer() && p.parentName() != last.name()))){
-             while(!hierachy.empty() && hierachy.top().first != p.parentName()) {
+               (!last.isContainer() && parentName != last.parentName()) ||
+               (last.isContainer() && parentName != last.name()))){
+             while(!hierachy.empty() && hierachy.top().first != parentName) {
                if (hierachy.top().second == EntryType::Array) {
-                 vis.endArray(key);
+                 vis.endArray(p.key());
                } else if (hierachy.top().second == EntryType::Object) {
-                 vis.endObject(key);
+                 vis.endObject(p.key());
                }
                hierachy.pop();
              }
@@ -196,20 +205,21 @@ public:
 
          if (t == EntryType::Array) {
            hierachy.push({name, EntryType::Array});
-           vis.beginArray(key, last.str().empty() || last == p.parent());
+           vis.beginArray(p.key(), last.empty() || last == parent);
          } else if (t == EntryType::Object) {
            hierachy.push({name, EntryType::Object});
-           vis.beginObject(key, last.str().empty() || last == p.parent());
+           vis.beginObject(p.key(), last.empty() || last == parent);
          } else {
-           bool first = last.str().empty() || last == p.parent();
+           bool first = last.empty() || last == parent;
            if(!hierachy.empty()){
-             vis.record(key, value, hierachy.top().second == EntryType::Array, first);
+             vis.record(p.key(), p.val(), hierachy.top().second == EntryType::Array, first);
            } else {
-             vis.record(key, value, false, first);
+             vis.record(p.key(), p.val(), false, first);
            }
          }
          last = p;
-       } while (cur->get(&key, &value, true));
+         ++cnt;
+       } while (cur.step());
 
        while (!hierachy.empty()) {
            if (hierachy.top().second == EntryType::Array) {
@@ -220,10 +230,8 @@ public:
            hierachy.pop();
        }
 
-       if (delete_cursor)
-         delete cur;
-
        vis.close();
+       return cnt;
      }
   };
 }

@@ -1,11 +1,11 @@
     TARGET  := janosh 
-    SRCS    := janosh.cpp
+    SRCS    := janosh.cpp Logger.cpp tri_logger/tri_logger.cpp
     OBJS    := ${SRCS:.cpp=.o} 
     DEPS    := ${SRCS:.cpp=.dep} 
 
-    CXXFLAGS = -std=c++0x -I/usr/local/include/ -Os -Wall 
+    CXXFLAGS = -std=c++0x -I/usr/local/include/ -Os -Wall -DETLOG
     LDFLAGS = -s 
-    LIBS    = -lboost_system -lboost_filesystem -lkyotocabinet -L/usr/local/lib  -rdynamic /usr/local/lib64/libjson_spirit.a
+    LIBS    = -Wl,-Bstatic -lboost_system -lboost_filesystem -ljson_spirit -Wl,-Bdynamic -lkyotocabinet
 
     .PHONY: all clean distclean 
     all:: ${TARGET} 
