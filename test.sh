@@ -45,8 +45,8 @@ function test_set() {
   janosh set /array/6 0			&& return 1
   [ `janosh size /array/.` -eq 1 ] 	|| return 1
   janosh mkobj /object/. 	 	|| return 1
-  janosh add /object/bla 1		|| return 1
-  janosh set /object/bla 2		|| return 1
+  janosh set /object/bla 1		|| return 1
+  [ `janosh size /object/.` -eq 1 ] 	|| return 1
 }
 
 function test_add() {
@@ -60,6 +60,19 @@ function test_add() {
   janosh add /object/0 0		&& return 1
   janosh add /object/5 0		|| return 1
   [ `janosh size /object/.` -eq 2 ] 	|| return 1
+}
+
+function test_replace() {
+  janosh mkarr /array/. 		|| return 1
+  janosh append /array/. 0 		|| return 1
+  janosh replace /array/0 2 		|| return 1
+  janosh replace /array/6 0		&& return 1
+  [ `janosh size /array/.` -eq 1 ] 	|| return 1
+  janosh mkobj /object/. 	 	|| return 1
+  janosh set /object/bla 1		|| return 1
+  janosh replace /object/bla 2		|| return 1
+  janosh replace /object/blu 0		&& return 1
+  [ `janosh size /object/.` -eq 1 ] 	|| return 1
 }
 
 function run() {
@@ -81,3 +94,4 @@ run mkobject
 run append
 run set
 run add
+run replace
