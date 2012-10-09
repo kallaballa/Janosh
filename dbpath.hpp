@@ -99,6 +99,11 @@ namespace janosh {
         return getCursorPtr()->get_value(&v);
       }
 
+      bool getKey(string& v) {
+        assert(isValid());
+        return getCursorPtr()->get_key(&v);
+      }
+
       bool step() {
         assert(isValid());
         return getCursorPtr()->step();
@@ -147,6 +152,15 @@ namespace janosh {
         return true;
       }
     };
+
+    DBPath(const char* path) :
+        hasKey(false),
+        hasValue(false),
+        container(false),
+        wildcard(false),
+        doesExist(false) {
+      update(path);
+    }
 
     DBPath(const string& strPath) :
         hasKey(false),
@@ -237,6 +251,18 @@ namespace janosh {
       return this->container;
     }
 
+    const bool isArray() const {
+      return this->getType() == Array;
+    }
+
+    const bool isValue() const {
+      return !this->isContainer() || this->getType() == Value;
+    }
+
+    const bool isObject() const {
+      return this->getType() == Object;
+    }
+
     const bool isWildcard() const {
       return this->wildcard;
     }
@@ -317,16 +343,17 @@ namespace janosh {
         }
       } else {
         if (!cur.isValid()) {
-          cur = Cursor(DBPath::db.cursor());
           string k;
-          if (!cur.jump(this->keyStr)) {
-            this->doesExist = false;
-            return Cursor();
-          } else {
-            cur.get(k, this->valueStr);
+          cur = Cursor(DBPath::db.cursor());
+          cur.jump(this->keyStr);
+          cur.getKey(k);
+          if (k == this->keyStr && cur.getValue(this->valueStr)) {
             this->hasValue = true;
             this->doesExist = true;
             update(k);
+          } else {
+            this->doesExist = false;
+            return Cursor();
           }
         } else if (!cur.getValue(this->valueStr)) {
           this->hasValue = true;

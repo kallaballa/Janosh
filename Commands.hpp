@@ -56,6 +56,23 @@ namespace janosh {
       }
     }
   };
+  class HashCommand: public Command {
+  public:
+    HashCommand(janosh::Janosh* janosh) :
+        Command(janosh) {
+    }
+
+    virtual Result operator()(const vector<string>& params) {
+      size_t s;
+      if (!params.empty()) {
+        LOG_DEBUG_STR("hash doesn't take any parameters");
+        return {0, "Failed"};
+      } else {
+        return {janosh->hash(), "Successful"};
+      }
+    }
+  };
+
 
   class LoadCommand: public Command {
   public:
@@ -72,6 +89,96 @@ namespace janosh {
         }
       }
       return {0, "Successful"};
+    }
+  };
+
+  class MakeArrayCommand: public Command {
+  public:
+    MakeArrayCommand(janosh::Janosh* janosh) :
+        Command(janosh) {
+    }
+
+    virtual Result operator()(const vector<string>& params) {
+      if (params.size() != 1)
+        return {0, "Expected one path" };
+
+      if(janosh->makeArray(params.front()))
+        return {1, "Successful"};
+      else
+        return {0, "Failed"};
+    }
+  };
+
+  class MakeObjectCommand: public Command {
+  public:
+    MakeObjectCommand(janosh::Janosh* janosh) :
+        Command(janosh) {
+    }
+
+    virtual Result operator()(const vector<string>& params) {
+      if (params.size() != 1)
+        return {0, "Expected one path" };
+
+      if(janosh->makeObject(params.front()))
+        return {1, "Successful"};
+      else
+        return {0, "Failed"};
+    }
+  };
+
+  class TruncateCommand: public Command {
+  public:
+    TruncateCommand(janosh::Janosh* janosh) :
+        Command(janosh) {
+    }
+
+    virtual Result operator()(const vector<string>& params) {
+      if (!params.empty())
+        return {0, "Truncate doesn't take any arguments" };
+
+      return {janosh->truncate(), "Successful"};
+    }
+  };
+
+  class AddCommand: public Command {
+  public:
+    AddCommand(janosh::Janosh* janosh) :
+        Command(janosh) {
+    }
+
+    virtual Result operator()(const vector<string>& params) {
+      if (params.size() % 2 != 0) {
+        return {-1, "Expected a list of path/value pairs"};
+      } else {
+        const string path = params.front();
+
+        for (auto it = params.begin(); it != params.end(); it+=2) {
+          if(!janosh->add(*it, *(it+1)))
+            return {0, "Failed"};
+        }
+
+        return {params.size()/2, "Successful"};
+      }
+    }
+  };
+
+  class ReplaceCommand: public Command {
+  public:
+    ReplaceCommand(janosh::Janosh* janosh) :
+        Command(janosh) {
+    }
+
+    virtual Result operator()(const vector<string>& params) {
+      if (params.empty() || params.size() % 2 != 0) {
+        return {-1, "Expected a list of path/value pairs"};
+      } else {
+        for (auto it = params.begin(); it != params.end(); it += 2) {
+          if(!janosh->replace(DBPath(*it), *(it + 1)))
+            return {0, "Failed"};
+        }
+
+        return {params.size()/2, "Successful"};
+      }
     }
   };
 

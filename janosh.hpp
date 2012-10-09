@@ -65,6 +65,7 @@ public:
     fs::path janoshFile;
     fs::path databaseFile;
     fs::path triggerFile;
+    fs::path logFile;
     vector<fs::path> triggerDirs;
 
     Settings();
@@ -127,8 +128,8 @@ public:
 
     void open();
     void close();
-    void loadJson(const string& jsonfile);
-    void loadJson(std::istream& is);
+    size_t loadJson(const string& jsonfile);
+    size_t loadJson(std::istream& is);
 
     size_t makeArray(DBPath target, size_t size = 0);
     size_t makeObject(DBPath target, size_t size = 0);
@@ -144,6 +145,8 @@ public:
     size_t remove(Cursor cur, size_t n);
     size_t removeChildren(Cursor cur);
     size_t dump();
+    size_t hash();
+    size_t truncate();
     size_t size(DBPath path);
     size_t size(Cursor cur);
     size_t append(const string& value, Cursor dest);
@@ -160,9 +163,9 @@ public:
     void changeContainerSize(Cursor cur, const size_t by);
 
     size_t load(DBPath path, const string& value);
-    void load(js::Value& v, DBPath& path);
-    void load(js::Object& obj, DBPath& path);
-    void load(js::Array& array, DBPath& path);
+    size_t load(js::Value& v, DBPath& path);
+    size_t load(js::Object& obj, DBPath& path);
+    size_t load(js::Array& array, DBPath& path);
 
     template<typename Tvisitor>
      size_t recurse(Cursor cur, Tvisitor vis)  {

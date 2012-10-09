@@ -4,6 +4,7 @@
 #include <boost/range.hpp>
 #include <boost/tokenizer.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/functional/hash.hpp>
 
 using std::map;
 using std::vector;
@@ -134,6 +135,7 @@ namespace janosh {
 
     this->janoshFile = fs::path(dir.string() + "janosh.json");
     this->triggerFile = fs::path(dir.string() + "triggers.json");
+    this->logFile = fs::path(dir.string() + "janosh.log");
 
     if(!fs::exists(janoshFile)) {
       error("janosh configuration not found: ", janoshFile);
@@ -200,18 +202,19 @@ namespace janosh {
     DBPath::db.close();
   }
 
-  void Janosh::loadJson(const string& jsonfile) {
+  size_t Janosh::loadJson(const string& jsonfile) {
     std::ifstream is(jsonfile.c_str());
-    this->loadJson(is);
+    size_t cnt = this->loadJson(is);
     is.close();
+    return cnt;
   }
 
-  void Janosh::loadJson(std::istream& is) {
+  size_t Janosh::loadJson(std::istream& is) {
     js::Value rootValue;
     js::read(is, rootValue);
 
     DBPath path;
-    load(rootValue, path);
+    return load(rootValue, path);
   }
 
   size_t Janosh::print(DBPath path, std::ostream& out) {
@@ -256,14 +259,23 @@ namespace janosh {
   }
 
   size_t Janosh::makeArray(DBPath target, size_t size) {
+    target.prune();
+    assert(target.isContainer());
+    assert(!target.exists());
     return DBPath::db.add(target.key(), "A" + lexical_cast<string>(size));
   }
 
   size_t Janosh::makeObject(DBPath target, size_t size) {
+    target.prune();
+    assert(target.isContainer());
+    assert(!target.exists());
     return DBPath::db.add(target.key(), "O" + lexical_cast<string>(size));
   }
 
   size_t Janosh::makeDirectory(DBPath target, EntryType type, size_t size) {
+    target.prune();
+    assert(!target.exists());
+
     if(type == Array) {
       return makeArray(target, size);
     } else if (type == Object) {
@@ -275,22 +287,47 @@ namespace janosh {
 
   size_t Janosh::add(DBPath path, const string& value) {
     LOG_DEBUG_MSG("add", path.key());
+    DBPath parent = path.parent();
+    path.prune();
+    parent.prune();
+    assert(path.isValue() && !path.exists());
+    assert(!parent.isArray() || path.parseIndex() <= parent.getSize());
+
     if(DBPath::db.add(path.key(), value)) {
       if(!path.isRoot())
         changeContainerSize(path.parent(), 1);
+
       return true;
+    } else {
+      return false;
     }
-    return false;
   }
 
   size_t Janosh::replace(DBPath path, const string& value) {
     LOG_DEBUG_MSG("replace", path.key());
-    return DBPath::db.add(path.key(), value);
+    DBPath parent = path.parent();
+    path.prune();
+    parent.prune();
+    assert(path.isValue() && path.exists());
+    assert(parent.isArray() || parent.isObject());
+
+    return DBPath::db.replace(path.key(), value);
   }
 
   size_t Janosh::set(DBPath path, const string& value) {
     LOG_DEBUG_MSG("Set", path.key());
-    return DBPath::db.set(path.key(), value);
+    DBPath parent = path.parent();
+    path.prune();
+    parent.prune();
+    assert(path.isValue());
+    assert(parent.isObject() || (parent.isArray() && path.parseIndex() < parent.getSize()));
+    bool isnew = !path.exists();
+    if(DBPath::db.set(path.key(), value)) {
+      if(isnew)
+        changeContainerSize(parent, 1);
+      return true;
+    }
+    return false;
   }
 
   size_t Janosh::set(Cursor cur, const string& value) {
@@ -364,6 +401,29 @@ namespace janosh {
     return cnt;
   }
 
+  size_t Janosh::hash() {
+    kc::DB::Cursor* cur = DBPath::db.cursor();
+    string key,value;
+    cur->jump();
+    size_t cnt = 0;
+    boost::hash<string> hasher;
+    size_t h = 0;
+    while(cur->get(&key, &value, true)) {
+      h = hasher(lexical_cast<string>(h) + key + value);
+      ++cnt;
+    }
+    std::cout << h << std::endl;
+    delete cur;
+    return cnt;
+  }
+
+  size_t Janosh::truncate() {
+    if(DBPath::db.clear())
+      return makeObject("/.");
+    else
+      return false;
+  }
+
   size_t Janosh::size(DBPath path) {
     path.prune();
     if(!path.isContainer())
@@ -388,7 +448,7 @@ namespace janosh {
     DBPath dest(destCursor);
     dest.prune();
     if(!dest.isContainer() || dest.getType() != Array)
-      error("append is limited dest arrays", dest.key());
+      error("append is limited to dest arrays", dest.key());
 
     size_t s = dest.getSize();
     string basePath = dest.basePath();
@@ -596,39 +656,48 @@ namespace janosh {
     return DBPath::db.add(path.key(), value);
   }
 
-  void Janosh::load(js::Value& v, DBPath& path) {
+  size_t Janosh::load(js::Value& v, DBPath& path) {
+    size_t cnt = 0;
     if (v.type() == js::obj_type) {
-      load(v.get_obj(), path);
+      cnt+=load(v.get_obj(), path);
     } else if (v.type() == js::array_type) {
-      load(v.get_array(), path);
+      cnt+=load(v.get_array(), path);
     } else {
-      this->add(path, v.get_str());
+      cnt+=this->load(path, v.get_str());
     }
+    return cnt;
   }
 
-  void Janosh::load(js::Object& obj, DBPath& path) {
+  size_t Janosh::load(js::Object& obj, DBPath& path) {
+    size_t cnt = 0;
     path.pushMember(".");
-    this->load(path, (boost::format("O%d") % obj.size()).str());
+    cnt+=this->load(path, (boost::format("O%d") % obj.size()).str());
     path.pop();
 
     BOOST_FOREACH(js::Pair& p, obj) {
       path.pushMember(p.name_);
-      load(p.value_, path);
+      cnt+=load(p.value_, path);
       path.pop();
+      ++cnt;
     }
+
+    return cnt;
   }
 
-  void Janosh::load(js::Array& array, DBPath& path) {
+  size_t Janosh::load(js::Array& array, DBPath& path) {
+    size_t cnt = 0;
     int index = 0;
     path.pushMember(".");
-    this->load(path, (boost::format("A%d") % array.size()).str());
+    cnt+=this->load(path, (boost::format("A%d") % array.size()).str());
     path.pop();
 
     BOOST_FOREACH(js::Value& v, array){
       path.pushIndex(index++);
-      load(v, path);
+      cnt+=load(v, path);
       path.pop();
+      ++cnt;
     }
+    return cnt;
   }
 }
 
@@ -651,6 +720,8 @@ CommandMap makeCommandMap(jh::Janosh* janosh) {
   CommandMap cm;
   cm.insert({"load", new jh::LoadCommand(janosh) });
 //  cm.insert({"dump", bind(constructor<jh::DumpCommand>(),_1) });
+  cm.insert({"add", new jh::AddCommand(janosh) });
+  cm.insert({"replace", new jh::ReplaceCommand(janosh) });
   cm.insert({"set", new jh::SetCommand(janosh) });
   cm.insert({"get", new jh::GetCommand(janosh) });
   cm.insert({"copy", new jh::CopyCommand(janosh) });
@@ -661,6 +732,10 @@ CommandMap makeCommandMap(jh::Janosh* janosh) {
   cm.insert({"size", new jh::SizeCommand(janosh) });
   cm.insert({"triggers", new jh::TriggerCommand(janosh) });
   cm.insert({"targets", new jh::TargetCommand(janosh) });
+  cm.insert({"truncate", new jh::TruncateCommand(janosh) });
+  cm.insert({"mkarr", new jh::MakeArrayCommand(janosh) });
+  cm.insert({"mkobj", new jh::MakeObjectCommand(janosh) });
+  cm.insert({"hash", new jh::HashCommand(janosh) });
 
   return cm;
 }
@@ -673,7 +748,6 @@ kyotocabinet::TreeDB janosh::DBPath::db;
 int main(int argc, char** argv) {
   using namespace std;
   int c;
-
 
   janosh::Format f = janosh::Bash;
 
@@ -758,6 +832,8 @@ int main(int argc, char** argv) {
       }
       (*cm["triggers"])(vecTriggers);
     }
+
+    return r.first ? 0 : 1;
   } else if(!execTargets){
     printUsage();
   }
