@@ -65,6 +65,8 @@ namespace janosh {
         if(path.isWildcard()) {
           parent::operator->()->jump(path.basePath());
           parent::operator->()->step();
+        } else if(path.isRoot()) {
+          parent::operator->()->jump();
         } else {
           parent::operator->()->jump(path.key());
         }
@@ -308,19 +310,19 @@ namespace janosh {
       return cur;
     }
 
-    DBPath makeDirectory() {
+    DBPath makeDirectoryPath() {
       return DBPath(this->basePath() + "/.");
     }
 
-    DBPath makeWildcard() {
+    DBPath makeWildcardPath() {
       return DBPath(this->basePath() + "/*");
     }
 
-    DBPath makeChild(const string& name) {
+    DBPath makeChildPath(const string& name) {
       return DBPath(this->basePath() + '/' + name);
     }
 
-    DBPath makeChild(const size_t& i) {
+    DBPath makeChildPath(const size_t& i) {
       return DBPath(this->basePath() + '/' + boost::lexical_cast<string>(i));
     }
 
@@ -428,7 +430,8 @@ namespace janosh {
 
     DBPath parent() const {
       DBPath parent(this->basePath());
-      parent.pop(false);
+      if(!parent.empty())
+        parent.pop(false);
       parent.pushMember(".");
 
       return parent;
@@ -450,9 +453,8 @@ namespace janosh {
     }
 
     const EntryType getType()  const {
-      assert(isComplete());
-
       if(this->isContainer()) {
+        assert(isComplete());
         char c = valueStr.at(0);
         if(c == 'A') {
           return Array;

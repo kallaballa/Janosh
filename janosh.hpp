@@ -166,6 +166,7 @@ public:
     size_t load(js::Value& v, DBPath& path);
     size_t load(js::Object& obj, DBPath& path);
     size_t load(js::Array& array, DBPath& path);
+    bool boundsCheck(DBPath p);
 
     template<typename Tvisitor>
      size_t recurse(Cursor cur, Tvisitor vis)  {

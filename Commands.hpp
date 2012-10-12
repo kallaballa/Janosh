@@ -63,7 +63,6 @@ namespace janosh {
     }
 
     virtual Result operator()(const vector<string>& params) {
-      size_t s;
       if (!params.empty()) {
         LOG_DEBUG_STR("hash doesn't take any parameters");
         return {0, "Failed"};
