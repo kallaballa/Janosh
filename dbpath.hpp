@@ -93,7 +93,17 @@ namespace janosh {
 
       bool jump(const string& k) {
         assert(isValid());
-        return getCursorPtr()->jump(k);
+        if(getCursorPtr()->jump(k)) {
+          string rkey;
+          getKey(rkey);
+          return rkey == k;
+        } else
+          return false;
+      }
+
+      bool jump_back(const string& k) {
+        assert(isValid());
+        return getCursorPtr()->jump_back(k);
       }
 
       bool getValue(string& v) {
@@ -149,7 +159,7 @@ namespace janosh {
           if(!this->step_back())
             return false;
           prev = *this;
-          DBPath prevParent = prev.parent();
+          prevParent = prev.parent();
         } while(prevParent != parent && parent.above(prev));
         return true;
       }
@@ -287,8 +297,11 @@ namespace janosh {
     }
 
     DBPath prune(Cursor cur = Cursor()) {
-      if(!isComplete())
-        read(cur);
+      if(!isComplete()) {
+        if(!read(getCursor(cur)).isValid()) {
+          this->doesExist = false;
+        }
+      }
 
       return *this;
     }
@@ -301,10 +314,14 @@ namespace janosh {
       }
 
       if(this->isWildcard()) {
-        cur.jump(this->basePath());
-        cur.step();
+        if(!cur.jump(this->basePath() + "/."))
+          return Cursor();
+
+        if(!cur.step())
+          return Cursor();
       } else {
-        cur.jump(this->key());
+        if(!cur.jump(this->key()))
+          return Cursor();
       }
 
       return cur;
@@ -329,8 +346,7 @@ namespace janosh {
     Cursor read(Cursor cur = Cursor()) {
       if(this->empty()) {
         if(!cur.isValid()) {
-          LOG_ERR("Can't read key from empty cursor");
-          exit(1);
+          return Cursor();
         }
         string k;
         if(cur.get(k,valueStr)) {
@@ -357,12 +373,12 @@ namespace janosh {
             this->doesExist = false;
             return Cursor();
           }
-        } else if (!cur.getValue(this->valueStr)) {
+        } else if (cur.getValue(this->valueStr)) {
           this->hasValue = true;
+          this->doesExist = true;
+        } else {
           this->doesExist = false;
           return Cursor();
-        } else {
-          this->doesExist = true;
         }
       }
 

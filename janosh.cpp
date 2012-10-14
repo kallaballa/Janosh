@@ -258,24 +258,49 @@ namespace janosh {
     return cnt;
   }
 
-  size_t Janosh::makeArray(DBPath target, size_t size) {
+  DBPath Janosh::makeTemp(EntryType t) {
+    DBPath tmp("/tmp/.");
+
+    if(!tmp.prune().exists()) {
+      makeDirectory(tmp, EntryType::Array, 0);
+      tmp.prune();
+    }
+
+    if(t == Value) {
+      tmp = tmp.makeChildPath(tmp.getSize());
+      this->add(tmp, "");
+    } else {
+      tmp = tmp.makeChildPath(tmp.getSize()).makeDirectoryPath();
+      this->makeDirectory(tmp, t, 0);
+    }
+    return tmp;
+  }
+
+
+  size_t Janosh::makeArray(DBPath target, size_t size, bool bounds) {
     target.prune();
-    assert(target.isContainer());
-    assert(!target.exists());
+    DBPath base = DBPath(target.basePath());
+    base.prune();
+    assert(target.isContainer() && !target.exists() && !base.exists());
+    assert(!bounds || boundsCheck(target));
+
+    changeContainerSize(target.parent(), 1);
     return DBPath::db.add(target.key(), "A" + lexical_cast<string>(size));
   }
 
   size_t Janosh::makeObject(DBPath target, size_t size) {
     target.prune();
-    assert(target.isContainer());
-    assert(!target.exists());
+    DBPath base = DBPath(target.basePath());
+    base.prune();
+    assert(target.isContainer() && !target.exists() && !base.exists());
+    assert(boundsCheck(target));
+
+    if(!target.isRoot())
+      changeContainerSize(target.parent(), 1);
     return DBPath::db.add(target.key(), "O" + lexical_cast<string>(size));
   }
 
   size_t Janosh::makeDirectory(DBPath target, EntryType type, size_t size) {
-    target.prune();
-    assert(!target.exists());
-
     if(type == Array) {
       return makeArray(target, size);
     } else if (type == Object) {
@@ -287,11 +312,8 @@ namespace janosh {
 
   size_t Janosh::add(DBPath path, const string& value) {
     LOG_DEBUG_MSG("add", path.key());
-    DBPath parent = path.parent();
-    path.prune();
-    parent.prune();
     assert(path.isValue() && !path.exists());
-    assert(!parent.isArray() || path.parseIndex() <= parent.getSize());
+    assert(boundsCheck(path));
 
     if(DBPath::db.add(path.key(), value)) {
       if(!path.isRoot())
@@ -305,29 +327,22 @@ namespace janosh {
 
   size_t Janosh::replace(DBPath path, const string& value) {
     LOG_DEBUG_MSG("replace", path.key());
-    DBPath parent = path.parent();
     path.prune();
-    parent.prune();
     assert(path.isValue() && path.exists());
-    assert(parent.isArray() || parent.isObject());
+    assert(boundsCheck(path));
 
     return DBPath::db.replace(path.key(), value);
   }
 
   size_t Janosh::set(DBPath path, const string& value) {
     LOG_DEBUG_MSG("Set", path.key());
-    DBPath parent = path.parent();
-    path.prune();
-    parent.prune();
     assert(path.isValue());
-    assert(parent.isObject() || (parent.isArray() && path.parseIndex() < parent.getSize()));
-    bool isnew = !path.exists();
-    if(DBPath::db.set(path.key(), value)) {
-      if(isnew)
-        changeContainerSize(parent, 1);
-      return true;
-    }
-    return false;
+    assert(boundsCheck(path));
+    path.prune();
+    if (path.exists())
+      return replace(path, value);
+    else
+      return add(path, value);
   }
 
   size_t Janosh::set(Cursor cur, const string& value) {
@@ -340,7 +355,7 @@ namespace janosh {
     p.prune();
 
     if(p.isWildcard()) {
-      return this->removeChildren(p.getCursor());
+      return this->removeChildren(p.makeDirectoryPath());
     } else
       return this->remove(p.getCursor(), 1);
   }
@@ -419,7 +434,7 @@ namespace janosh {
 
   size_t Janosh::truncate() {
     if(DBPath::db.clear())
-      return makeObject("/.");
+      return DBPath::db.add("/.", "O" + lexical_cast<string>(0));
     else
       return false;
   }
@@ -455,7 +470,7 @@ namespace janosh {
 
     size_t cnt = 0;
     for(; begin != end; ++begin) {
-      DBPath target = dest.makeChild(s + cnt);
+      DBPath target = dest.makeChildPath(s + cnt);
       assert(DBPath::db.add(target.key(), *begin));
       ++cnt;
     }
@@ -474,12 +489,13 @@ namespace janosh {
     string basePath = dest.basePath();
     size_t cnt = 0;
     string value;
-
-    for(; cnt < n; ++cnt) {
+    string key;
+    do {
+      srcCur.getKey(key);
       srcCur.getValue(value);
-      DBPath target = dest.makeChild(s + cnt);
+      DBPath target = dest.makeChildPath(s + cnt);
       assert(DBPath::db.add(target.key(), value));
-    }
+    } while(++cnt < n && srcCur.step());
 
     setContainerSize(dest, s + cnt);
     return cnt;
@@ -496,7 +512,7 @@ namespace janosh {
     DBPath src(srcCur);
     DBPath dest(destCur);
     LOG_DEBUG_MSG("copy", src.key() + "->" + dest.key());
-
+    std::cerr << src.key() << "->" << dest.key() << std::endl;
     if(dest.isWildcard())
       error("Destination can't be a wildcard", dest.key());
 
@@ -504,7 +520,7 @@ namespace janosh {
       return 0;
 
     if(src.isWildcard()) {
-      DBPath target = dest.makeDirectory();
+      DBPath target = dest.makeDirectoryPath();
       remove(dest);
       this->makeDirectory(target, src.getType());
       destCur = target.getCursor();
@@ -522,24 +538,24 @@ namespace janosh {
       destCur = target.getCursor();
       return this->appendChildren(srcCur, destCur);
     } else if(src.isContainer()) {
-      DBPath target = dest.makeDirectory();
-      this->makeDirectory(target, src.getType());
+      DBPath target = dest.makeDirectoryPath();
 
       if(dest.isContainer()) {
-        remove(dest.makeWildcard());
+        remove(dest.makeWildcardPath());
         setContainerSize(destCur, 0);
       } else {
         remove(destCur);
+        this->makeDirectory(target, src.getType());
       }
 
-      destCur = target.getCursor();
+      destCur = target.getCursor(destCur);
       return this->appendChildren(srcCur, destCur);
     } else {
       if(dest.isContainer()) {
-        //add first to make sure the cursor will step to the newly created entry on remove
-        bool success = this->add(dest.basePath(), src.val());
-        remove(destCur);
-        destCur.step_back();
+        remove(dest);
+        DBPath target(dest.basePath());
+        bool success = this->set(target, src.val());
+        destCur = target.getCursor(destCur);
         return success;
       } else {
         return this->set(destCur, src.val());
@@ -553,71 +569,55 @@ namespace janosh {
     LOG_DEBUG_MSG("shift", src.key() + "->" + dest.key());
 
     DBPath srcParent = src.parent();
-    DBPath destParent = dest.parent();
     srcParent.prune();
-    destParent.prune();
 
-    if(srcParent.getType() != EntryType::Array) {
-      error("Move is limited on arrays", srcParent.key());
+    if(srcParent.getType() != EntryType::Array || srcParent != dest.parent()) {
+      error("Move is limited within one array", src.key() + "->" + dest.key());
     }
 
-    if(destParent.getType() != EntryType::Array) {
-      error("Move is limited on arrays", destParent.key());
-    }
-
-    size_t destSize = destParent.getSize();
+    size_t parentSize = srcParent.getSize();
     size_t srcIndex = src.parseIndex();
     size_t destIndex = dest.parseIndex();
 
-    if(srcIndex >= destSize) {
-      error("<From> index greater than array size", src.name());
+    if(srcIndex >= parentSize || destIndex >= parentSize) {
+      error("index out of bounds", src.key());
     }
 
-    if(destIndex >= destSize) {
-      error("<To> index greater than array size", src.name());
+    bool back = srcIndex > destIndex;
+    Cursor forwardCur = src.getCursor();
+    Cursor backCur = src.getCursor();
+
+    if(back) {
+      assert(forwardCur.previous());
+    } else {
+      assert(forwardCur.next());
     }
 
-    if(srcParent == destParent) {
-      bool back = srcIndex > destIndex;
-      Cursor forwardCur = src.getCursor();
-      Cursor backCur = src.getCursor();
+    DBPath tmp;
+
+    if(src.isContainer()) {
+      tmp = makeTemp(src.getType());
+      this->appendChildren(src, tmp);
+    } else {
+      tmp = makeTemp(EntryType::Value);
+      this->set(tmp, src.val());
+    }
+
+    for(size_t i=0; i < abs(destIndex - srcIndex); ++i) {
+      copy(forwardCur, backCur);
 
       if(back) {
-        assert(forwardCur.previous());
+        backCur.previous();
+        forwardCur.previous();
       } else {
-        assert(forwardCur.next());
+        backCur.next();
+        forwardCur.next();
       }
+    }
 
-      Cursor tmpCursor;
-
-      if(src.isContainer()) {
-        DBPath tmp = destParent.makeChild(destSize).makeDirectory();
-        makeDirectory(tmp, src.getType());
-        Cursor tmpCursor = tmp.getCursor();
-        this->append(src.getCursor(), tmpCursor, src.getSize());
-        remove(src);
-      } else {
-        DBPath tmp = destParent.makeChild(destSize);
-        this->add(tmp, src.val());
-        tmpCursor = tmp.getCursor();
-      }
-
-      for(size_t i=0; i < abs(destIndex - srcIndex); ++i) {
-        copy(forwardCur, backCur);
-
-        if(back) {
-          assert(backCur.previous());
-          assert(forwardCur.previous());
-        } else {
-          assert(backCur.next());
-          assert(forwardCur.next());
-        }
-      }
-
-      copy(tmpCursor,destCur);
-      remove(tmpCursor);
-    } else
-      assert(false);
+    Cursor tmpCursor = tmp.getCursor();
+    copy(tmpCursor,destCur);
+    remove(tmp);
 
     destCur = srcCur;
     srcCur = dest.getCursor();
@@ -648,6 +648,7 @@ namespace janosh {
 
   void Janosh::changeContainerSize(Cursor cur, const size_t by) {
     DBPath container(cur);
+    container.prune();
     setContainerSize(cur, container.getSize() + by);
   }
 
@@ -699,8 +700,16 @@ namespace janosh {
     }
     return cnt;
   }
-}
 
+  bool Janosh::boundsCheck(DBPath p) {
+    DBPath parent = p.parent();
+
+    p.prune();
+    parent.prune();
+
+    return (parent.isRoot() || (!parent.isArray() || p.parseIndex() <= parent.getSize()));
+  }
+}
 
 void printUsage() {
   std::cerr << "janosh [-l] <path>" << endl
@@ -741,9 +750,6 @@ CommandMap makeCommandMap(jh::Janosh* janosh) {
 }
 
 kyotocabinet::TreeDB janosh::DBPath::db;
-
-#include <boost/generator_iterator.hpp>
-
 
 int main(int argc, char** argv) {
   using namespace std;

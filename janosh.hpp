@@ -130,8 +130,7 @@ public:
     void close();
     size_t loadJson(const string& jsonfile);
     size_t loadJson(std::istream& is);
-
-    size_t makeArray(DBPath target, size_t size = 0);
+    size_t makeArray(DBPath target, size_t size = 0, bool boundsCheck=true);
     size_t makeObject(DBPath target, size_t size = 0);
     size_t makeDirectory(DBPath target, EntryType type, size_t size = 0);
     size_t print(DBPath path, std::ostream& out);
@@ -167,6 +166,7 @@ public:
     size_t load(js::Object& obj, DBPath& path);
     size_t load(js::Array& array, DBPath& path);
     bool boundsCheck(DBPath p);
+    DBPath makeTemp(EntryType t);
 
     template<typename Tvisitor>
      size_t recurse(Cursor cur, Tvisitor vis)  {

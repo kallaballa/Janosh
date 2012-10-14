@@ -23,13 +23,15 @@ function test_truncate() {
 function test_mkarray() { 
   janosh mkarr /array/.        || return 1
   janosh mkarr /array/.        && return 1 
-  [  `janosh size /.` -eq  1 ] || return 1
+  janosh set /bla blu          || return 1
+  janosh mkarr /bla/.          && return 1 || return 0
 }
 
 function test_mkobject() {
   janosh mkobj /object/.       || return 1
   janosh mkobj /object/.       && return 1
-  [  `janosh size /.` -eq  1 ] || return 1
+  janosh set /bla blu          || return 1
+  janosh mkobj /bla/.          && return 1 || return 0
 }
 
 function test_append() {
@@ -79,17 +81,21 @@ function test_replace() {
 }
 
 function test_shift() {
-  janosh mkarr /array/.               || return 1
-  janosh append /array/. 0 1 2 3      || return 1
-  janosh shift /array/0 /array/3      || return 1
-  [ `janosh size /.` -eq 1 ]    || return 1
-  [ `janosh size /array/.` -eq 4 ]    || return 1
-  [ `janosh -r get /array/0` -eq 1 ]  || return 1
-  [ `janosh -r get /array/3` -eq 0 ]  || return 1
-  janosh mkarr /array/4/.             || return 1
-  janosh append /array/4/. 3 2 1 0    || return 1
-  janosh shift /array/4/3 /array/4/0  && return 1
-  #[ `janosh -r get /sub/1` -eq 2  ]  || return 1  
+  janosh mkarr /array/.                 || return 1
+  janosh append /array/. 0 1 2 3        || return 1
+  janosh shift /array/0 /array/3        || return 1
+  [ `janosh size /array/.` -eq 4 ]      || return 1
+  [ `janosh -r get /array/0` -eq 1 ]    || return 1
+  [ `janosh -r get /array/3` -eq 0 ]    || return 1
+  janosh mkarr /array/4/.               || return 1
+  janosh append /array/4/. 3 2 1 0      || return 1
+  janosh shift /array/4/3 /array/4/0    || return 1
+  [ `janosh -r get /array/4/0` -eq 0  ] || return 1  
+  [ `janosh -r get /array/4/3` -eq 1  ] || return 1
+  janosh append /array/. 4 5 6 7        || return 1
+  janosh mkarr /array/9/.               || return 1
+  janosh append /array/9/. 7 6 5 4      || return 1
+ # janosh shift /array/4/. /array/9/.    || return 1
 }
 
 
