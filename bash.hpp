@@ -5,6 +5,7 @@
 #include <string>
 #include <stack>
 #include <iostream>
+#include <boost/algorithm/string.hpp>
 
 using std::string;
 using std::cerr;
@@ -42,6 +43,7 @@ namespace janosh {
     void record(const Path& p, const string& value, bool array, bool first) {
         string stripped = value;
         replace(stripped.begin(), stripped.end(), '\n', ' ');
+        boost::algorithm::replace_all(stripped, "&",  "&#39;");
         out  << '[' << p.pretty() << "]='" << stripped << "' ";
     }
   };

@@ -56,12 +56,14 @@ namespace janosh {
   }
 
   const Value::Type Record::getType()  const {
-    if(this->isDirectory()) {
+    if(this->path().isDirectory()) {
       assert(this->hasData());
       return value().getType();
+    } else if(this->path().isWildcard()) {
+      return Value::Range;
+    } else {
+      return Value::String;
     }
-
-    return Value::String;
   }
 
   const size_t Record::getSize() const {
@@ -251,7 +253,7 @@ namespace janosh {
     return readPath() && readValue();
   }
 
-  Record Record::fetch() {
+  Record& Record::fetch() {
     assert(isInitialized());
     if(!hasData()) {
       init(this->path());

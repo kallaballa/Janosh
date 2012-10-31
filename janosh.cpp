@@ -323,7 +323,7 @@ namespace janosh {
     assert(boundsCheck(dest));
 
     if(Record::db.add(dest.path(), value)) {
-      if(!dest.path().isRoot())
+//      if(!dest.path().isRoot())
         changeContainerSize(dest.parent(), 1);
       return true;
     } else {
@@ -364,23 +364,26 @@ namespace janosh {
     Record target;
     size_t r;
     if(dest.isDirectory()) {
-      if(src.isDirectory())
+      if(src.isDirectory()) {
         target = dest.path();
-      else
+        Record wildcard = src.path().asWildcard();
+        r = this->copy(wildcard,target);
+      } else {
         target = dest.path().basePath();
+        remove(dest,false);
+        r = this->copy(src,target);
+      }
 
-      remove(dest);
-
-      r = this->copy(src,target);
       dest = target;
     } else {
       if(src.isDirectory()) {
         Record target = dest.path().asDirectory();
         Record wildcard = src.path().asWildcard();
-        remove(dest);
+        remove(dest,false);
         makeDirectory(target, src.getType());
         r = this->append(wildcard, target);
         dest = target;
+
       } else {
         r = Record::db.replace(dest.path(), src.value());
       }
@@ -458,21 +461,21 @@ namespace janosh {
    * @param rec The record to remove. Points to the next record in the database after removal.
    * @return number of total records affected.
    */
-  size_t Janosh::remove(Record& rec) {
+  size_t Janosh::remove(Record& rec, bool pack) {
     JANOSH_TRACE({rec});
     if(!rec.isInitialized())
       return 0;
-    rec.fetch();
-    size_t n = rec.getSize();
+
+    size_t n = rec.fetch().getSize();
     size_t cnt = 0;
 
-    if(rec.isDirectory()) {
-      Record parent = rec.parent();
+    Record parent = rec.parent();
+    Path targetPath = rec.path();
+    Record target(targetPath);
 
-      if(parent.fetch().exists())
-        changeContainerSize(parent, -1);
+    if(rec.isDirectory() || rec.isRange()) {
+      rec.step();
 
-      rec.remove();
       for(size_t i = 0; i < n; ++i) {
         if(!rec.isDirectory()) {
           rec.remove();
@@ -481,34 +484,45 @@ namespace janosh {
           cnt += remove(rec);
         }
       }
-    } else {
-      for(size_t i = 0; i < n; ++i) {
-        Record parent = rec.parent();
-        rec.fetch();
-        Value::Type rootType = rec.getType();
+    }
 
-        if(parent.fetch().exists())
-          changeContainerSize(parent, -1);
+    if(!targetPath.isWildcard()) {
+      if(pack && parent.fetch().isArray()) {
+        size_t parentSize = parent.getSize();
+        size_t index = targetPath.parseIndex();
 
-        if (rootType != Value::String) {
-          const size_t size = rec.getSize();
-          rec.remove();
-          ++cnt;
+        if(index + 1 < parentSize) {
+          Record forwardRec = targetPath;
+          Record backRec = targetPath;
+          forwardRec.fetch().next();
 
-          for (size_t j = 0; j < size; ++j) {
-            if(!rec.isDirectory()) {
-              rec.remove();
-              ++cnt;
-            } else {
-              cnt += remove(rec);
-            }
+          for(size_t i=0; i < parentSize - 1 - index; ++i) {
+            replace(forwardRec, backRec);
+            backRec.next();
+            forwardRec.next();
+          }
+
+          if(forwardRec.fetch().isDirectory())
+            cnt += remove(forwardRec);
+          else {
+            forwardRec = forwardRec.path();
+            cnt += forwardRec.fetch().remove();
           }
         } else {
-          rec.remove();
-          ++cnt;
+          cnt += target.fetch().remove();
         }
+      } else {
+        cnt += target.fetch().remove();
       }
+
+      changeContainerSize(parent, -1);
+    } else {
+      parent.fetch();
+      setContainerSize(parent, 0);
     }
+
+    rec = target;
+
     return cnt;
   }
 

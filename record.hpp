@@ -450,6 +450,8 @@ public:
     Record clone();
     Record(const Path& path);
     Record();
+
+
     kc::DB::Cursor* getCursorPtr();
     const Value::Type getType()  const;
     const size_t getSize() const;
@@ -484,7 +486,7 @@ public:
     const bool exists() const;
     const bool empty() const;
 
-    Record fetch();
+    Record& fetch();
     bool readValue();
     bool readPath();
     bool read();
