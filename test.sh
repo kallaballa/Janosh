@@ -69,11 +69,15 @@ function test_add() {
 
 function test_remove() {
   janosh mkarr /array/.             || return 1
-  janosh add /array/#0 1             || return 1
-  janosh add /array/#0 0             && return 1
-  janosh add /array/#5 0             && return 1
-  janosh mkarr /array/#1/.           || return 1
+  janosh add /array/#0 1            || return 1
+  janosh add /array/#0 0            && return 1
+  janosh append /array/. 2 3 4      || return 1
+  janosh remove /array/#1           || return 1
+  [ `janosh -r get /array/#1` -eq 3 ]  || return 1
+  janosh add /array/#5 0            && return 1
+  return 0
   janosh remove /array/*            || return 1
+  janosh mkarr /array/#1/.          || return 1
   [ `janosh size /array/.` -eq 0 ]  || return 1
   janosh mkobj /object/.            || return 1
   janosh add /object/0 1            || return 1
@@ -130,9 +134,8 @@ function test_shift() {
   janosh append /array/#9/. 7 6 5 4      || return 1
   janosh shift /array/#4/. /array/#9/.    || return 1
   [ `janosh size /array/#8/.` -eq 4 ]    || return 1
-  [ `janosh size /array/#9/.` -eq 4 ]    || return 1
+  [ `janosh size /array/#9/.` -eq 8 ]    || return 1
   [ `janosh -r get /array/#8/#0` -eq 7  ] || return 1
-  [ `janosh -r get /array/#9/#0` -eq 0  ] || return 1
 }
 
 function run() {
