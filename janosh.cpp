@@ -359,7 +359,7 @@ namespace janosh {
     src.fetch();
     dest.fetch();
 
-    assert(!src.isRange() && src.exists() && dest.exists());
+    assert(!src.isWildcard() && src.exists() && dest.exists());
     assert(boundsCheck(dest));
     Record target;
     size_t r;
@@ -407,7 +407,7 @@ namespace janosh {
     src.fetch();
     dest.fetch();
 
-    assert(!src.isRange() && src.exists() && dest.exists());
+    assert(!src.isWildcard() && src.exists() && dest.exists());
     assert(boundsCheck(dest));
     Record target;
     size_t r;
@@ -455,7 +455,6 @@ namespace janosh {
       return add(rec, value);
   }
 
-
   /**
    * Removes a record from the database.
    * @param rec The record to remove. Points to the next record in the database after removal.
@@ -463,65 +462,45 @@ namespace janosh {
    */
   size_t Janosh::remove(Record& rec, bool pack) {
     JANOSH_TRACE({rec});
-    if(!rec.isInitialized())
-      return 0;
-
-    size_t n = rec.fetch().getSize();
+    Value val = rec.value();
     size_t cnt = 0;
-
     Record parent = rec.parent();
-    Path targetPath = rec.path();
-    Record target(targetPath);
 
-    if(rec.isDirectory() || rec.isRange()) {
-      rec.step();
+    if(rec.isWildcard() || (rec.isDirectory() && !(pack && parent.isArray()))) {
+      Value::iterator it = val.begin();
+      if(rec.isDirectory())
+        (*it++).getRecord().remove();
+      else
+        setContainerSize(parent, 0);
 
-      for(size_t i = 0; i < n; ++i) {
-        if(!rec.isDirectory()) {
-          rec.remove();
-          ++cnt;
-        } else {
-          cnt += remove(rec);
+      std::for_each(it, val.end(), [&](Value& v) {
+         if(v.getType() == Array || v.getType() == Object) {
+           cnt += remove(v.getRecord());
+         } else {
+           v.getRecord().remove();
+           ++cnt;
+         }
+       });
+    } else {
+      size_t parentSize = parent.getSize();
+      size_t index = rec.getIndex();
+
+      if(index + 1 < parentSize) {
+        Value::iterator backIt = val.begin();
+        Value::iterator frontIt = (val.begin() + 1);
+        Value bv;
+        Value fv;
+        for(size_t i=0; i < parentSize - 1 - index; ++i) {
+          bv = *backIt++;
+          fv = *frontIt++;
+          replace(fv.getRecord(), bv.getRecord());
         }
-      }
-    }
 
-    if(!targetPath.isWildcard()) {
-      if(pack && parent.fetch().isArray()) {
-        size_t parentSize = parent.getSize();
-        size_t index = targetPath.parseIndex();
-
-        if(index + 1 < parentSize) {
-          Record forwardRec = targetPath;
-          Record backRec = targetPath;
-          forwardRec.fetch().next();
-
-          for(size_t i=0; i < parentSize - 1 - index; ++i) {
-            replace(forwardRec, backRec);
-            backRec.next();
-            forwardRec.next();
-          }
-
-          if(forwardRec.fetch().isDirectory())
-            cnt += remove(forwardRec);
-          else {
-            forwardRec = forwardRec.path();
-            cnt += forwardRec.fetch().remove();
-          }
-        } else {
-          cnt += target.fetch().remove();
-        }
-      } else {
-        cnt += target.fetch().remove();
+        cnt += remove(fv.getRecord(), false);
       }
 
       changeContainerSize(parent, -1);
-    } else {
-      parent.fetch();
-      setContainerSize(parent, 0);
     }
-
-    rec = target;
 
     return cnt;
   }
@@ -607,17 +586,18 @@ namespace janosh {
     src.fetch();
     dest.fetch();
 
-    size_t n = src.isDirectory() ? 1 : src.getSize();
+    size_t n = src.getSize();
     size_t s = dest.getSize();
     size_t cnt = 0;
 
     string path;
     string value;
 
-    do {
-      src.read();
-      assert(!src.isAncestorOf(dest));
-      if(src.isDirectory()) {
+
+    std::for_each(src.value().begin(), src.value().end(), [&](Value& v){
+      assert(!v.getRecord().isAncestorOf(dest));
+
+      if(v.getType() == Array || v.getType() == Object) {
         Record target;
         if(dest.isObject()) {
           target = dest.path().withChild(src.path().name()).asDirectory();
@@ -626,8 +606,9 @@ namespace janosh {
         } else
           assert(false);
 
-        assert(!src.isAncestorOf(target));
-        assert(makeDirectory(target, src.getType()));
+        assert(!v.getRecord().isAncestorOf(target));
+        assert(makeDirectory(target, v.getType()));
+
         Record wildcard = src.path().asWildcard();
         assert(append(wildcard, target));
       } else {
@@ -643,6 +624,10 @@ namespace janosh {
           ));
         }
       }
+    });
+
+    do {
+
     } while(++cnt < n && src.next());
 
     setContainerSize(dest, s + cnt);
@@ -662,7 +647,7 @@ namespace janosh {
 
     assert(src.isValue() || dest.isDirectory());
 
-    if((src.isRange() || src.isDirectory()) && !dest.exists()) {
+    if((src.isWildcard() || src.isDirectory()) && !dest.exists()) {
       makeDirectory(dest, src.getType());
       Record wildcard = src.path().asWildcard();
       return this->append(wildcard, dest);
