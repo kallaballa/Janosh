@@ -7,8 +7,16 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/functional/hash.hpp>
 #include <boost/function.hpp>
+#include <boost/interprocess/creation_tags.hpp>
+#include <functional>
 #include <algorithm>
+#include <boost/bind.hpp>
+#include <boost/thread.hpp>
 
+#include <string>
+#include <fstream>
+
+using std::string;
 using std::map;
 using std::vector;
 using boost::make_iterator_range;
@@ -183,6 +191,14 @@ namespace janosh {
   Janosh::Janosh() :
     settings(),
     triggers(settings.triggerFile, settings.triggerDirs) {
+    this->shm_ringbuf_in = new shared_ringbuf(boost::interprocess::create_only, "JanoshIPC_in", boost::interprocess::read_write);
+    this->shm_ringbuf_out = new shared_ringbuf(boost::interprocess::create_only, "JanoshIPC_out", boost::interprocess::read_write);
+    this->in = new shared_ringbuf::istream(shm_ringbuf_in);
+    this->out = new shared_ringbuf::ostream(shm_ringbuf_out);
+  }
+
+
+  Janosh::~Janosh() {
   }
 
   void Janosh::setFormat(Format f) {
@@ -220,14 +236,14 @@ namespace janosh {
     return load(rootValue, path);
   }
 
-  size_t Janosh::print(Record rec, std::ostream& out) {
+  size_t Janosh::get(Record rec, std::ostream& out) {
     rec.fetch();
     size_t cnt = 1;
 
     LOG_DEBUG_MSG("print", rec.path());
 
     if(!rec.exists())
-      error("Path not found", rec.path());
+      return error("Path not found", rec.path());
 
     if (rec.isDirectory()) {
       switch(this->getFormat()) {
@@ -280,8 +296,11 @@ namespace janosh {
     target.fetch();
     Record base = Record(target.path().basePath());
     base.fetch();
-    assert(target.isDirectory() && !target.exists() && !base.exists());
-    assert(!bounds || boundsCheck(target));
+    if(!target.isDirectory() || target.exists() || base.exists())
+      return error("Invalid target");
+
+    if(bounds && !boundsCheck(target))
+      return error("Out of array bounds");
 
     changeContainerSize(target.parent(), 1);
     return Record::db.add(target.path(), "A" + lexical_cast<string>(size));
@@ -292,8 +311,11 @@ namespace janosh {
     target.fetch();
     Record base = Record(target.path().basePath());
     base.fetch();
-    assert(target.isDirectory() && !target.exists() && !base.exists());
-    assert(boundsCheck(target));
+    if(!target.isDirectory() || target.exists() || base.exists())
+      return error("Invalid target");
+
+    if(!boundsCheck(target))
+      return error("Out of array bounds");
 
     if(!target.path().isRoot())
       changeContainerSize(target.parent(), 1);
@@ -319,8 +341,12 @@ namespace janosh {
    */
   size_t Janosh::add(Record dest, const string& value) {
     JANOSH_TRACE({dest}, value);
-    assert(dest.isValue() && !dest.exists());
-    assert(boundsCheck(dest));
+
+    if(!dest.isValue() || dest.exists())
+      return error("Invalid target");
+
+    if(!boundsCheck(dest))
+      return error("Out of array bounds");
 
     if(Record::db.add(dest.path(), value)) {
 //      if(!dest.path().isRoot())
@@ -340,8 +366,12 @@ namespace janosh {
   size_t Janosh::replace(Record dest, const string& value) {
     JANOSH_TRACE({dest}, value);
     dest.fetch();
-    assert(dest.isValue() && dest.exists());
-    assert(boundsCheck(dest));
+
+    if(!dest.isValue() || !dest.exists())
+      return error("Invalid target");
+
+    if(!boundsCheck(dest))
+      return error("Out of array bounds");
 
     return Record::db.replace(dest.path(), value);
   }
@@ -359,8 +389,12 @@ namespace janosh {
     src.fetch();
     dest.fetch();
 
-    assert(!src.isRange() && src.exists() && dest.exists());
-    assert(boundsCheck(dest));
+    if(src.isRange() || !src.exists() || !dest.exists())
+      return error("Invalid target");
+
+    if(!boundsCheck(dest))
+      return error("Out of array bounds");
+
     Record target;
     size_t r;
     if(dest.isDirectory()) {
@@ -407,8 +441,12 @@ namespace janosh {
     src.fetch();
     dest.fetch();
 
-    assert(!src.isRange() && src.exists() && dest.exists());
-    assert(boundsCheck(dest));
+    if(src.isRange() || !src.exists() || !dest.exists())
+      return error("Invalid target");
+
+    if(!boundsCheck(dest))
+      return error("Out of array bounds");
+
     Record target;
     size_t r;
     if(dest.isDirectory()) {
@@ -445,8 +483,12 @@ namespace janosh {
    */
   size_t Janosh::set(Record rec, const string& value) {
     JANOSH_TRACE({rec}, value);
-    assert(rec.isValue());
-    assert(boundsCheck(rec));
+
+    if(!rec.isValue())
+      return error("Invalid target");
+
+    if(!boundsCheck(rec))
+      return error("Out of array bounds");
 
     rec.fetch();
     if (rec.exists())
@@ -533,7 +575,7 @@ namespace janosh {
     size_t cnt = 0;
 
     while(cur->get(&key, &value, true)) {
-      std::cout << "path: " << Path(key).pretty() <<  " value:" << value << endl;
+      (*this->out) << "path: " << Path(key).pretty() <<  " value:" << value << endl;
       ++cnt;
     }
     delete cur;
@@ -551,7 +593,7 @@ namespace janosh {
       h = hasher(lexical_cast<string>(h) + key + value);
       ++cnt;
     }
-    std::cout << h << std::endl;
+    (*this->out) << h << std::endl;
     delete cur;
     return cnt;
   }
@@ -565,7 +607,7 @@ namespace janosh {
 
   size_t Janosh::size(Record rec) {
     if(!rec.isDirectory())
-      error("size is limited to containers", rec.path());
+      return error("size is limited to containers", rec.path());
 
     return rec.fetch().getSize();
   }
@@ -573,10 +615,12 @@ namespace janosh {
   size_t Janosh::append(Record dest, const string& value) {
     JANOSH_TRACE({dest}, value);
     if(!dest.isDirectory())
-      error("append is limited to dest directories", dest.path());
+      return error("append is limited to dest directories", dest.path());
 
     Record target(dest.path().withChild(dest.getSize()));
-    assert(Record::db.add(target.path(), value));
+    if(!Record::db.add(target.path(), value))
+      return error("Failed to add target");
+
     dest = target;
     return 1;
   }
@@ -584,13 +628,14 @@ namespace janosh {
   size_t Janosh::append(vector<string>::const_iterator begin, vector<string>::const_iterator end, Record dest) {
     JANOSH_TRACE({dest});
     if(!dest.isDirectory())
-      error("append is limited to dest directories", dest.path());
+      return error("append is limited to dest directories", dest.path());
     dest.fetch();
     size_t s = dest.getSize();
     size_t cnt = 0;
 
     for(; begin != end; ++begin) {
-      assert(Record::db.add(dest.path().withChild(s + cnt), *begin));
+      if(!Record::db.add(dest.path().withChild(s + cnt), *begin))
+        return error("Failed to add target");
       ++cnt;
     }
 
@@ -602,7 +647,7 @@ namespace janosh {
     JANOSH_TRACE({src,dest});
 
     if(!dest.isDirectory())
-      error("append is limited to directories", dest.path());
+      return error("append is limited to directories", dest.path());
 
     src.fetch();
     dest.fetch();
@@ -616,7 +661,9 @@ namespace janosh {
 
     do {
       src.read();
-      assert(!src.isAncestorOf(dest));
+      if(src.isAncestorOf(dest))
+        return error("can't append an ancestor");
+
       if(src.isDirectory()) {
         Record target;
         if(dest.isObject()) {
@@ -626,21 +673,27 @@ namespace janosh {
         } else
           assert(false);
 
-        assert(!src.isAncestorOf(target));
-        assert(makeDirectory(target, src.getType()));
+        if(src.isAncestorOf(target))
+          return error("can't append an ancestor");
+
+
+        if(!makeDirectory(target, src.getType()))
+          return error("failed to create directory");
+
         Record wildcard = src.path().asWildcard();
-        assert(append(wildcard, target));
+        if(!append(wildcard, target))
+          return error("failed to append values");
       } else {
         if(dest.isArray()) {
-          assert(Record::db.add(
+          if(!Record::db.add(
               dest.path().withChild(s + cnt),
               src.value()
-          ));
+          )) return error("failed to add");
         } else if(dest.isObject()) {
-          assert(Record::db.add(
+          if(!Record::db.add(
               dest.path().withChild(src.path().name()),
               src.value()
-          ));
+          )) return error("failed to add");
         }
       }
     } while(++cnt < n && src.next());
@@ -655,12 +708,14 @@ namespace janosh {
     src.fetch();
     dest.fetch();
     if(dest.exists() && dest.isRange())
-      error("Destination can't be a range", dest.path());
+      return error("Destination can't be a range", dest.path());
 
     if(src == dest)
       return 0;
 
-    assert(src.isValue() || dest.isDirectory());
+    if(!src.isValue() && !dest.isDirectory())
+      return error("invalid target");
+
 
     if((src.isRange() || src.isDirectory()) && !dest.exists()) {
       makeDirectory(dest, src.getType());
@@ -682,7 +737,7 @@ namespace janosh {
     srcParent.fetch();
 
     if(!srcParent.isArray() || srcParent != dest.parent()) {
-      error("Move is limited within one array", src.path().key() + "->" + dest.path().key());
+      return error("Move is limited within one array", src.path().key() + "->" + dest.path().key());
     }
 
     size_t parentSize = srcParent.getSize();
@@ -690,7 +745,7 @@ namespace janosh {
     size_t destIndex = dest.getIndex();
 
     if(srcIndex >= parentSize || destIndex >= parentSize) {
-      error("index out of bounds", src.path());
+      return error("index out of bounds", src.path());
     }
 
     bool back = srcIndex > destIndex;
@@ -831,7 +886,7 @@ void printUsage() {
   exit(1);
 }
 
-typedef map<const string, jh::Command*> CommandMap;
+typedef map<const std::string, jh::Command*> CommandMap;
 
 CommandMap makeCommandMap(jh::Janosh* janosh) {
   CommandMap cm;
@@ -868,114 +923,185 @@ std::vector<size_t> sequence() {
 
 
 kyotocabinet::TreeDB janosh::Record::db;
+
 using namespace janosh;
+#include <sstream>
+#include <boost/iostreams/stream.hpp>
 
 int main(int argc, char** argv) {
   using namespace std;
   int c;
+  bool daemon = false;
 
-  janosh::Format f = janosh::Bash;
-
-  bool verbose = false;
-  bool execTriggers = false;
-  bool execTargets = false;
-
-  string key;
-  string value;
-  string targetList;
-
-  while ((c = getopt(argc, argv, "vfjbrte:")) != -1) {
+  while ((c = getopt(argc, argv, "dvfjbrte:")) != -1) {
     switch (c) {
-    case 'f':
-      if(string(optarg) == "bash")
-        f=janosh::Bash;
-      else if(string(optarg) == "json")
-        f=janosh::Json;
-      else if(string(optarg) == "raw")
-        f=janosh::Raw;
-       else
-        printUsage();
+    case 'd':
+      daemon = true;
       break;
-    case 'j':
-      f=janosh::Json;
-      break;
-    case 'b':
-      f=janosh::Bash;
-      break;
-    case 'r':
-      f=janosh::Raw;
-      break;
-    case 'v':
-      verbose=true;
-      break;
-    case 't':
-      execTriggers = true;
-      break;
-    case 'e':
-      execTargets = true;
-      targetList = optarg;
-      break;
-    case ':':
-      printUsage();
-      break;
-    case '?':
-      printUsage();
+    default:
       break;
     }
   }
-  jh::Janosh janosh;
-  janosh.setFormat(f);
 
-  if(verbose)
-    Logger::init(LogLevel::L_DEBUG);
-  else
-    Logger::init(LogLevel::L_INFO);
+  if(daemon) {
+    jh::Janosh janosh;
+    janosh.open();
+    CommandMap cm = makeCommandMap(&janosh);
 
-  janosh.open();
-  CommandMap cm = makeCommandMap(&janosh);
+    for(;;) {
+        string l;
+        std::vector<std::string> args;
+        while(!std::getline(*janosh.in, l)) {
+          boost::this_thread::sleep(boost::posix_time::milliseconds(5));
+        }
+        args.push_back(l);
+        while(std::getline(*janosh.in, l) && l != "-d") {
+          std::cerr << "l:" << l << std::endl;
+          args.push_back(l);
+        }
 
-  if(argc - optind >= 1) {
-    string strCmd = string(argv[optind]);
-    jh::Command* cmd = cm[strCmd];
-    if(!cmd)
-      janosh.error("Unknown command", strCmd);
+        std::vector<char*> vc;
 
-    vector<string> vecParams;
-    for(size_t i = optind+1; i < argc; ++i) {
-      vecParams.push_back(argv[i]);
+      std::transform(args.begin(), args.end(), std::back_inserter(vc), [&](const std::string & s){
+        char *pc = new char[s.size()+1];
+        std::strcpy(pc, s.c_str());
+        return pc;
+      });
+
+      int c;
+      janosh::Format f = janosh::Bash;
+
+      bool verbose = false;
+      bool execTriggers = false;
+      bool execTargets = false;
+
+      string key;
+      string value;
+      string targetList;
+      char* const* c_args = (char* const*)&vc[0];
+      optind=1;
+      while ((c = getopt(args.size(), c_args, "dvfjbrte:")) != -1) {
+        switch (c) {
+        case 'd':
+          break;
+        case 'f':
+          if(string(optarg) == "bash")
+            f=janosh::Bash;
+          else if(string(optarg) == "json")
+            f=janosh::Json;
+          else if(string(optarg) == "raw")
+            f=janosh::Raw;
+           else
+            printUsage();
+          break;
+        case 'j':
+          f=janosh::Json;
+          break;
+        case 'b':
+          f=janosh::Bash;
+          break;
+        case 'r':
+          f=janosh::Raw;
+          break;
+        case 'v':
+          verbose=true;
+          break;
+        case 't':
+          execTriggers = true;
+          break;
+        case 'e':
+          execTargets = true;
+          targetList = optarg;
+          break;
+        case ':':
+          printUsage();
+          break;
+        case '?':
+          printUsage();
+          break;
+        }
+      }
+
+      janosh.setFormat(f);
+
+      if(verbose)
+        Logger::init(LogLevel::L_DEBUG);
+      else
+        Logger::init(LogLevel::L_INFO);
+
+
+      if(args.size() - optind >= 1) {
+        string strCmd = string(args[optind].c_str());
+        jh::Command* cmd = cm[strCmd];
+        if(!cmd)
+          return janosh.error("Unknown command", strCmd);
+
+        vector<std::string> vecArgs;
+
+        std::transform(
+            args.begin() + optind + 1, args.end(),
+            std::back_inserter(vecArgs),
+            boost::bind(&std::string::c_str, _1)
+            );
+
+        jh::Command::Result r = (*cmd)(vecArgs);
+        LOG_INFO_MSG(r.second, r.first);
+
+//        janosh.close();
+        if(strCmd == "set" && execTriggers) {
+          vector<string> vecTriggers;
+
+          for(size_t i = 0; i < args.size(); i+=2) {
+            vecTriggers.push_back(args[i].c_str());
+          }
+          (*cm["triggers"])(vecTriggers);
+        }
+
+        *(janosh.out) << "{?endofjanosh?}" << std::endl;
+        *(janosh.out) << r.first << std::endl;
+        //return r.first ? 0 : 1;
+        continue;
+      } else if(!execTargets){
+        *(janosh.out) << "{?endofjanosh?}" << std::endl;
+        printUsage();
+      }
+
+      if(execTargets) {
+         vector<string> vecTargets;
+         tokenizer<char_separator<char> > tok(targetList, char_separator<char>(","));
+
+         BOOST_FOREACH (const string& t, tok) {
+           vecTargets.push_back(t);
+         }
+
+         (*cm["targets"])(vecTargets);
+         *(janosh.out) << "{?endofjanosh?}" << std::endl;
+      }
+
+
     }
-
-    jh::Command::Result r = (*cmd)(vecParams);
-    LOG_INFO_MSG(r.second, r.first);
 
     janosh.close();
-    if(strCmd == "set" && execTriggers) {
-      vector<string> vecTriggers;
+  } else {
+    shared_ringbuf shm_ringbuf_in(boost::interprocess::open_only, "JanoshIPC_out", boost::interprocess::read_write);
+    shared_ringbuf shm_ringbuf_out(boost::interprocess::open_only, "JanoshIPC_in", boost::interprocess::read_write);
+    shared_ringbuf::istream in(&shm_ringbuf_in);
+    shared_ringbuf::ostream out(&shm_ringbuf_out);
 
-      for(size_t i = optind+1; i < argc; i+=2) {
-        vecTriggers.push_back(argv[i]);
-      }
-      (*cm["triggers"])(vecTriggers);
+    for(int i = 0; i < argc; i++) {
+      out << argv[i] << std::endl;
     }
+    //use -d to terminate list of arguments since a client should never pass -d
+    out << "-d" << endl;
+    out.flush();
 
-    return r.first ? 0 : 1;
-  } else if(!execTargets){
-    printUsage();
+    string l;
+    while(std::getline(in, l) && l != "{?endofjanosh?}") {
+      std::cout << l << endl;
+    }
+    std::getline(in, l);
+    return boost::lexical_cast<size_t>(l) ? 0 : 1;
   }
-
-  janosh.close();
-
-  if(execTargets) {
-     vector<string> vecTargets;
-     tokenizer<char_separator<char> > tok(targetList, char_separator<char>(","));
-
-     BOOST_FOREACH (const string& t, tok) {
-       vecTargets.push_back(t);
-     }
-
-     (*cm["targets"])(vecTargets);
-   }
-
 
   return 0;
 }

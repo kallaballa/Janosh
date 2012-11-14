@@ -16,6 +16,7 @@
 #include "record.hpp"
 #include "json.hpp"
 #include "bash.hpp"
+#include "ipc.hpp"
 
 namespace janosh {
   namespace kc = kyotocabinet;
@@ -77,53 +78,31 @@ public:
     bool find(const js::Object& obj, const string& name, js::Value& value);
   };
 
-  class RawPrintVisitor {
-    std::ostream& out;
-
-  public:
-    RawPrintVisitor(std::ostream& out) :
-        out(out){
-    }
-
-    void beginArray(const Path& p, bool first) {
-    }
-
-    void endArray(const Path& p) {
-    }
-
-    void beginObject(const Path& p, bool first) {
-    }
-
-    void endObject(const Path& p) {
-    }
-
-    void begin() {
-    }
-
-    void close() {
-    }
-
-    void record(const Path& p, const string& value, bool array, bool first) {
-        string stripped = value;
-        replace(stripped.begin(), stripped.end(), '\n', ' ');
-        out << stripped << endl;
-    }
-  };
-
   class Janosh {
   public:
     Settings settings;
     TriggerBase triggers;
     Format format;
+
+    shared_ringbuf* shm_ringbuf_in;
+    shared_ringbuf* shm_ringbuf_out;
+    shared_ringbuf::istream* in;
+    shared_ringbuf::ostream* out;
+
     Janosh();
+    ~Janosh();
 
     void setFormat(Format f) ;
     Format getFormat();
 
-    template<typename T> void error(const string& msg, T t, int exitcode=1) {
+    size_t error(const char* msg) {
+      LOG_ERR_STR(msg);
+      return 0;
+    }
+
+    template<typename T> size_t error(const char* msg, T t) {
       LOG_ERR_MSG(msg, t);
-      close();
-      exit(exitcode);
+      return 0;
     }
 
     void open();
@@ -134,7 +113,7 @@ public:
     size_t makeArray(Record target, size_t size = 0, bool boundsCheck=true);
     size_t makeObject(Record target, size_t size = 0);
     size_t makeDirectory(Record target, Value::Type type, size_t size = 0);
-    size_t print(Record target, std::ostream& out);
+    size_t get(Record target, std::ostream& out);
     size_t size(Record target);
     size_t remove(Record& target, bool pack=true);
 
@@ -236,6 +215,40 @@ public:
        vis.close();
        return cnt;
      }
+  };
+
+  class RawPrintVisitor {
+    std::function<void(const string&)> f;
+    std::ostream& out;
+
+  public:
+    RawPrintVisitor(std::ostream& out) :
+        out(out) {
+    }
+
+    void beginArray(const Path& p, bool first) {
+    }
+
+    void endArray(const Path& p) {
+    }
+
+    void beginObject(const Path& p, bool first) {
+    }
+
+    void endObject(const Path& p) {
+    }
+
+    void begin() {
+    }
+
+    void close() {
+    }
+
+    void record(const Path& p, const string& value, bool array, bool first) {
+      string stripped = value;
+      replace(stripped.begin(), stripped.end(), '\n', ' ');
+      out << stripped << endl;
+    }
   };
 }
 #endif

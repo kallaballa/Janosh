@@ -1,130 +1,160 @@
 #ifndef IPC_HPP_
 #define IPC_HPP_
 
+#include <cstring>
+#include <functional>
+#include <string>
 #include <boost/interprocess/sync/interprocess_semaphore.hpp>
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
-#include <boost/function_output_iterator.hpp>
-#include <boost/generator_iterator.hpp>
-#include <boost/foreach.hpp>
-#include <functional>
-#include <iostream>
-#include <sstream>
 #include <boost/interprocess/containers/string.hpp>
-#include <boost/bind.hpp>
-#include <boost/lexical_cast.hpp>
+#include <boost/iostreams/stream.hpp>
 
-using std::ostringstream;
-using std::istringstream;
 using boost::interprocess::shared_memory_object;
 using boost::interprocess::interprocess_semaphore;
 using boost::interprocess::mapped_region;
-using boost::interprocess::create_only;
-using boost::interprocess::open_only;
-using boost::interprocess::read_write;
-class shared_ring_buffer {
-private:
-  static const size_t _size = 4096;
+using boost::interprocess::create_only_t;
+using boost::interprocess::open_only_t;
+
+template <std::streamsize T_size, typename T_char_type, typename T_traits = std::char_traits<T_char_type> >
+struct basic_ringbuf {
+  typedef typename T_traits::int_type int_type;
 
   //Semaphores to protect and synchronize access
   boost::interprocess::interprocess_semaphore
-     _mutex, _nempty, _nstored;
+     mutex_, nempty_, nstored_;
 
-  size_t rear = 0, front = 0;
-  char _buffer[_size];
-public:
+  std::streamsize rear_ = 0, front_ = 0;
+  T_char_type buffer_[T_size];
 
-  typedef boost::interprocess::string string;
+  basic_ringbuf() :
+    mutex_(1),
+    nempty_(T_size),
+    nstored_(0)
+  {}
 
-  typedef boost::generator_iterator_generator<std::function<string()> >::type InputIterator;
-  typedef boost::function_output_iterator<std::function<void(const string&)> > OutputIterator;
+  bool putc(const T_char_type & c) {
+    if(this->nempty_.try_wait()) {
+      this->mutex_.wait();
 
-  shared_ring_buffer() :
-        _mutex(1),
-        _nempty(_size),
-        _nstored(0) {
-   }
+      this->buffer_[++this->front_ % T_size ] = c;
 
-   ~shared_ring_buffer() {
-   }
+      this->mutex_.post();
+      this->nstored_.post();
+      return true;
+    }
+    return false;
+  }
 
-  void writeln(const string& str) {
-
-    size_t n = 0;
-
-    if(str.empty()) {
-      this->_nempty.wait();
-      this->_mutex.wait();
-
-      this->_buffer[++front % shared_ring_buffer::_size] = 0;
-
-      this->_mutex.post();
-      this->_nstored.post();
+  const int_type getc() {
+    if(this->nstored_.try_wait()) {
+      this->mutex_.wait();
+      const T_char_type & c = this->buffer_[++this->rear_ % T_size];
+      this->mutex_.post();
+      this->nempty_.post();
+      return T_traits::to_int_type(c);
     }
 
-    while(n < str.size()) {
-       for(; n < shared_ring_buffer::_size && n < str.size(); ++n){
-         this->_nempty.wait();
-         this->_mutex.wait();
-
-         this->_buffer[(++front % shared_ring_buffer::_size)] = str.at(n);
-         std::cerr << front % shared_ring_buffer::_size << ":" << this->_buffer[front % shared_ring_buffer::_size] << std::endl;
-
-         this->_mutex.post();
-         this->_nstored.post();
-       }
-
-       if(n == str.size()) {
-         this->_nempty.wait();
-         this->_mutex.wait();
-
-         this->_buffer[++front % shared_ring_buffer::_size] = 0;
-
-         this->_mutex.post();
-         this->_nstored.post();
-
-       }
-     }
+    return T_traits::eof();
   }
 
-  OutputIterator getOutputIterator() {
-    std::function<void (const string&)> f = boost::bind( &shared_ring_buffer::writeln, this, _1 );
-
-    return boost::make_function_output_iterator(f);
-  }
-
-  string readln() {
-    //Extract the data
-    string str;
-    for(;;) {
-      for(size_t i = 0; i < shared_ring_buffer::_size; ++i){
-        this->_nstored.wait();
-        this->_mutex.wait();
-
-        const char c = this->_buffer[++rear % shared_ring_buffer::_size];
-         std::cerr << rear % shared_ring_buffer::_size << ":" << this->_buffer[rear % shared_ring_buffer::_size] << std::endl;
-
-         if(c == '\0') {
-           this->_mutex.post();
-           this->_nempty.post();
-           return str;
-         }
-         else
-           str += c;
-
-         this->_mutex.post();
-         this->_nempty.post();
-      }
-    }
-
-    return str;
-  }
-
-  InputIterator getInputIterator()
-  {
-    std::function<string()> f = boost::bind(&shared_ring_buffer::readln, this);
-    return boost::make_generator_iterator(f);
+  const int_type getc_block() {
+    this->nstored_.wait();
+    this->mutex_.wait();
+    const T_char_type & c = this->buffer_[++this->rear_ % T_size];
+    this->mutex_.post();
+    this->nempty_.post();
+    return T_traits::to_int_type(c);
   }
 };
 
+template <std::streamsize T_size, typename T_char_type, typename T_traits = std::char_traits<T_char_type> >
+class basic_shared_ringbuf {
+
+private:
+  typedef basic_shared_ringbuf<T_size, T_char_type, T_traits> type;
+  typedef basic_ringbuf<T_size, T_char_type, T_traits> t_ringbuf;
+
+  const std::string name;
+  t_ringbuf* rbuf;
+public:
+  typedef T_traits t_traits;
+
+  struct Sink {
+    typedef T_char_type  char_type;
+    typedef boost::iostreams::sink_tag  category;
+
+    type* t;
+    Sink(type* t): t(t)
+    {}
+
+    std::streamsize write(const T_char_type* s, std::streamsize n) {
+      for(int i = 0; i < n; i++) {
+        if(!t->rbuf->putc(*s))
+          return i;
+          ++s;
+        }
+        return n;
+      }
+  };
+
+  struct Source {
+      typedef T_char_type char_type;
+      typedef boost::iostreams::source_tag  category;
+      type* t;
+      Source(type* t): t(t)
+      {}
+
+      std::streamsize read(char* s, std::streamsize n) {
+        int_type d;
+        for(int i = 0; i < n; i++) {
+          if((d = t->rbuf->getc()) == T_traits::eof()) {
+            if(i == 0)
+              d = t->rbuf->getc_block();
+            else
+              return i;
+          }
+
+          *s = T_traits::to_char_type(d);
+          ++s;
+        }
+        return n;
+      }
+  };
+
+  typedef boost::interprocess::string string;
+  typedef typename T_traits::int_type int_type;
+  typedef boost::iostreams::stream<Sink> ostream;
+  typedef boost::iostreams::stream<Source> istream;
+
+  shared_memory_object shm;
+  mapped_region region;
+
+  basic_shared_ringbuf(create_only_t c, const char* name, boost::interprocess::mode_t m) :
+      name(name) {
+    shared_memory_object::remove(name);
+    shm = shared_memory_object(c, name, m);
+    shm.truncate(sizeof(t_ringbuf));
+    //Map the whole shared memory in this process
+    region = mapped_region(shm, m);
+
+    this->rbuf = new (region.get_address()) t_ringbuf;
+  }
+
+  basic_shared_ringbuf(boost::interprocess::open_only_t c, const char* name, boost::interprocess::mode_t m) :
+      name(name) {
+    shm = shared_memory_object(c, name, m);
+    shm.truncate(sizeof(t_ringbuf));
+    //Map the whole shared memory in this process
+    region = mapped_region(shm, m);
+
+    this->rbuf = static_cast<t_ringbuf*>(region.get_address());
+  }
+
+  virtual ~basic_shared_ringbuf() {
+  }
+};
+
+//typedef basic_shared_ringbuf<4096, char> ringbuf;
+typedef basic_shared_ringbuf<4096, char> shared_ringbuf;
 #endif /* IPC_HPP_ */
