@@ -110,9 +110,9 @@ function test_copy() {
   janosh copy /object/array/. /target/array/. || return 1
   janosh copy /object/array/. /target/.       && return 1  
   janosh copy /object/. /object/array/.       && return 1
-  janosh copy /target/. /object/array/.       || return 1
+  janosh copy /target/. /object/array/.       && return 1
   [ `janosh size /target/array/.` -eq 4 ] 	  || return 1
-  [ `janosh size /object/array/.` -eq 5 ]     || return 1
+  [ `janosh size /object/array/.` -eq 4 ]     || return 1
   [ `janosh -r get /target/array/#0` -eq 0 ]  || return 1
   [ `janosh -r get /object/array/#0` -eq 0 ]  || return 1
 }
