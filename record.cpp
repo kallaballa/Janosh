@@ -57,7 +57,6 @@ namespace janosh {
 
   const Value::Type Record::getType()  const {
     if(this->path().isDirectory()) {
-      assert(this->hasData());
       return value().getType();
     } else if(this->path().isWildcard()) {
       return Value::Range;

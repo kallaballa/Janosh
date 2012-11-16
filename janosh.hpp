@@ -19,6 +19,7 @@
 #include "ipc.hpp"
 
 namespace janosh {
+
   namespace kc = kyotocabinet;
   namespace js = json_spirit;
   namespace fs = boost::filesystem;
@@ -94,16 +95,6 @@ public:
 
     void setFormat(Format f) ;
     Format getFormat();
-
-    size_t error(const char* msg) {
-      LOG_ERR_STR(msg);
-      return 0;
-    }
-
-    template<typename T> size_t error(const char* msg, T t) {
-      LOG_ERR_MSG(msg, t);
-      return 0;
-    }
 
     void open();
     void close();

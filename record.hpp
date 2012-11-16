@@ -397,9 +397,6 @@ public:
     }
 
     const Type getType()  const {
-      assert(isInitialized());
-      assert(!isEmpty());
-
       return this->type;
     }
 
