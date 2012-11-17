@@ -25,15 +25,12 @@
 #include <boost/foreach.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string/predicate.hpp>
-
 #include <kcpolydb.h>
 
-#include "Logger.hpp"
-
-#include "request.hpp"
+#include "logger.hpp"
+#include "channel.hpp"
 #include "record.hpp"
 #include "ipc.hpp"
-#include "request.hpp"
 #include "json_spirit.h"
 #include "json.hpp"
 #include "bash.hpp"

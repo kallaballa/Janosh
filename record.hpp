@@ -1,6 +1,7 @@
-#ifndef _JANOSH_RECORD_HPP
-#define _JANOSH_RECORD_HPP
+#ifndef _JANOSH_DBPATH_HPP
+#define _JANOSH_DBPATH_HPP
 
+#include <stack>
 #include <sstream>
 #include <iostream>
 #include <boost/lexical_cast.hpp>
@@ -10,7 +11,7 @@
 #include <boost/smart_ptr.hpp>
 #include <kcpolydb.h>
 #include "Logger.hpp"
-#include "value.hpp"
+#include <bitset>
 
 namespace janosh {
   namespace kc = kyotocabinet;
@@ -148,7 +149,7 @@ public:
 
       if(p.at(0) != '/') {
         LOG_ERR_MSG("Illegal Path", p);
-        return;
+        exit(1);
       }
 
       char_separator<char> ssep("[/", "", boost::keep_empty_tokens);
@@ -162,7 +163,7 @@ public:
           const string& c = *it;
           if(c.empty()) {
             LOG_ERR_MSG("Illegal Path", p);
-            return;
+            exit(1);
           }
           this->components.push_back(Component(c));
         }
@@ -400,6 +401,9 @@ public:
     }
 
     const size_t getSize() const {
+      assert(isInitialized());
+      assert(!isEmpty());
+
       return this->size;
     }
 
@@ -444,6 +448,7 @@ public:
     Record(const Path& path);
     Record();
 
+
     kc::DB::Cursor* getCursorPtr();
     const Value::Type getType()  const;
     const size_t getSize() const;
@@ -458,6 +463,7 @@ public:
     bool jump_back(const Path& p);
     bool step();
     bool step_back();
+    bool next();
     bool previous();
     bool remove();
 
@@ -469,7 +475,7 @@ public:
     const bool isAncestorOf(const Record& other) const;
     const bool isArray() const;
     const bool isDirectory() const;
-    const bool isWildcard() const;
+    const bool isRange() const;
     const bool isValue() const;
     const bool isObject() const;
     const bool isInitialized() const;
@@ -487,41 +493,10 @@ public:
     bool operator!=(const Record& other) const;
   };
 
-  static Value readValue(Record& rec) {
-    string v;
-
-    const Path& p = rec.path();
-
-    if(p.isWildcard()) {
-      Record wild = p.asDirectory();
-      if(!wild.getCursorPtr()->get_value(&v))
-        return Value();
-      size_t s = boost::lexical_cast<size_t>(v.substr(1));
-
-      return Wildcard(&wild, v, s);
-    } else {
-      if(rec.getCursorPtr()->get_value(&v))
-        return Value();
-
-      if(p.isDirectory()) {
-        char c = v.at(0);
-        size_t s = boost::lexical_cast<size_t>(v.substr(1));
-
-        if(c == 'A') {
-          return Array(&rec, v, s);
-        } else if(c == 'O') {
-          return Object(&rec, v, s);
-        } else {
-          assert(!"Unknown directory descriptor");
-          return Value();
-        }
-      } else {
-        return String(&rec, v);
-      }
-    }
-  }
-
-
+  std::ostream& operator<< (std::ostream& os, const janosh::Path& p);
+  std::ostream& operator<< (std::ostream& os, const janosh::Value& v);
 }
+
+
 
 #endif

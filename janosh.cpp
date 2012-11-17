@@ -1,7 +1,7 @@
 
 
 #include "janosh.hpp"
-#include "Commands.hpp"
+#include "commands.hpp"
 
 using std::string;
 using std::map;

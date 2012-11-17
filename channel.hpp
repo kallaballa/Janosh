@@ -6,11 +6,11 @@
 #include <stddef.h>
 #include <string>
 #include <iostream>
-#include "Logger.hpp"
-#include "ipc.hpp"
 #include <boost/iostreams/device/back_inserter.hpp>
+#include "logger.hpp"
+#include "ipc.hpp"
 
-    using std::string;
+using std::string;
 namespace janosh {
   class Channel {
   private:
