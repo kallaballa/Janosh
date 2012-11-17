@@ -59,19 +59,17 @@ namespace janosh {
     if(this->path().isDirectory()) {
       return value().getType();
     } else if(this->path().isWildcard()) {
-      return Value::Range;
+      return Value::Wildcard;
     } else {
       return Value::String;
     }
   }
 
   const size_t Record::getSize() const {
-    assert(hasData());
     return value().getSize();
   }
 
   const size_t Record::getIndex() const {
-    assert(isInitialized());
     return path().parseIndex();
   }
 
@@ -127,24 +125,6 @@ namespace janosh {
     return r;
   }
 
-  bool Record::next() {
-    assert(isInitialized());
-    bool success;
-
-    if(this->isDirectory()) {
-      size_t s = this->getSize();
-      success = this->step();
-
-      for(size_t i = 0; success && i < s; ++i) {
-        success &= this->step();
-      }
-    } else {
-      success = this->step();
-    }
-
-    return success;
-  }
-
   bool Record::previous() {
     assert(isInitialized());
     Record parent = this->parent();
@@ -171,7 +151,7 @@ namespace janosh {
 
   void Record::clear() {
     this->pathObj.reset();
-    this->valueObj.reset();
+    this->valueObj = Value();
   }
 
   Record Record::parent() const {
@@ -179,15 +159,15 @@ namespace janosh {
   }
 
   const bool Record::isArray() const {
-    return this->isDirectory() && this->getType() == Value::Array;
+    return this->getType() == Value::Array;
   }
 
   const bool Record::isDirectory() const {
     return this->path().isDirectory();
   }
 
-  const bool Record::isRange() const {
-    return this->getType() == Value::Range;
+  const bool Record::isWildcard() const {
+    return this->getType() == Value::Wildcard;
   }
 
   const bool Record::isValue() const {
@@ -200,10 +180,6 @@ namespace janosh {
 
   const bool Record::isInitialized() const {
     return (*this) != NULL;
-  }
-
-  const bool Record::hasData() const {
-    return valueObj.isInitialized();
   }
 
   const bool Record::exists() const {
@@ -223,23 +199,6 @@ namespace janosh {
     return this->valueObj;
   }
 
-  bool Record::readValue() {
-    assert(isInitialized());
-    assert(!empty());
-    string v;
-    bool s = getCursorPtr()->get_value(&v);
-
-    if(path().isDirectory()) {
-      valueObj = Value(v, true);
-    } else if(path().isWildcard()) {
-      valueObj = Value(v, Value::Range);
-    } else {
-      valueObj = Value(v, false);
-    }
-
-    return s;
-  }
-
   bool Record::readPath() {
     assert(isInitialized());
     string k;
@@ -248,15 +207,50 @@ namespace janosh {
     return s;
   }
 
+  bool Record::readValue() {
+    string v;
+    assert(isInitialized());
+    const Path& p = this->path();
+
+    if(p.isWildcard()) {
+      Record wild = p.asDirectory();
+      if(!wild.getCursorPtr()->get_value(&v)) {
+        this->valueObj = Value();
+      } else {
+        size_t s = boost::lexical_cast<size_t>(v.substr(1));
+        this->valueObj = Wildcard(&wild, v, s);
+      }
+    } else {
+      if(this->getCursorPtr()->get_value(&v)) {
+        this->valueObj = Value();
+      }
+      if(p.isDirectory()) {
+        char c = v.at(0);
+        size_t s = boost::lexical_cast<size_t>(v.substr(1));
+
+        if(c == 'A') {
+          this->valueObj = Array(this, v, s);
+        } else if(c == 'O') {
+          this->valueObj = Object(this, v, s);
+        } else {
+          assert(!"Unknown directory descriptor");
+          this->valueObj = Value();
+        }
+      } else {
+        this->valueObj = String(this, v);
+      }
+    }
+
+    return this->valueObj.getType() != Value::Empty;
+  }
+
   bool Record::read() {
     return readPath() && readValue();
   }
 
   Record& Record::fetch() {
     assert(isInitialized());
-    if(!hasData()) {
-      init(this->path());
-    }
+    init(this->path());
     return *this;
   }
 
@@ -272,10 +266,4 @@ namespace janosh {
       os << p.key();
       return os;
   }
-
-  std::ostream& operator<< (std::ostream& os, const janosh::Value& v) {
-      os << v.str();
-      return os;
-  }
 }
-

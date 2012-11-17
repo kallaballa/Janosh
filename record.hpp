@@ -1,7 +1,6 @@
-#ifndef _JANOSH_DBPATH_HPP
-#define _JANOSH_DBPATH_HPP
+#ifndef _JANOSH_RECORD_HPP
+#define _JANOSH_RECORD_HPP
 
-#include <stack>
 #include <sstream>
 #include <iostream>
 #include <boost/lexical_cast.hpp>
@@ -11,7 +10,7 @@
 #include <boost/smart_ptr.hpp>
 #include <kcpolydb.h>
 #include "Logger.hpp"
-#include <bitset>
+#include "value.hpp"
 
 namespace janosh {
   namespace kc = kyotocabinet;
@@ -445,7 +444,6 @@ public:
     Record(const Path& path);
     Record();
 
-
     kc::DB::Cursor* getCursorPtr();
     const Value::Type getType()  const;
     const size_t getSize() const;
@@ -460,7 +458,6 @@ public:
     bool jump_back(const Path& p);
     bool step();
     bool step_back();
-    bool next();
     bool previous();
     bool remove();
 
@@ -472,7 +469,7 @@ public:
     const bool isAncestorOf(const Record& other) const;
     const bool isArray() const;
     const bool isDirectory() const;
-    const bool isRange() const;
+    const bool isWildcard() const;
     const bool isValue() const;
     const bool isObject() const;
     const bool isInitialized() const;
@@ -490,10 +487,41 @@ public:
     bool operator!=(const Record& other) const;
   };
 
-  std::ostream& operator<< (std::ostream& os, const janosh::Path& p);
-  std::ostream& operator<< (std::ostream& os, const janosh::Value& v);
+  static Value readValue(Record& rec) {
+    string v;
+
+    const Path& p = rec.path();
+
+    if(p.isWildcard()) {
+      Record wild = p.asDirectory();
+      if(!wild.getCursorPtr()->get_value(&v))
+        return Value();
+      size_t s = boost::lexical_cast<size_t>(v.substr(1));
+
+      return Wildcard(&wild, v, s);
+    } else {
+      if(rec.getCursorPtr()->get_value(&v))
+        return Value();
+
+      if(p.isDirectory()) {
+        char c = v.at(0);
+        size_t s = boost::lexical_cast<size_t>(v.substr(1));
+
+        if(c == 'A') {
+          return Array(&rec, v, s);
+        } else if(c == 'O') {
+          return Object(&rec, v, s);
+        } else {
+          assert(!"Unknown directory descriptor");
+          return Value();
+        }
+      } else {
+        return String(&rec, v);
+      }
+    }
+  }
+
+
 }
-
-
 
 #endif
