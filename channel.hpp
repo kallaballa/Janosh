@@ -37,8 +37,8 @@ namespace janosh {
         this->out_ = new shared_ringbuf::ostream(shm_rbuf_out_);
       } else {
         //swap in and out channel
-        this->shm_rbuf_in_ = new shared_ringbuf(boost::interprocess::open_only, nameOut.c_str(), boost::interprocess::read_write);
         this->shm_rbuf_out_ = new shared_ringbuf(boost::interprocess::open_only, nameIn.c_str(), boost::interprocess::read_write);
+        this->shm_rbuf_in_ = new shared_ringbuf(boost::interprocess::open_only, nameOut.c_str(), boost::interprocess::read_write);
         this->in_ = new shared_ringbuf::istream(shm_rbuf_in_);
         this->out_ = new shared_ringbuf::ostream(shm_rbuf_out_);
       }

@@ -9,6 +9,7 @@
 #include <boost/interprocess/mapped_region.hpp>
 #include <boost/interprocess/containers/string.hpp>
 #include <boost/iostreams/stream.hpp>
+#include <boost/thread.hpp>
 
 using boost::interprocess::shared_memory_object;
 using boost::interprocess::interprocess_semaphore;
@@ -19,16 +20,15 @@ using boost::interprocess::open_only_t;
 template <std::streamsize T_size, typename T_char_type, typename T_traits = std::char_traits<T_char_type> >
 struct basic_ringbuf {
   typedef typename T_traits::int_type int_type;
+  typedef boost::interprocess::interprocess_semaphore ipc_semaphore;
 
   //Semaphores to protect and synchronize access
-  boost::interprocess::interprocess_semaphore
-  lock_, mutex_, nempty_, nstored_;
+  ipc_semaphore mutex_, nempty_, nstored_;
 
   std::streamsize rear_ = 0, front_ = 0;
   T_char_type buffer_[T_size];
 
   basic_ringbuf() :
-    lock_(1),
     mutex_(1),
     nempty_(T_size),
     nstored_(0)
@@ -73,6 +73,7 @@ template <std::streamsize T_size, typename T_char_type, typename T_traits = std:
 class basic_shared_ringbuf {
 
 private:
+  typedef boost::interprocess::interprocess_semaphore ipc_semaphore;
   typedef basic_shared_ringbuf<T_size, T_char_type, T_traits> type;
   typedef basic_ringbuf<T_size, T_char_type, T_traits> t_ringbuf;
 
@@ -130,34 +131,87 @@ public:
 
   shared_memory_object shm;
   mapped_region region;
+  ipc_semaphore*  mutex_;
+
+  enum sync_state {
+    FIN,
+    ACK,
+    SIN
+  };
+
+/*
+  syn >> 1
+mutex >> 2
+         1 >> syn
+         1 << ack
+               reread
+  ack << 1 >> ack
+         1 >> fin
+               reread
+  fin >> 1
+         1 >> fin
+         2 >> mutex
+*/
 
   basic_shared_ringbuf(create_only_t c, const char* name, boost::interprocess::mode_t m) :
       name(name) {
     shared_memory_object::remove(name);
     shm = shared_memory_object(c, name, m);
-    shm.truncate(sizeof(t_ringbuf));
+    shm.truncate(sizeof(sync_state) + sizeof(ipc_semaphore) + sizeof(t_ringbuf));
     //Map the whole shared memory in this process
     region = mapped_region(shm, m);
 
-    this->rbuf = new (region.get_address()) t_ringbuf;
+    sync_state* s = new (region.get_address()) sync_state;
+    sync_state r;
+  //  this->mutex_ = new ( ((char*)region.get_address()) + sizeof(sync_state)) ipc_semaphore(1);
+    *s = SIN;
+    std::cerr << "server init" << std::endl;
+    while((r = *s) != ACK) {
+      std::cerr << "server wait ack: " << r << std::endl;
+      boost::this_thread::sleep(boost::posix_time::milliseconds(1));
+    }
+    *s = FIN;
+    std::cerr << "server fin" << std::endl;
+
+    this->rbuf = new (((char*)region.get_address()) + sizeof(sync_state) + sizeof(ipc_semaphore)) t_ringbuf;
   }
 
   basic_shared_ringbuf(boost::interprocess::open_only_t c, const char* name, boost::interprocess::mode_t m) :
-      name(name) {
+      name(name),
+      mutex_(NULL){
     shm = shared_memory_object(c, name, m);
-    shm.truncate(sizeof(t_ringbuf));
+    shm.truncate(sizeof(sync_state) + sizeof(ipc_semaphore) + sizeof(t_ringbuf));
     //Map the whole shared memory in this process
     region = mapped_region(shm, m);
 
-    this->rbuf = static_cast<t_ringbuf*>(region.get_address());
-    this->rbuf->lock_.wait();
+    sync_state* s = static_cast<sync_state*> (region.get_address());
+    sync_state r;
+    std::cerr << "client init" << std::endl;
+    while((r = *s) != SIN) {
+      std::cerr << "client wait sin:" << r << std::endl;
+      boost::this_thread::sleep(boost::posix_time::milliseconds(1));
+    }
+
+    std::cerr << "set ack: " << r << std::endl;
+    *s = ACK;
+
+    while((r = *s) != FIN || r == ACK) {
+      std::cerr << "wait fin: " << r << std::endl;
+      boost::this_thread::sleep(boost::posix_time::milliseconds(1));
+    }
+
+    assert(r != SIN);
+
+    ipc_semaphore* sema = static_cast<ipc_semaphore*> ((void*)((char*)region.get_address() + sizeof(sync_state)));
+    sema->wait();
+    this->rbuf = static_cast<t_ringbuf*>((void*)((char*)region.get_address() + sizeof(sync_state) + sizeof(ipc_semaphore)));
   }
 
   virtual ~basic_shared_ringbuf() {
-    this->rbuf->lock_.post();
+    if(this->mutex_)
+      this->mutex_->post();
   }
 };
 
-//typedef basic_shared_ringbuf<4096, char> ringbuf;
 typedef basic_shared_ringbuf<4096, char> shared_ringbuf;
 #endif /* IPC_HPP_ */

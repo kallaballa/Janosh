@@ -10,7 +10,7 @@
 #include <boost/tokenizer.hpp>
 #include <boost/smart_ptr.hpp>
 #include <kcpolydb.h>
-#include "Logger.hpp"
+#include "logger.hpp"
 #include <bitset>
 
 namespace janosh {
