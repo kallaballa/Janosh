@@ -1,20 +1,7 @@
-#include "Commands.hpp"
-#include <map>
-#include <vector>
-#include <initializer_list>
-#include <boost/range.hpp>
-#include <boost/tokenizer.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/functional/hash.hpp>
-#include <boost/function.hpp>
-#include <boost/interprocess/creation_tags.hpp>
-#include <functional>
-#include <algorithm>
-#include <boost/bind.hpp>
-#include <boost/thread.hpp>
 
-#include <string>
-#include <fstream>
+
+#include "janosh.hpp"
+#include "Commands.hpp"
 
 using std::string;
 using std::map;
@@ -22,7 +9,6 @@ using std::vector;
 using boost::make_iterator_range;
 using boost::tokenizer;
 using boost::char_separator;
-namespace jh = janosh;
 
 namespace janosh {
   namespace kc = kyotocabinet;
@@ -190,13 +176,10 @@ namespace janosh {
 
   Janosh::Janosh() :
     settings(),
-    triggers(settings.triggerFile, settings.triggerDirs) {
-    this->shm_ringbuf_in = new shared_ringbuf(boost::interprocess::create_only, "JanoshIPC_in", boost::interprocess::read_write);
-    this->shm_ringbuf_out = new shared_ringbuf(boost::interprocess::create_only, "JanoshIPC_out", boost::interprocess::read_write);
-    this->in = new shared_ringbuf::istream(shm_ringbuf_in);
-    this->out = new shared_ringbuf::ostream(shm_ringbuf_out);
+    triggers(settings.triggerFile, settings.triggerDirs),
+    channel_(true),
+    cm(makeCommandMap(this)) {
   }
-
 
   Janosh::~Janosh() {
   }
@@ -215,6 +198,144 @@ namespace janosh {
       LOG_ERR_MSG("open error", Record::db.error().name());
       exit(2);
     }
+  }
+
+  bool Janosh::processRequest() {
+    bool success = true;
+    vector<string> args;
+    channel_.receive(args);
+
+    std::vector<char*> vc;
+
+    std::transform(args.begin(), args.end(), std::back_inserter(vc), [&](const std::string & s){
+      char *pc = new char[s.size()+1];
+      std::strcpy(pc, s.c_str());
+      return pc;
+    });
+
+    int c;
+    janosh::Format f = janosh::Bash;
+
+    bool verbose = false;
+    bool execTriggers = false;
+    bool execTargets = false;
+
+    string key;
+    string value;
+    string targetList;
+    char* const* c_args = (char* const*)&vc[0];
+    optind=1;
+    while ((c = getopt(args.size(), c_args, "dvfjbrte:")) != -1) {
+      switch (c) {
+      case 'd':
+        break;
+      case 'f':
+        if(string(optarg) == "bash")
+          f=janosh::Bash;
+        else if(string(optarg) == "json")
+          f=janosh::Json;
+        else if(string(optarg) == "raw")
+          f=janosh::Raw;
+         else
+           LOG_ERR_MSG("Illegal format:", string(optarg));
+           channel_.send(false);
+           return false;
+        break;
+      case 'j':
+        f=janosh::Json;
+        break;
+      case 'b':
+        f=janosh::Bash;
+        break;
+      case 'r':
+        f=janosh::Raw;
+        break;
+      case 'v':
+        verbose=true;
+        break;
+      case 't':
+        execTriggers = true;
+        break;
+      case 'e':
+        execTargets = true;
+        targetList = optarg;
+        break;
+      case ':':
+        LOG_ERR_MSG("Illegal option:", c);
+        channel_.send(false);
+        return false;
+        break;
+      case '?':
+        LOG_ERR_MSG("Illegal option:", c);
+        channel_.send(false);
+        return false;
+        break;
+      }
+    }
+
+    this->setFormat(f);
+
+    if(verbose)
+      Logger::init(LogLevel::L_DEBUG);
+    else
+      Logger::init(LogLevel::L_INFO);
+
+    vector<std::string> vecArgs;
+
+    if(args.size() - optind >= 1) {
+      string strCmd = string(args[optind].c_str());
+      Command* cmd = this->cm[strCmd];
+      if(!cmd) {
+        LOG_ERR_MSG("Unknown command", strCmd);
+        channel_.send(false);
+        return false;
+      }
+
+      vecArgs.clear();
+
+      std::transform(
+          args.begin() + optind + 1, args.end(),
+          std::back_inserter(vecArgs),
+          boost::bind(&std::string::c_str, _1)
+          );
+
+      Command::Result r = (*cmd)(vecArgs);
+      LOG_INFO_MSG(r.second, r.first);
+      success = r.first ? 0 : 1;
+    } else if(!execTargets){
+      channel_.send(false);
+      return false;
+    }
+
+    channel_.send(success);
+
+    if(execTriggers) {
+      Command* t = cm["triggers"];
+      boost::thread([=]() {
+        vector<string> vecTriggers;
+
+        for(size_t i = 0; i < vecArgs.size(); i+=2) {
+          vecTriggers.push_back(vecArgs[i].c_str());
+        }
+
+        (*t)(vecTriggers);
+      });
+    }
+
+    if(execTargets) {
+      Command* t = cm["targets"];
+      boost::thread([=]() {
+      vector<string> vecTargets;
+       tokenizer<char_separator<char> > tok(targetList, char_separator<char>(","));
+
+       BOOST_FOREACH (const string& t, tok) {
+         vecTargets.push_back(t);
+       }
+
+       (*t)(vecTargets);
+      });
+    }
+    return success;
   }
 
   void Janosh::close() {
@@ -589,7 +710,7 @@ namespace janosh {
     size_t cnt = 0;
 
     while(cur->get(&key, &value, true)) {
-      (*this->out) << "path: " << Path(key).pretty() <<  " value:" << value << endl;
+      this->channel_.out() << "path: " << Path(key).pretty() <<  " value:" << value << endl;
       ++cnt;
     }
     delete cur;
@@ -607,7 +728,7 @@ namespace janosh {
       h = hasher(lexical_cast<string>(h) + key + value);
       ++cnt;
     }
-    (*this->out) << h << std::endl;
+    this->channel_.out() << h << std::endl;
     delete cur;
     return cnt;
   }
@@ -921,32 +1042,6 @@ void printUsage() {
   exit(1);
 }
 
-typedef map<const std::string, jh::Command*> CommandMap;
-
-CommandMap makeCommandMap(jh::Janosh* janosh) {
-  CommandMap cm;
-  cm.insert({"load", new jh::LoadCommand(janosh) });
-//  cm.insert({"dump", bind(constructor<jh::DumpCommand>(),_1) });
-  cm.insert({"add", new jh::AddCommand(janosh) });
-  cm.insert({"replace", new jh::ReplaceCommand(janosh) });
-  cm.insert({"set", new jh::SetCommand(janosh) });
-  cm.insert({"get", new jh::GetCommand(janosh) });
-  cm.insert({"copy", new jh::CopyCommand(janosh) });
-  cm.insert({"remove", new jh::RemoveCommand(janosh) });
-  cm.insert({"shift", new jh::ShiftCommand(janosh) });
-  cm.insert({"append", new jh::AppendCommand(janosh) });
-  cm.insert({"dump", new jh::DumpCommand(janosh) });
-  cm.insert({"size", new jh::SizeCommand(janosh) });
-  cm.insert({"triggers", new jh::TriggerCommand(janosh) });
-  cm.insert({"targets", new jh::TargetCommand(janosh) });
-  cm.insert({"truncate", new jh::TruncateCommand(janosh) });
-  cm.insert({"mkarr", new jh::MakeArrayCommand(janosh) });
-  cm.insert({"mkobj", new jh::MakeObjectCommand(janosh) });
-  cm.insert({"hash", new jh::HashCommand(janosh) });
-
-  return cm;
-}
-
 std::vector<size_t> sequence() {
   std::vector<size_t> v(10);
   size_t off = 5;
@@ -959,12 +1054,9 @@ std::vector<size_t> sequence() {
 
 kyotocabinet::TreeDB janosh::Record::db;
 
-using namespace janosh;
-#include <sstream>
-#include <boost/iostreams/stream.hpp>
-
 int main(int argc, char** argv) {
   using namespace std;
+  using namespace janosh;
   int c;
   bool daemon = false;
 
@@ -979,165 +1071,19 @@ int main(int argc, char** argv) {
   }
 
   if(daemon) {
-    jh::Janosh janosh;
+    Janosh janosh;
     janosh.open();
-    CommandMap cm = makeCommandMap(&janosh);
-
-    for(;;) {
-        string l;
-        std::vector<std::string> args;
-        while(!std::getline(*janosh.in, l)) {
-          boost::this_thread::sleep(boost::posix_time::milliseconds(5));
-        }
-        args.push_back(l);
-        while(std::getline(*janosh.in, l) && l != "-d") {
-          std::cerr << "l:" << l << std::endl;
-          args.push_back(l);
-        }
-
-        std::vector<char*> vc;
-
-      std::transform(args.begin(), args.end(), std::back_inserter(vc), [&](const std::string & s){
-        char *pc = new char[s.size()+1];
-        std::strcpy(pc, s.c_str());
-        return pc;
-      });
-
-      int c;
-      janosh::Format f = janosh::Bash;
-
-      bool verbose = false;
-      bool execTriggers = false;
-      bool execTargets = false;
-
-      string key;
-      string value;
-      string targetList;
-      char* const* c_args = (char* const*)&vc[0];
-      optind=1;
-      while ((c = getopt(args.size(), c_args, "dvfjbrte:")) != -1) {
-        switch (c) {
-        case 'd':
-          break;
-        case 'f':
-          if(string(optarg) == "bash")
-            f=janosh::Bash;
-          else if(string(optarg) == "json")
-            f=janosh::Json;
-          else if(string(optarg) == "raw")
-            f=janosh::Raw;
-           else
-            printUsage();
-          break;
-        case 'j':
-          f=janosh::Json;
-          break;
-        case 'b':
-          f=janosh::Bash;
-          break;
-        case 'r':
-          f=janosh::Raw;
-          break;
-        case 'v':
-          verbose=true;
-          break;
-        case 't':
-          execTriggers = true;
-          break;
-        case 'e':
-          execTargets = true;
-          targetList = optarg;
-          break;
-        case ':':
-          printUsage();
-          break;
-        case '?':
-          printUsage();
-          break;
-        }
-      }
-
-      janosh.setFormat(f);
-
-      if(verbose)
-        Logger::init(LogLevel::L_DEBUG);
-      else
-        Logger::init(LogLevel::L_INFO);
-
-
-      if(args.size() - optind >= 1) {
-        string strCmd = string(args[optind].c_str());
-        jh::Command* cmd = cm[strCmd];
-        if(!cmd) {
-          LOG_ERR_MSG("Unknown command", strCmd);
-          continue;
-        }
-
-        vector<std::string> vecArgs;
-
-        std::transform(
-            args.begin() + optind + 1, args.end(),
-            std::back_inserter(vecArgs),
-            boost::bind(&std::string::c_str, _1)
-            );
-
-        jh::Command::Result r = (*cmd)(vecArgs);
-        LOG_INFO_MSG(r.second, r.first);
-
-//        janosh.close();
-        if(strCmd == "set" && execTriggers) {
-          vector<string> vecTriggers;
-
-          for(size_t i = 0; i < args.size(); i+=2) {
-            vecTriggers.push_back(args[i].c_str());
-          }
-          (*cm["triggers"])(vecTriggers);
-        }
-
-        *(janosh.out) << "{?endofjanosh?}" << std::endl;
-        *(janosh.out) << r.first << std::endl;
-        //return r.first ? 0 : 1;
-        continue;
-      } else if(!execTargets){
-        *(janosh.out) << "{?endofjanosh?}" << std::endl;
-        printUsage();
-      }
-
-      if(execTargets) {
-         vector<string> vecTargets;
-         tokenizer<char_separator<char> > tok(targetList, char_separator<char>(","));
-
-         BOOST_FOREACH (const string& t, tok) {
-           vecTargets.push_back(t);
-         }
-
-         (*cm["targets"])(vecTargets);
-         *(janosh.out) << "{?endofjanosh?}" << std::endl;
-      }
-
-
-    }
-
+    while(janosh.processRequest());
     janosh.close();
   } else {
-    shared_ringbuf shm_ringbuf_in(boost::interprocess::open_only, "JanoshIPC_out", boost::interprocess::read_write);
-    shared_ringbuf shm_ringbuf_out(boost::interprocess::open_only, "JanoshIPC_in", boost::interprocess::read_write);
-    shared_ringbuf::istream in(&shm_ringbuf_in);
-    shared_ringbuf::ostream out(&shm_ringbuf_out);
-
+    //client passes the argv to the daemon
+    Channel rq;
     for(int i = 0; i < argc; i++) {
-      out << argv[i] << std::endl;
+      rq.writeln(argv[i]);
     }
-    //use -d to terminate list of arguments since a client should never pass -d
-    out << "-d" << endl;
-    out.flush();
+    rq.send(true);
 
-    string l;
-    while(std::getline(in, l) && l != "{?endofjanosh?}") {
-      std::cout << l << endl;
-    }
-    std::getline(in, l);
-    return boost::lexical_cast<size_t>(l) ? 0 : 1;
+    return rq.receive(std::cout);
   }
 
   return 0;

@@ -9,34 +9,36 @@
 
 namespace janosh {
   using std::string;
+  using std::vector;
   using boost::tokenizer;
   using boost::char_separator;
+  typedef map<const std::string, Command*> CommandMap;
 
   class Command {
   protected:
-    janosh::Janosh * janosh;
+    Janosh * janosh;
   public:
     typedef std::pair<int32_t, string> Result;
 
-    Command(janosh::Janosh* janosh) :
+    Command(Janosh* janosh) :
         janosh(janosh) {
     }
 
     virtual ~Command() {
     }
 
-    virtual Result operator()(const vector<string>& params) {
+    virtual Result operator()(const std::vector<string>& params) {
       return {-1, "Not implemented" };
     };
   };
 
   class RemoveCommand: public Command {
   public:
-    RemoveCommand(janosh::Janosh* janosh) :
+    RemoveCommand(Janosh* janosh) :
         Command(janosh) {
     }
 
-    virtual Result operator()(const vector<string>& params) {
+    virtual Result operator()(const std::vector<string>& params) {
       if (!params.empty()) {
         int cnt = 0;
         BOOST_FOREACH(const string& p, params) {
@@ -300,7 +302,7 @@ namespace janosh {
         return {-1, "Expected a path"};
       } else {
         Record p(params.front());
-        *(janosh->out) << janosh->size(p) << std::endl;
+        janosh->channel_.out() << janosh->size(p) << std::endl;
       }
       return {0, "Successful"};
     }
@@ -338,7 +340,7 @@ namespace janosh {
         bool found_all = true;
         BOOST_FOREACH(const string& p, params) {
           Record rec(p);
-          found_all = found_all && janosh->get(rec, *janosh->out);
+          found_all = found_all && janosh->get(rec, janosh->channel_.out());
         }
 
         if (!found_all)
@@ -367,5 +369,28 @@ namespace janosh {
       return {cnt, "Successful"};
     }
   };
+
+  CommandMap makeCommandMap(Janosh* janosh) {
+    CommandMap cm;
+    cm.insert({"load", new LoadCommand(janosh) });
+    cm.insert({"add", new AddCommand(janosh) });
+    cm.insert({"replace", new ReplaceCommand(janosh) });
+    cm.insert({"set", new SetCommand(janosh) });
+    cm.insert({"get", new GetCommand(janosh) });
+    cm.insert({"copy", new CopyCommand(janosh) });
+    cm.insert({"remove", new RemoveCommand(janosh) });
+    cm.insert({"shift", new ShiftCommand(janosh) });
+    cm.insert({"append", new AppendCommand(janosh) });
+    cm.insert({"dump", new DumpCommand(janosh) });
+    cm.insert({"size", new SizeCommand(janosh) });
+    cm.insert({"triggers", new TriggerCommand(janosh) });
+    cm.insert({"targets", new TargetCommand(janosh) });
+    cm.insert({"truncate", new TruncateCommand(janosh) });
+    cm.insert({"mkarr", new MakeArrayCommand(janosh) });
+    cm.insert({"mkobj", new MakeObjectCommand(janosh) });
+    cm.insert({"hash", new HashCommand(janosh) });
+   return cm;
+  }
+
 }
 #endif

@@ -1,29 +1,46 @@
 #ifndef _JANOSH_HPP
 #define _JANOSH_HPP
 
-#include "json_spirit.h"
+#include <map>
+#include <vector>
+#include <string>
+#include <sstream>
 #include <fstream>
 #include <iostream>
-#include <sstream>
+#include <functional>
+#include <algorithm>
 #include <exception>
+#include <initializer_list>
+
+#include <boost/bind.hpp>
+#include <boost/thread.hpp>
+#include <boost/range.hpp>
+#include <boost/tokenizer.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/functional/hash.hpp>
+#include <boost/function.hpp>
+#include <boost/interprocess/creation_tags.hpp>
+#include <boost/iostreams/stream.hpp>
 #include <boost/format.hpp>
 #include <boost/foreach.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+
 #include <kcpolydb.h>
 
+#include "Logger.hpp"
+
+#include "request.hpp"
 #include "record.hpp"
+#include "ipc.hpp"
+#include "request.hpp"
+#include "json_spirit.h"
 #include "json.hpp"
 #include "bash.hpp"
-#include "ipc.hpp"
-
-namespace janosh {
 
   namespace kc = kyotocabinet;
   namespace js = json_spirit;
   namespace fs = boost::filesystem;
-
   using std::cerr;
   using std::cout;
   using std::endl;
@@ -33,6 +50,7 @@ namespace janosh {
   using std::istringstream;
   using std::ifstream;
   using std::exception;
+namespace janosh {
 
   enum Format {
     Bash,
@@ -79,16 +97,17 @@ public:
     bool find(const js::Object& obj, const string& name, js::Value& value);
   };
 
+  class Command;
+  typedef map<const std::string, Command*> CommandMap;
+
   class Janosh {
   public:
     Settings settings;
     TriggerBase triggers;
     Format format;
 
-    shared_ringbuf* shm_ringbuf_in;
-    shared_ringbuf* shm_ringbuf_out;
-    shared_ringbuf::istream* in;
-    shared_ringbuf::ostream* out;
+    Channel channel_;
+    CommandMap cm;
 
     Janosh();
     ~Janosh();
@@ -97,6 +116,7 @@ public:
     Format getFormat();
 
     void open();
+    bool processRequest();
     void close();
     size_t loadJson(const string& jsonfile);
     size_t loadJson(std::istream& is);

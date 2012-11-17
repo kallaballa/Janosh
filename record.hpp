@@ -149,7 +149,7 @@ public:
 
       if(p.at(0) != '/') {
         LOG_ERR_MSG("Illegal Path", p);
-        exit(1);
+        return;
       }
 
       char_separator<char> ssep("[/", "", boost::keep_empty_tokens);
@@ -163,7 +163,7 @@ public:
           const string& c = *it;
           if(c.empty()) {
             LOG_ERR_MSG("Illegal Path", p);
-            exit(1);
+            return;
           }
           this->components.push_back(Component(c));
         }
@@ -401,9 +401,6 @@ public:
     }
 
     const size_t getSize() const {
-      assert(isInitialized());
-      assert(!isEmpty());
-
       return this->size;
     }
 

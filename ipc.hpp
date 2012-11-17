@@ -22,12 +22,13 @@ struct basic_ringbuf {
 
   //Semaphores to protect and synchronize access
   boost::interprocess::interprocess_semaphore
-     mutex_, nempty_, nstored_;
+  lock_, mutex_, nempty_, nstored_;
 
   std::streamsize rear_ = 0, front_ = 0;
   T_char_type buffer_[T_size];
 
   basic_ringbuf() :
+    lock_(1),
     mutex_(1),
     nempty_(T_size),
     nstored_(0)
@@ -149,9 +150,11 @@ public:
     region = mapped_region(shm, m);
 
     this->rbuf = static_cast<t_ringbuf*>(region.get_address());
+    this->rbuf->lock_.wait();
   }
 
   virtual ~basic_shared_ringbuf() {
+    this->rbuf->lock_.post();
   }
 };
 
