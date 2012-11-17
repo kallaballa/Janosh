@@ -191,11 +191,15 @@ namespace janosh {
       if (params.empty() || params.size() % 2 != 0) {
         return {-1, "Expected a list of path/value pairs"};
       } else {
+        size_t cnt = 0;
         for (auto it = params.begin(); it != params.end(); it += 2) {
-          janosh->set(Record(*it), *(it + 1));
+          cnt += janosh->set(Record(*it), *(it + 1));
         }
 
-        return {params.size()/2, "Successful"};
+        if(cnt < 0)
+          return {0, "Failed"};
+        else
+          return {cnt, "Successful"};
       }
     }
   };
@@ -217,8 +221,11 @@ namespace janosh {
         if(!src.exists())
           return {-1, "Source path doesn't exist"};
 
-        janosh->shift(src, dest);
-        return {1, "Successful"};
+        size_t cnt = janosh->shift(src, dest);
+        if(cnt < 0)
+          return {0, "Failed"};
+        else
+          return {1, "Successful"};
       }
     }
   };
@@ -238,10 +245,13 @@ namespace janosh {
         src.fetch();
 
         if(!src.exists())
-          return {-1, "Source path doesn't exist"};
+          return {0, "Source path doesn't exist"};
 
-        janosh->copy(src, dest);
-        return {1, "Successful"};
+        size_t n = janosh->copy(src, dest);
+        if(n > 0)
+          return {n, "Successful"};
+        else
+          return {0, "Failed"};
       }
     }
   };

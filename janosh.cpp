@@ -242,8 +242,9 @@ namespace janosh {
 
     LOG_DEBUG_MSG("print", rec.path());
 
-    if(!rec.exists())
-      return error("Path not found", rec.path());
+    if(!rec.exists()) {
+      JANOSH_ERROR("Path not found", rec.path());
+    }
 
     if (rec.isDirectory()) {
       switch(this->getFormat()) {
@@ -296,14 +297,15 @@ namespace janosh {
     target.fetch();
     Record base = Record(target.path().basePath());
     base.fetch();
-    if(!target.isDirectory() || target.exists() || base.exists())
-      return error("Invalid target");
+    if(!target.isDirectory() || target.exists() || base.exists()) {
+      JANOSH_ERROR("Invalid target",target.path());
+    }
 
-    if(bounds && !boundsCheck(target))
-      return error("Out of array bounds");
-
+    if(bounds && !boundsCheck(target)) {
+      JANOSH_ERROR("Out of array bounds",target.path());
+    }
     changeContainerSize(target.parent(), 1);
-    return Record::db.add(target.path(), "A" + lexical_cast<string>(size));
+    return Record::db.add(target.path(), "A" + lexical_cast<string>(size)) ? 1 : 0;
   }
 
   size_t Janosh::makeObject(Record target, size_t size) {
@@ -311,15 +313,17 @@ namespace janosh {
     target.fetch();
     Record base = Record(target.path().basePath());
     base.fetch();
-    if(!target.isDirectory() || target.exists() || base.exists())
-      return error("Invalid target");
+    if(!target.isDirectory() || target.exists() || base.exists()) {
+      JANOSH_ERROR("Invalid target",target.path());
+    }
 
-    if(!boundsCheck(target))
-      return error("Out of array bounds");
+    if(!boundsCheck(target)) {
+      JANOSH_ERROR("Out of array bounds", target.path());
+    }
 
     if(!target.path().isRoot())
       changeContainerSize(target.parent(), 1);
-    return Record::db.add(target.path(), "O" + lexical_cast<string>(size));
+    return Record::db.add(target.path(), "O" + lexical_cast<string>(size)) ? 1 : 0;
   }
 
   size_t Janosh::makeDirectory(Record target, Value::Type type, size_t size) {
@@ -342,18 +346,20 @@ namespace janosh {
   size_t Janosh::add(Record dest, const string& value) {
     JANOSH_TRACE({dest}, value);
 
-    if(!dest.isValue() || dest.exists())
-      return error("Invalid target");
+    if(!dest.isValue() || dest.exists()) {
+      JANOSH_ERROR("Invalid target", dest.path());
+    }
 
-    if(!boundsCheck(dest))
-      return error("Out of array bounds");
+    if(!boundsCheck(dest)) {
+      JANOSH_ERROR("Out of array bounds",dest.path());
+    }
 
     if(Record::db.add(dest.path(), value)) {
 //      if(!dest.path().isRoot())
         changeContainerSize(dest.parent(), 1);
-      return true;
+      return 1;
     } else {
-      return false;
+      return 0;
     }
   }
 
@@ -367,11 +373,13 @@ namespace janosh {
     JANOSH_TRACE({dest}, value);
     dest.fetch();
 
-    if(!dest.isValue() || !dest.exists())
-      return error("Invalid target");
+    if(!dest.isValue() || !dest.exists()) {
+      JANOSH_ERROR("Invalid target", dest.path());
+    }
 
-    if(!boundsCheck(dest))
-      return error("Out of array bounds");
+    if(!boundsCheck(dest)) {
+      JANOSH_ERROR("Out of array bounds", dest.path());
+    }
 
     return Record::db.replace(dest.path(), value);
   }
@@ -389,11 +397,13 @@ namespace janosh {
     src.fetch();
     dest.fetch();
 
-    if(src.isRange() || !src.exists() || !dest.exists())
-      return error("Invalid target");
+    if(src.isRange() || !src.exists() || !dest.exists()) {
+      JANOSH_ERROR("Invalid target", dest.path());
+    }
 
-    if(!boundsCheck(dest))
-      return error("Out of array bounds");
+    if(!boundsCheck(dest)) {
+      JANOSH_ERROR("Out of array bounds", dest.path());
+    }
 
     Record target;
     size_t r;
@@ -441,11 +451,13 @@ namespace janosh {
     src.fetch();
     dest.fetch();
 
-    if(src.isRange() || !src.exists() || !dest.exists())
-      return error("Invalid target");
+    if(src.isRange() || !src.exists() || !dest.exists()) {
+      JANOSH_ERROR("Invalid src", src.path());
+    }
 
-    if(!boundsCheck(dest))
-      return error("Out of array bounds");
+    if(!boundsCheck(dest)) {
+      JANOSH_ERROR("Out of array bounds", dest.path());
+    }
 
     Record target;
     size_t r;
@@ -484,11 +496,13 @@ namespace janosh {
   size_t Janosh::set(Record rec, const string& value) {
     JANOSH_TRACE({rec}, value);
 
-    if(!rec.isValue())
-      return error("Invalid target");
+    if(!rec.isValue()) {
+      JANOSH_ERROR("Invalid target", rec.path());
+    }
 
-    if(!boundsCheck(rec))
-      return error("Out of array bounds");
+    if(!boundsCheck(rec)) {
+      JANOSH_ERROR("Out of array bounds", rec.path());
+    }
 
     rec.fetch();
     if (rec.exists())
@@ -579,26 +593,29 @@ namespace janosh {
 
   size_t Janosh::truncate() {
     if(Record::db.clear())
-      return Record::db.add("/!", "O" + lexical_cast<string>(0));
+      return Record::db.add("/!", "O" + lexical_cast<string>(0)) ? 1 : 0;
     else
       return false;
   }
 
   size_t Janosh::size(Record rec) {
-    if(!rec.isDirectory())
-      return error("size is limited to containers", rec.path());
+    if(!rec.isDirectory()) {
+      JANOSH_ERROR("size is limited to containers", rec.path());
+    }
 
     return rec.fetch().getSize();
   }
 
   size_t Janosh::append(Record dest, const string& value) {
     JANOSH_TRACE({dest}, value);
-    if(!dest.isDirectory())
-      return error("append is limited to dest directories", dest.path());
+    if(!dest.isDirectory()) {
+      JANOSH_ERROR("append is limited to dest directories", dest.path());
+    }
 
     Record target(dest.path().withChild(dest.getSize()));
-    if(!Record::db.add(target.path(), value))
-      return error("Failed to add target");
+    if(!Record::db.add(target.path(), value)) {
+      JANOSH_ERROR("Failed to add target", target.path());
+    }
 
     dest = target;
     return 1;
@@ -606,15 +623,17 @@ namespace janosh {
 
   size_t Janosh::append(vector<string>::const_iterator begin, vector<string>::const_iterator end, Record dest) {
     JANOSH_TRACE({dest});
-    if(!dest.isDirectory())
-      return error("append is limited to dest directories", dest.path());
+    if(!dest.isDirectory()) {
+      JANOSH_ERROR("append is limited to dest directories", dest.path());
+    }
     dest.fetch();
     size_t s = dest.getSize();
     size_t cnt = 0;
 
     for(; begin != end; ++begin) {
-      if(!Record::db.add(dest.path().withChild(s + cnt), *begin))
-        return error("Failed to add target");
+      if(!Record::db.add(dest.path().withChild(s + cnt), *begin)) {
+        JANOSH_ERROR("Failed to add target", dest.path());
+      }
       ++cnt;
     }
 
@@ -625,8 +644,9 @@ namespace janosh {
   size_t Janosh::append(Record& src, Record& dest) {
     JANOSH_TRACE({src,dest});
 
-    if(!dest.isDirectory())
-      return error("append is limited to directories", dest.path());
+    if(!dest.isDirectory()) {
+      JANOSH_ERROR("append is limited to directories", dest.path());
+    }
 
     src.fetch();
     dest.fetch();
@@ -640,8 +660,9 @@ namespace janosh {
 
     do {
       src.read();
-      if(src.isAncestorOf(dest))
-        return error("can't append an ancestor");
+      if(src.isAncestorOf(dest)) {
+        JANOSH_ERROR("can't append an ancestor", src.path());
+      }
 
       if(src.isDirectory()) {
         Record target;
@@ -652,27 +673,36 @@ namespace janosh {
         } else
           assert(false);
 
-        if(src.isAncestorOf(target))
-          return error("can't append an ancestor");
+        if(src.isAncestorOf(target)) {
+          JANOSH_ERROR("can't append an ancestor",src.path());
+        }
 
 
-        if(!makeDirectory(target, src.getType()))
-          return error("failed to create directory");
+        if(!makeDirectory(target, src.getType())) {
+          JANOSH_ERROR("failed to create directory", target.path());
+        }
 
         Record wildcard = src.path().asWildcard();
-        if(!append(wildcard, target))
-          return error("failed to append values");
+        if(!append(wildcard, target)) {
+          JANOSH_ERROR("failed to append values", target.path());
+        }
       } else {
         if(dest.isArray()) {
+          Path target = dest.path().withChild(s + cnt);
           if(!Record::db.add(
-              dest.path().withChild(s + cnt),
+              target,
               src.value()
-          )) return error("failed to add");
+          )) {
+            JANOSH_ERROR("failed to add", target);
+          }
         } else if(dest.isObject()) {
+          Path target = dest.path().withChild(src.path().name());
           if(!Record::db.add(
-              dest.path().withChild(src.path().name()),
+              target,
               src.value()
-          )) return error("failed to add");
+          )) {
+            JANOSH_ERROR("failed to add",target);
+          }
         }
       }
     });
@@ -690,15 +720,20 @@ namespace janosh {
 
     src.fetch();
     dest.fetch();
-    if(dest.exists() && dest.isRange())
-      return error("Destination can't be a range", dest.path());
+    if(dest.exists() && !src.isRange()) {
+      JANOSH_ERROR("Destination already exists", dest.path());
+    }
+
+    if(dest.isRange()) {
+      JANOSH_ERROR("Destination can't be a range", dest.path());
+    }
 
     if(src == dest)
       return 0;
 
-    if(!src.isValue() && !dest.isDirectory())
-      return error("invalid target");
-
+    if(!src.isValue() && !dest.isDirectory()) {
+      JANOSH_ERROR("invalid target", dest.path());
+    }
 
     if((src.isWildcard() || src.isDirectory()) && !dest.exists()) {
       makeDirectory(dest, src.getType());
@@ -720,7 +755,7 @@ namespace janosh {
     srcParent.fetch();
 
     if(!srcParent.isArray() || srcParent != dest.parent()) {
-      return error("Move is limited within one array", src.path().key() + "->" + dest.path().key());
+      JANOSH_ERROR("Move is limited within one array", src.path().key() + "->" + dest.path().key());
     }
 
     size_t parentSize = srcParent.getSize();
@@ -728,7 +763,7 @@ namespace janosh {
     size_t destIndex = dest.getIndex();
 
     if(srcIndex >= parentSize || destIndex >= parentSize) {
-      return error("index out of bounds", src.path());
+      JANOSH_ERROR("index out of bounds", src.path());
     }
 
     bool back = srcIndex > destIndex;
@@ -800,7 +835,7 @@ namespace janosh {
 
   size_t Janosh::load(const Path& path, const string& value) {
     LOG_DEBUG_MSG("add", path.key());
-    return Record::db.add(path, value);
+    return Record::db.add(path, value) ? 1 : 0;
   }
 
   size_t Janosh::load(js::Value& v, Path& path) {
@@ -1016,8 +1051,10 @@ int main(int argc, char** argv) {
       if(args.size() - optind >= 1) {
         string strCmd = string(args[optind].c_str());
         jh::Command* cmd = cm[strCmd];
-        if(!cmd)
-          return janosh.error("Unknown command", strCmd);
+        if(!cmd) {
+          LOG_ERR_MSG("Unknown command", strCmd);
+          continue;
+        }
 
         vector<std::string> vecArgs;
 
