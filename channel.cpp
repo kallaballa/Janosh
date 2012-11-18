@@ -6,7 +6,7 @@
 
 using std::string;
 namespace janosh {
-    Channel::Channel() {}
+    Channel::Channel() : shm_rbuf_in_(NULL), shm_rbuf_out_(NULL) {}
 
     void Channel::accept() {
       const char* user = getenv ("USER");
@@ -18,8 +18,22 @@ namespace janosh {
       string nameOut = "JanoshIPC_out" + string(user);
 
       this->daemon_ =  true;
-      this->shm_rbuf_in_ = new ringbuffer_connection(boost::interprocess::create_only, nameIn.c_str(), boost::interprocess::read_write);
-      this->shm_rbuf_out_ = new ringbuffer_connection(boost::interprocess::create_only, nameOut.c_str(), boost::interprocess::read_write);
+
+      if(!this->shm_rbuf_in_)
+        this->shm_rbuf_in_ = new ringbuffer_connection(nameIn.c_str());
+
+      if(!this->shm_rbuf_out_)
+        this->shm_rbuf_out_ = new ringbuffer_connection(nameOut.c_str());
+
+      boost::thread t([&](){
+        this->shm_rbuf_out_->listen(boost::interprocess::read_write);
+      });
+
+      while(!this->shm_rbuf_in_->shm_init_ && t.timed_join(boost::posix_time::millisec(5)))
+      {}
+
+      this->shm_rbuf_in_->listen(boost::interprocess::read_write);
+      t.join();
       this->in_ = new ringbuffer_connection::istream(shm_rbuf_in_);
       this->out_ = new ringbuffer_connection::ostream(shm_rbuf_out_);
     }
@@ -34,8 +48,12 @@ namespace janosh {
       string nameOut = "JanoshIPC_out" + string(user);
 
       //swap in and out channel
-      this->shm_rbuf_out_ = new ringbuffer_connection(boost::interprocess::open_only, nameIn.c_str(), boost::interprocess::read_write);
-      this->shm_rbuf_in_ = new ringbuffer_connection(boost::interprocess::open_only, nameOut.c_str(), boost::interprocess::read_write);
+      this->shm_rbuf_in_ = new ringbuffer_connection(nameOut.c_str());
+      this->shm_rbuf_out_ = new ringbuffer_connection(nameIn.c_str());
+
+      this->shm_rbuf_out_->connect(boost::interprocess::read_write);
+      this->shm_rbuf_in_->connect(boost::interprocess::read_write);
+
       this->in_ = new ringbuffer_connection::istream(shm_rbuf_in_);
       this->out_ = new ringbuffer_connection::ostream(shm_rbuf_out_);
     }

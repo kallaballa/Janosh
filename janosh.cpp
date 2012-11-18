@@ -300,7 +300,7 @@ namespace janosh {
 
       Command::Result r = (*cmd)(vecArgs);
       LOG_INFO_MSG(r.second, r.first);
-      success = r.first ? 0 : 1;
+      success = r.first ? 1 : 0;
     } else if(!execTargets){
       channel_.flush(false);
       return false;
