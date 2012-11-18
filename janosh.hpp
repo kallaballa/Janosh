@@ -30,7 +30,6 @@
 #include "logger.hpp"
 #include "channel.hpp"
 #include "record.hpp"
-#include "ipc.hpp"
 #include "json_spirit.h"
 #include "json.hpp"
 #include "bash.hpp"

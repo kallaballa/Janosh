@@ -1069,7 +1069,7 @@ int main(int argc, char** argv) {
   if(daemon) {
     Janosh janosh;
     janosh.open();
-    while(janosh.processRequest());
+    while(janosh.processRequest()) {};
     janosh.close();
   } else {
     //client passes the argv to the daemon
