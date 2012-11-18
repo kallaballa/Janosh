@@ -4,8 +4,10 @@
 #include <cstring>
 #include <functional>
 #include <string>
+#include <algorithm>
 #include <boost/exception/all.hpp>
 #include <boost/interprocess/sync/interprocess_semaphore.hpp>
+#include <boost/interprocess/ipc/message_queue.hpp>
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 #include <boost/interprocess/containers/string.hpp>
@@ -18,63 +20,15 @@ using boost::interprocess::mapped_region;
 using boost::interprocess::create_only_t;
 using boost::interprocess::open_only_t;
 
-template <std::streamsize T_size, typename T_char_type, typename T_traits = std::char_traits<T_char_type> >
-struct basic_ringbuf {
-  typedef typename T_traits::int_type t_int_type;
-  typedef boost::interprocess::interprocess_semaphore ipc_semaphore;
-
-  //Semaphores to protect and synchronize access
-  ipc_semaphore mutex_, nempty_, nstored_;
-
-  std::streamsize rear_ = 0, front_ = 0;
-  t_int_type buffer_[T_size];
-
-  basic_ringbuf() :
-    mutex_(1),
-    nempty_(T_size),
-    nstored_(0)
-  {}
-
-  void putc(const t_int_type& d) {
-    this->nempty_.wait();
-    this->mutex_.wait();
-
-    this->buffer_[++this->front_ % T_size ] = d;
-
-    this->mutex_.post();
-    this->nstored_.post();
-  }
-
-  void putc(const T_char_type& c) {
-    this->putc(T_traits::to_int_type(c));
-  }
-
-  const t_int_type getc() {
-    try {
-    this->nstored_.wait();
-    } catch (boost::interprocess::interprocess_exception &ex) {
-      std::cerr << ex.get_error_code() << std::endl;
-      std::cerr << ex.get_native_error() << std::endl;
-      exit(2);
-    }
-      this->mutex_.wait();
-      const t_int_type & c = this->buffer_[++this->rear_ % T_size];
-      this->mutex_.post();
-      this->nempty_.post();
-      return c;
-  }
-};
-
-template <std::streamsize T_size, typename T_char_type, typename T_traits = std::char_traits<T_char_type> >
+template <std::streamsize T_size, typename T_char_type >
 class basic_ringbuffer_connection {
 
 private:
   typedef boost::interprocess::string t_string;
-  typedef typename T_traits::int_type t_int_type;
 
   typedef uint8_t t_sync_state;
   typedef boost::interprocess::interprocess_semaphore t_ipc_semaphore;
-  typedef basic_ringbuf<T_size, T_char_type, T_traits> t_ringbuf;
+  typedef boost::interprocess::message_queue t_msg_queue;
 
   shared_memory_object shm_;
   mapped_region region_;
@@ -85,17 +39,18 @@ private:
   t_ipc_semaphore*  mutex_;
 
   //the underlying ringbuffer manages memory and synchronisation itself
-  t_ringbuf* rbuf_;
+  t_msg_queue* mq_;
   bool daemon_;
 
   static const t_sync_state FIN_ = 0;
   static const t_sync_state ACK_ = 1;
   static const t_sync_state SIN_ = 2;
+  static const t_sync_state CLS_ = 3;
 public:
   struct connection_error: virtual boost::exception { };
 
-  typedef basic_ringbuffer_connection<T_size, T_char_type, T_traits> type;
-  typedef T_traits t_char_traits;
+  typedef std::char_traits<T_char_type> t_char_traits;
+  typedef basic_ringbuffer_connection<T_size, T_char_type> type;
 
   struct Sink {
     typedef T_char_type  char_type;
@@ -106,12 +61,11 @@ public:
     {}
 
     std::streamsize write(const T_char_type* s, std::streamsize n) {
-      int i = 0;
-      for(; i < n; i++) {
-        t->rbuf_->putc(*s);
+      for(int i = 0; i < n; ++i) {
+        t->mq_->send(s, sizeof(T_char_type), 0);
         ++s;
       }
-      return i;
+      return n;
     }
   };
 
@@ -123,27 +77,18 @@ public:
       {}
 
       std::streamsize read(char* s, std::streamsize n) {
-        t_int_type d;
-        int i = 0;
-        for(; i < n; i++) {
-          if((d = t->rbuf_->getc()) == T_traits::eof())
-            break;
-
-          *s = T_traits::to_char_type(d);
+        size_t rs;
+        unsigned int priority;
+        type::t_msg_queue::size_type num = std::min(t->mq_->get_num_msg(), boost::lexical_cast<type::t_msg_queue::size_type>(n));
+        if(t->isOpen() && num == 0)
+          ++num;
+        for(size_t i = 0; i < num; ++i) {
+          t->mq_->receive(s, sizeof(T_char_type), rs, priority);
+          if(rs == 0)
+            return i;
           ++s;
         }
-        return i;
-      }
-
-      std::streamsize readLn(std::string& s) {
-        t_int_type d;
-        int i = 0;
-        s.clear();
-        while((d = t->rbuf_->getc()) != T_traits::eof() && T_traits::to_char_type(d) != '\n') {
-          s += T_traits::to_char_type(d);
-          ++i;
-        }
-        return i;
+        return num;
       }
   };
 
@@ -172,7 +117,7 @@ mutex >> 2
 
     shared_memory_object::remove(name);
     this->shm_ = shared_memory_object(c, name, m);
-    this->shm_.truncate(sizeof(t_sync_state) + sizeof(t_ipc_semaphore) + sizeof(t_ringbuf));
+    this->shm_.truncate(sizeof(t_sync_state) + sizeof(t_ipc_semaphore));
     //Map the whole shared memory in this process
     this->region_ = mapped_region(shm_, m);
 
@@ -192,10 +137,12 @@ mutex >> 2
     this->mutex_ = new ( static_cast<void *>(addr+1) ) t_ipc_semaphore(1);
 
     /**
-     * initalize the ringbuffer
+     * initalize the message_queue
      */
-
-    this->rbuf_ = new ( static_cast<void *>(this->mutex_+1)) t_ringbuf;
+    std::string mq_name = std::string(name) + "_mq";
+    //Erase previous message queue
+    t_msg_queue::remove(mq_name.c_str());
+    this->mq_ = new t_msg_queue(c, mq_name.c_str(), T_size, sizeof(T_char_type));
 
     /**
      * promote handshake by writing SIN
@@ -226,7 +173,7 @@ mutex >> 2
       daemon_(false) {
 
     shm_ = shared_memory_object(c, name, m);
-    shm_.truncate(sizeof(t_sync_state) + sizeof(t_ipc_semaphore) + sizeof(t_ringbuf));
+    shm_.truncate(sizeof(t_sync_state) + sizeof(t_ipc_semaphore));
     //Map the whole shared memory in this process
     region_ = mapped_region(shm_, m);
 
@@ -273,19 +220,22 @@ mutex >> 2
     if(!this->mutex_->try_wait())
       continue; // it's not our turn. start over.
 
-    this->rbuf_ = static_cast<t_ringbuf*>(static_cast<void *>(this->mutex_ + 1));
+    std::string mq_name = std::string(name) + "_mq";
+    this->mq_ = new t_msg_queue(c, mq_name.c_str());
     std::cerr << "client done" << std::endl;
     break;
     }
   }
 
-  size_t available() {
-    return this->rbuf_->front_ - this->rbuf_->rear_;
+  bool isOpen() {
+    return *this->state_ == FIN_;
   }
 
   void close() {
-    if(!this->daemon_)
+    if(!this->daemon_) {
+      *this->state_ = CLS_;
       this->mutex_->post();
+    }
   }
 
   virtual ~basic_ringbuffer_connection() {

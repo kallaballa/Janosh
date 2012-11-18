@@ -175,7 +175,7 @@ namespace janosh {
   Janosh::Janosh() :
     settings(),
     triggers(settings.triggerFile, settings.triggerDirs),
-    channel_(true),
+    channel_(),
     cm(makeCommandMap(this)) {
   }
 
@@ -199,6 +199,7 @@ namespace janosh {
   }
 
   bool Janosh::processRequest() {
+    channel_.accept();
     bool success = true;
     vector<string> args;
     channel_.receive(args);
@@ -236,7 +237,7 @@ namespace janosh {
           f=janosh::Raw;
          else
            LOG_ERR_MSG("Illegal format:", string(optarg));
-           channel_.send(false);
+           channel_.flush(false);
            return false;
         break;
       case 'j':
@@ -260,12 +261,12 @@ namespace janosh {
         break;
       case ':':
         LOG_ERR_MSG("Illegal option:", c);
-        channel_.send(false);
+        channel_.flush(false);
         return false;
         break;
       case '?':
         LOG_ERR_MSG("Illegal option:", c);
-        channel_.send(false);
+        channel_.flush(false);
         return false;
         break;
       }
@@ -285,7 +286,7 @@ namespace janosh {
       Command* cmd = this->cm[strCmd];
       if(!cmd) {
         LOG_ERR_MSG("Unknown command", strCmd);
-        channel_.send(false);
+        channel_.flush(false);
         return false;
       }
 
@@ -301,11 +302,11 @@ namespace janosh {
       LOG_INFO_MSG(r.second, r.first);
       success = r.first ? 0 : 1;
     } else if(!execTargets){
-      channel_.send(false);
+      channel_.flush(false);
       return false;
     }
 
-    channel_.send(success);
+    channel_.flush(success);
 
     if(execTriggers) {
       Command* t = cm["triggers"];
@@ -333,6 +334,7 @@ namespace janosh {
        (*t)(vecTargets);
       });
     }
+    while(channel_.isOpen()) {};
     return success;
   }
 
@@ -1069,17 +1071,19 @@ int main(int argc, char** argv) {
   if(daemon) {
     Janosh janosh;
     janosh.open();
-    while(janosh.processRequest()) {};
+    for(;;) {
+      std:: cerr << "result: " << janosh.processRequest() << std::endl;
+    };
     janosh.close();
   } else {
     //client passes the argv to the daemon
-    Channel rq;
+    Channel chan;
+    chan.connect();
     for(int i = 0; i < argc; i++) {
-      rq.writeln(argv[i]);
+      chan.writeln(argv[i]);
     }
-    rq.send(true);
-
-    return rq.receive(std::cout);
+    chan.flush(true);
+    return chan.receive(std::cout);
   }
 
   return 0;
