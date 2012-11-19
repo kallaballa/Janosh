@@ -22,15 +22,68 @@ using boost::interprocess::open_only_t;
 using boost::this_thread::sleep;
 using boost::posix_time::milliseconds;
 
-template <std::streamsize T_size, typename T_char_type >
+template <std::streamsize T_size, typename T_char_type, typename T_traits = std::char_traits<T_char_type> >
+struct basic_ringbuf {
+  typedef typename T_traits::int_type int_type;
+
+  //Semaphores to protect and synchronize access
+  boost::interprocess::interprocess_semaphore
+     mutex_, nempty_, nstored_;
+
+  std::streamsize rear_ = 0, front_ = 0;
+  T_char_type buffer_[T_size];
+
+  basic_ringbuf() :
+    mutex_(1),
+    nempty_(T_size),
+    nstored_(0)
+  {}
+
+  inline bool putc(const T_char_type & c) {
+    if(this->nempty_.try_wait()) {
+      this->mutex_.wait();
+
+      this->buffer_[++this->front_ % T_size ] = c;
+
+      this->mutex_.post();
+      this->nstored_.post();
+      return true;
+    }
+    return false;
+  }
+
+  inline const int_type getc() {
+    if(this->nstored_.try_wait()) {
+      this->mutex_.wait();
+      const T_char_type & c = this->buffer_[++this->rear_ % T_size];
+      this->mutex_.post();
+      this->nempty_.post();
+      return T_traits::to_int_type(c);
+    }
+
+    return T_traits::eof();
+  }
+
+  inline const int_type getc_block() {
+    this->nstored_.wait();
+    this->mutex_.wait();
+    const T_char_type & c = this->buffer_[++this->rear_ % T_size];
+    this->mutex_.post();
+    this->nempty_.post();
+    return T_traits::to_int_type(c);
+  }
+};
+
+template <std::streamsize T_size, typename T_char_type, typename T_char_traits = std::char_traits<T_char_type> >
 class basic_ringbuffer_connection {
 
 private:
+  typedef basic_ringbuf<T_size, char> t_ringbuf;
+  typedef typename T_char_traits::int_type t_int_type;
   typedef boost::interprocess::string t_string;
 
   typedef uint8_t t_sync_state;
   typedef boost::interprocess::interprocess_semaphore t_ipc_semaphore;
-  typedef boost::interprocess::message_queue t_msg_queue;
 
   shared_memory_object shm_;
   mapped_region region_;
@@ -40,8 +93,9 @@ private:
   volatile t_sync_state* state_;
   t_ipc_semaphore*  mutex_;
 
-  //the underlying ringbuffer manages memory and synchronisation itself
-  t_msg_queue* mq_;
+  //the underlying ringbuffer manages synchronisation itself
+  t_ringbuf* rbuf_;
+
   bool daemon_;
   static const t_sync_state FIN_ = 0;
   static const t_sync_state ACK_ = 1;
@@ -64,7 +118,7 @@ public:
 
     std::streamsize write(const T_char_type* s, std::streamsize n) {
       for(int i = 0; i < n; ++i) {
-        t->mq_->send(s, sizeof(T_char_type), 0);
+        t->rbuf_->putc(*s);
         ++s;
       }
       return n;
@@ -72,26 +126,36 @@ public:
   };
 
   struct Source {
-      typedef T_char_type char_type;
-      typedef boost::iostreams::source_tag  category;
-      type* t;
-      Source(type* t): t(t)
-      {}
+    typedef T_char_type char_type;
+    typedef boost::iostreams::source_tag  category;
+    type* t;
+    Source(type* t): t(t)
+    {}
 
-      std::streamsize read(char* s, std::streamsize n) {
-        size_t rs;
-        unsigned int priority;
-        type::t_msg_queue::size_type num = std::min(t->mq_->get_num_msg(), boost::lexical_cast<type::t_msg_queue::size_type>(n));
-        if(t->isOpen() && num == 0)
-          ++num;
-        for(size_t i = 0; i < num; ++i) {
-          t->mq_->receive(s, sizeof(T_char_type), rs, priority);
-          if(rs == 0)
-            return i;
+    std::streamsize read(char* s, std::streamsize n) {
+      t_int_type c;
+      std::streamsize num = std::min(t->rbuf_->front_ - t->rbuf_->rear_, boost::lexical_cast<std::streamsize>(n));
+      if(t->isOpen() && num == 0)
+        ++num;
+      std::streamsize i = 0;
+      while(i < num) {
+        if((c = t->rbuf_->getc()) != T_char_traits::eof()) {
+          *s = T_char_traits::to_char_type(c);
           ++s;
+          ++i;
+        } else if (!t->isOpen()) {
+          if((c = t->rbuf_->getc()) != T_char_traits::eof()) {
+            *s = T_char_traits::to_char_type(c);
+            ++s;
+            ++i;
+            return i + this->read(s,n - 1);
+          } else {
+            return 0;
+          }
         }
-        return num;
       }
+      return num;
+    }
   };
 
   typedef boost::iostreams::stream<Sink> ostream;
@@ -108,17 +172,9 @@ public:
     if(!this->shm_init_) {
       shared_memory_object::remove(this->name_.c_str());
       this->shm_ = shared_memory_object(boost::interprocess::open_or_create, this->name_.c_str() , m);
-      this->shm_.truncate(sizeof(t_sync_state) + sizeof(t_ipc_semaphore));
+      this->shm_.truncate(sizeof(t_sync_state) + sizeof(t_ipc_semaphore) + sizeof(t_ringbuf));
       //Map the whole shared memory in this process
       this->region_ = mapped_region(shm_, m);
-
-      /**
-       * initalize the message_queue
-       */
-      std::string mq_name = this->name_ + "_mq";
-      //Erase previous message queue
-      t_msg_queue::remove(mq_name.c_str());
-      this->mq_ = new t_msg_queue(boost::interprocess::open_or_create, mq_name.c_str(), T_size, sizeof(T_char_type));
       this->shm_init_ = true;
     }
 
@@ -136,6 +192,7 @@ public:
      * initialize the mutex (really semaphore).
      */
     this->mutex_ = new ( static_cast<void *>(addr+1) ) t_ipc_semaphore(1);
+    this->rbuf_ = new ( static_cast<void *>(this->mutex_+1) ) t_ringbuf;
 
     /**
      * promote handshake by writing SIN
@@ -161,7 +218,7 @@ public:
 
     for(;;) {
       shm_ = shared_memory_object(boost::interprocess::open_only, this->name_.c_str(), m);
-      shm_.truncate(sizeof(t_sync_state) + sizeof(t_ipc_semaphore));
+      shm_.truncate(sizeof(t_sync_state) + sizeof(t_ipc_semaphore) + sizeof(t_ringbuf));
       //Map the whole shared memory in this process
       region_ = mapped_region(shm_, m);
 
@@ -201,8 +258,7 @@ public:
     if(!this->mutex_->try_wait())
       continue; // it's not our turn. start over.
 
-    std::string mq_name = this->name_ + "_mq";
-    this->mq_ = new t_msg_queue(boost::interprocess::open_only, mq_name.c_str());
+    this->rbuf_ = static_cast<t_ringbuf*> (static_cast<void *>(this->mutex_ + 1));
     break;
     }
   }
