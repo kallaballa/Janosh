@@ -334,7 +334,10 @@ namespace janosh {
        (*t)(vecTargets);
       });
     }
-    while(channel_.isOpen()) {};
+
+    while(channel_.isOpen()) {
+      boost::this_thread::sleep(boost::posix_time::milliseconds(10));
+    };
     return success;
   }
 
@@ -1055,8 +1058,8 @@ kyotocabinet::TreeDB janosh::Record::db;
 int main(int argc, char** argv) {
   using namespace std;
   using namespace janosh;
-  int c;
   bool daemon = false;
+  int c;
 
   while ((c = getopt(argc, argv, "dvfjbrte:")) != -1) {
     switch (c) {
@@ -1083,7 +1086,9 @@ int main(int argc, char** argv) {
       chan.writeln(argv[i]);
     }
     chan.flush(true);
-    return chan.receive(std::cout);
+    bool success = chan.receive(std::cout);
+    chan.close();
+    return success;
   }
 
   return 0;

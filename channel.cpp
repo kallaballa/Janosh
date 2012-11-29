@@ -28,14 +28,10 @@ namespace janosh {
       boost::thread t([&](){
         this->shm_rbuf_out_->listen(boost::interprocess::read_write);
       });
-
-      while(!this->shm_rbuf_in_->shm_init_ && t.timed_join(boost::posix_time::millisec(5)))
-      {}
-
       this->shm_rbuf_in_->listen(boost::interprocess::read_write);
       t.join();
-      this->in_ = new ringbuffer_connection::istream(shm_rbuf_in_);
-      this->out_ = new ringbuffer_connection::ostream(shm_rbuf_out_);
+      this->in_ = shm_rbuf_in_->make_istream();
+      this->out_ = shm_rbuf_out_->make_ostream();
     }
 
     void Channel::connect() {
@@ -54,13 +50,11 @@ namespace janosh {
       this->shm_rbuf_out_->connect(boost::interprocess::read_write);
       this->shm_rbuf_in_->connect(boost::interprocess::read_write);
 
-      this->in_ = new ringbuffer_connection::istream(shm_rbuf_in_);
-      this->out_ = new ringbuffer_connection::ostream(shm_rbuf_out_);
+      this->in_ = shm_rbuf_in_->make_istream();
+      this->out_ = shm_rbuf_out_->make_ostream();
     }
 
     Channel::~Channel() {
-      this->shm_rbuf_in_->close();
-      this->shm_rbuf_out_->close();
     }
 
     std::istream& Channel::in() {
@@ -85,7 +79,6 @@ namespace janosh {
       }
       out().flush();
     }
-
 
     bool Channel::receive(std::vector<string>& v) {
       if(this->daemon_) {
@@ -136,6 +129,11 @@ namespace janosh {
         std::getline(this->in(), l);
         return boost::lexical_cast<size_t>(l) ? 0 : 1;
       }
+    }
+
+    void Channel::close() {
+      this->shm_rbuf_out_->close();
+      this->shm_rbuf_in_->close();
     }
 
     bool Channel::isOpen() {

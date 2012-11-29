@@ -20,13 +20,13 @@ namespace janosh {
     void accept();
     void connect();
     bool isOpen();
+    void close();
     std::istream& in();
     std::ostream& out();
     void writeln(const string& s);
     void flush(bool success);
     bool receive(std::vector<std::string>& v);
     bool receive(std::ostream& os);
-
   };
 }
 #endif /* CHANNEL_HPP_ */
