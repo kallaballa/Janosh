@@ -3,21 +3,20 @@
 #include <boost/iostreams/device/back_inserter.hpp>
 #include "logger.hpp"
 #include "channel.hpp"
+#include "exception.hpp"
 
 using std::string;
 namespace janosh {
     Channel::Channel() : shm_rbuf_in_(NULL), shm_rbuf_out_(NULL) {}
 
     void Channel::accept() {
+      this->daemon_=true;
       const char* user = getenv ("USER");
       if (user==NULL) {
-        LOG_ERR_MSG("Can't find environment variable.", "USER");
-        exit(1);
+        throw channel_exception() << con_msg_info("Can't find environment variable 'USER'");
       }
       string nameIn = "JanoshIPC_in" + string(user);
       string nameOut = "JanoshIPC_out" + string(user);
-
-      this->daemon_ =  true;
 
       if(!this->shm_rbuf_in_)
         this->shm_rbuf_in_ = new ringbuffer_connection(nameIn.c_str());
@@ -30,15 +29,16 @@ namespace janosh {
       });
       this->shm_rbuf_in_->listen(boost::interprocess::read_write);
       t.join();
+
       this->in_ = shm_rbuf_in_->make_istream();
       this->out_ = shm_rbuf_out_->make_ostream();
     }
 
     void Channel::connect() {
+      this->daemon_=false;
       const char* user = getenv ("USER");
       if (user==NULL) {
-        LOG_ERR_MSG("Can't find environment variable.", "USER");
-        exit(1);
+        throw channel_exception() << con_msg_info("Can't find environment variable 'USER'");
       }
       string nameIn = "JanoshIPC_in" + string(user);
       string nameOut = "JanoshIPC_out" + string(user);
@@ -78,6 +78,7 @@ namespace janosh {
         this->writeln("-d");
       }
       out().flush();
+    //  this->shm_rbuf_out_->close();
     }
 
     bool Channel::receive(std::vector<string>& v) {
@@ -126,14 +127,26 @@ namespace janosh {
             os << l << std::endl;
         }
 
+        if(l != "{?endofjanosh?}")
+          throw janosh_exception() << msg_info("end of stream not found");
+
         std::getline(this->in(), l);
         return boost::lexical_cast<size_t>(l) ? 0 : 1;
       }
     }
 
     void Channel::close() {
-      this->shm_rbuf_out_->close();
-      this->shm_rbuf_in_->close();
+      if(isOpen()) {
+        this->shm_rbuf_out_->close();
+        this->shm_rbuf_in_->close();
+      }
+    }
+
+    void Channel::remove() {
+      if(this->daemon_) {
+        this->shm_rbuf_out_->remove();
+        this->shm_rbuf_in_->remove();
+      }
     }
 
     bool Channel::isOpen() {

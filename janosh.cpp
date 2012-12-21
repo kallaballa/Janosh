@@ -32,7 +32,8 @@ namespace janosh {
   int TriggerBase::executeTarget(const string& name) {
     auto it = targets.find(name);
     if(it == targets.end()) {
-      error("Target not found", name);
+      warn("Target not found", name);
+      return -1;
     }
     LOG_DEBUG_MSG("Execute target", name);
     return system((*it).second.c_str());
@@ -73,7 +74,6 @@ namespace janosh {
   void TriggerBase::load(const fs::path& config) {
     if(!fs::exists(config)) {
       error("Trigger config doesn't exist", config);
-      exit(1);
     }
 
     ifstream is(config.string().c_str());
@@ -192,15 +192,21 @@ namespace janosh {
 
   void Janosh::open() {
     // open the database
-    if (!Record::db.open(settings.databaseFile.string(), kc::PolyDB::OREADER | kc::PolyDB::OWRITER | kc::PolyDB::OCREATE)) {
+    if (!Record::db.open(settings.databaseFile.string(),  kc::PolyDB::OTRYLOCK | kc::PolyDB::OAUTOTRAN | kc::PolyDB::OREADER | kc::PolyDB::OWRITER | kc::PolyDB::OCREATE)) {
       LOG_ERR_MSG("open error", Record::db.error().name());
       exit(2);
     }
+    open_ = true;
+  }
+
+  bool Janosh::isOpen() {
+    return this->open_;
   }
 
   bool Janosh::processRequest() {
+    bool success = false;
+    try {
     channel_.accept();
-    bool success = true;
     vector<string> args;
     channel_.receive(args);
 
@@ -281,7 +287,7 @@ namespace janosh {
 
     vector<std::string> vecArgs;
 
-    if(args.size() - optind >= 1) {
+    if(((int)args.size()) >= optind + 1) {
       string strCmd = string(args[optind].c_str());
       Command* cmd = this->cm[strCmd];
       if(!cmd) {
@@ -308,41 +314,56 @@ namespace janosh {
 
     channel_.flush(success);
 
+    boost::thread th_triggers([=]() {
     if(execTriggers) {
       Command* t = cm["triggers"];
-      boost::thread([=]() {
-        vector<string> vecTriggers;
+      vector<string> vecTriggers;
 
-        for(size_t i = 0; i < vecArgs.size(); i+=2) {
-          vecTriggers.push_back(vecArgs[i].c_str());
-        }
-
-        (*t)(vecTriggers);
-      });
+      for(size_t i = 0; i < vecArgs.size(); i+=2) {
+        vecTriggers.push_back(vecArgs[i].c_str());
+      }
+      (*t)(vecTriggers);
     }
 
     if(execTargets) {
       Command* t = cm["targets"];
-      boost::thread([=]() {
       vector<string> vecTargets;
-       tokenizer<char_separator<char> > tok(targetList, char_separator<char>(","));
+      tokenizer<char_separator<char> > tok(targetList, char_separator<char>(","));
+      BOOST_FOREACH (const string& t, tok) {
+        vecTargets.push_back(t);
+      }
 
-       BOOST_FOREACH (const string& t, tok) {
-         vecTargets.push_back(t);
-       }
+      (*t)(vecTargets);
+    }});
 
-       (*t)(vecTargets);
-      });
-    }
-
+    size_t retries = 0;
     while(channel_.isOpen()) {
+      if(++retries > 200) {
+        channel_.flush(false);
+        channel_.close();
+        break;
+      }
       boost::this_thread::sleep(boost::posix_time::milliseconds(10));
     };
+    } catch(janosh_exception& ex) {
+      channel_.flush(false);
+      channel_.close();
+      throw ex;
+    } catch(std::exception& ex) {
+      channel_.flush(false);
+      channel_.close();
+      throw ex;
+    }
     return success;
   }
 
   void Janosh::close() {
-    Record::db.close();
+    if(isOpen()) {
+      open_ = false;
+      Record::db.close();
+    }
+
+    channel_.remove();
   }
 
   size_t Janosh::loadJson(const string& jsonfile) {
@@ -367,7 +388,7 @@ namespace janosh {
     LOG_DEBUG_MSG("print", rec.path());
 
     if(!rec.exists()) {
-      JANOSH_ERROR("Path not found", rec.path());
+      throw janosh_exception() << record_info({"Path not found", rec});
     }
 
     if (rec.isDirectory()) {
@@ -422,11 +443,11 @@ namespace janosh {
     Record base = Record(target.path().basePath());
     base.fetch();
     if(!target.isDirectory() || target.exists() || base.exists()) {
-      JANOSH_ERROR("Invalid target",target.path());
+      throw janosh_exception() << record_info({"Invalid target",target});
     }
 
     if(bounds && !boundsCheck(target)) {
-      JANOSH_ERROR("Out of array bounds",target.path());
+      throw janosh_exception() << record_info({"Out of array bounds",target});
     }
     changeContainerSize(target.parent(), 1);
     return Record::db.add(target.path(), "A" + lexical_cast<string>(size)) ? 1 : 0;
@@ -438,11 +459,11 @@ namespace janosh {
     Record base = Record(target.path().basePath());
     base.fetch();
     if(!target.isDirectory() || target.exists() || base.exists()) {
-      JANOSH_ERROR("Invalid target",target.path());
+      throw janosh_exception() << record_info({"Invalid target",target});
     }
 
     if(!boundsCheck(target)) {
-      JANOSH_ERROR("Out of array bounds", target.path());
+      throw janosh_exception() << record_info({"Out of array bounds", target});
     }
 
     if(!target.path().isRoot())
@@ -458,6 +479,7 @@ namespace janosh {
       return makeObject(target, size);
     } else
       assert(false);
+
     return 0;
   }
 
@@ -471,11 +493,11 @@ namespace janosh {
     JANOSH_TRACE({dest}, value);
 
     if(!dest.isValue() || dest.exists()) {
-      JANOSH_ERROR("Invalid target", dest.path());
+      throw janosh_exception() << record_info({"Invalid target", dest});
     }
 
     if(!boundsCheck(dest)) {
-      JANOSH_ERROR("Out of array bounds",dest.path());
+      throw janosh_exception() << record_info({"Out of array bounds",dest});
     }
 
     if(Record::db.add(dest.path(), value)) {
@@ -498,11 +520,11 @@ namespace janosh {
     dest.fetch();
 
     if(!dest.isValue() || !dest.exists()) {
-      JANOSH_ERROR("Invalid target", dest.path());
+      throw janosh_exception() << record_info({"Invalid target", dest});
     }
 
     if(!boundsCheck(dest)) {
-      JANOSH_ERROR("Out of array bounds", dest.path());
+      throw janosh_exception() << record_info({"Out of array bounds", dest});
     }
 
     return Record::db.replace(dest.path(), value);
@@ -522,11 +544,11 @@ namespace janosh {
     dest.fetch();
 
     if(src.isRange() || !src.exists() || !dest.exists()) {
-      JANOSH_ERROR("Invalid target", dest.path());
+      throw janosh_exception() << record_info({"Invalid target", dest});
     }
 
     if(!boundsCheck(dest)) {
-      JANOSH_ERROR("Out of array bounds", dest.path());
+      throw janosh_exception() << record_info({"Out of array bounds", dest});
     }
 
     Record target;
@@ -538,7 +560,7 @@ namespace janosh {
         r = this->copy(wildcard,target);
       } else {
         target = dest.path().basePath();
-        remove(dest,false);
+        remove(dest, false);
         r = this->copy(src,target);
       }
 
@@ -547,7 +569,7 @@ namespace janosh {
       if(src.isDirectory()) {
         Record target = dest.path().asDirectory();
         Record wildcard = src.path().asWildcard();
-        remove(dest,false);
+        remove(dest, false);
         makeDirectory(target, src.getType());
         r = this->append(wildcard, target);
         dest = target;
@@ -576,11 +598,11 @@ namespace janosh {
     dest.fetch();
 
     if(src.isRange() || !src.exists() || !dest.exists()) {
-      JANOSH_ERROR("Invalid src", src.path());
+      throw janosh_exception() << record_info({"Invalid src", src});
     }
 
     if(!boundsCheck(dest)) {
-      JANOSH_ERROR("Out of array bounds", dest.path());
+      throw janosh_exception() << record_info({"Out of array bounds", dest});
     }
 
     Record target;
@@ -621,11 +643,11 @@ namespace janosh {
     JANOSH_TRACE({rec}, value);
 
     if(!rec.isValue()) {
-      JANOSH_ERROR("Invalid target", rec.path());
+      throw janosh_exception() << record_info({"Invalid target", rec});
     }
 
     if(!boundsCheck(rec)) {
-      JANOSH_ERROR("Out of array bounds", rec.path());
+      throw janosh_exception() << record_info({"Out of array bounds", rec});
     }
 
     rec.fetch();
@@ -650,54 +672,50 @@ namespace janosh {
     size_t cnt = 0;
 
     Record parent = rec.parent();
-
     Path targetPath = rec.path();
     Record target(targetPath);
+    parent.fetch();
+    target.fetch();
 
-    if(rec.isDirectory() || rec.isRange()) {
+    if(target.isDirectory())
       rec.step();
 
-      for(size_t i = 0; i < n; ++i) {
-        if(!rec.isDirectory()) {
-          rec.remove();
-          ++cnt;
-        } else {
-          cnt += remove(rec);
-        }
-      }
-    }
+    for(size_t i = 0; i < n; ++i) {
+       if(!rec.isDirectory()) {
+         rec.remove();
+         ++cnt;
+       } else {
+         remove(rec,false);
+       }
+     }
 
-    if(!targetPath.isWildcard()) {
-      if(pack && parent.fetch().isArray()) {
-        size_t parentSize = parent.getSize();
-        size_t index = targetPath.parseIndex();
-
-        if(index + 1 < parentSize) {
-          Record forwardRec = targetPath;
-          Record backRec = targetPath;
-          forwardRec.fetch().next();
-
-          for(size_t i=0; i < parentSize - 1 - index; ++i) {
-            replace(forwardRec, backRec);
-            backRec.next();
-            forwardRec.next();
-          }
-          if(forwardRec.fetch().isDirectory())
-            cnt += remove(forwardRec);
-          else {
-            forwardRec = forwardRec.path();
-            cnt += forwardRec.fetch().remove();
-          }
-        } else {
-          cnt += target.fetch().remove();
-        }
-      } else {
-        cnt += target.fetch().remove();
-      }
+    if(target.isDirectory()) {
+      target.remove();
       changeContainerSize(parent, -1);
     } else {
-      parent.fetch();
-      setContainerSize(parent, 0);
+      changeContainerSize(parent, cnt * -1);
+    }
+
+    if(pack && parent.isArray()) {
+      parent.read();
+      Record child = Record(parent.path()).fetch();
+      size_t left = parent.getSize();
+      child.step();
+      for(size_t i = 0; i < left; ++i) {
+        child.fetch();
+
+        if(child.parent().path() != parent.path()) {
+          throw db_exception() << record_info({"corrupted array detected", parent});
+        }
+        if(child.getIndex() > i) {
+          Record indexPos(parent.path().withChild(i));
+          copy(child, indexPos);
+          child.remove();
+        } else {
+          child.next();
+        }
+      }
+      setContainerSize(parent, left);
     }
 
     rec = target;
@@ -744,7 +762,7 @@ namespace janosh {
 
   size_t Janosh::size(Record rec) {
     if(!rec.isDirectory()) {
-      JANOSH_ERROR("size is limited to containers", rec.path());
+      throw janosh_exception() << record_info({"size is limited to containers", rec});
     }
 
     return rec.fetch().getSize();
@@ -753,12 +771,12 @@ namespace janosh {
   size_t Janosh::append(Record dest, const string& value) {
     JANOSH_TRACE({dest}, value);
     if(!dest.isDirectory()) {
-      JANOSH_ERROR("append is limited to dest directories", dest.path());
+      throw janosh_exception() << record_info({"append is limited to dest directories", dest});
     }
 
     Record target(dest.path().withChild(dest.getSize()));
     if(!Record::db.add(target.path(), value)) {
-      JANOSH_ERROR("Failed to add target", target.path());
+      throw janosh_exception() << record_info({"Failed to add target", target});
     }
 
     dest = target;
@@ -768,7 +786,7 @@ namespace janosh {
   size_t Janosh::append(vector<string>::const_iterator begin, vector<string>::const_iterator end, Record dest) {
     JANOSH_TRACE({dest});
     if(!dest.isDirectory()) {
-      JANOSH_ERROR("append is limited to dest directories", dest.path());
+      throw janosh_exception() << record_info({"append is limited to dest directories", dest});
     }
     dest.fetch();
     size_t s = dest.getSize();
@@ -776,7 +794,7 @@ namespace janosh {
 
     for(; begin != end; ++begin) {
       if(!Record::db.add(dest.path().withChild(s + cnt), *begin)) {
-        JANOSH_ERROR("Failed to add target", dest.path());
+        throw janosh_exception() << record_info({"Failed to add target", dest});
       }
       ++cnt;
     }
@@ -789,7 +807,7 @@ namespace janosh {
     JANOSH_TRACE({src,dest});
 
     if(!dest.isDirectory()) {
-      JANOSH_ERROR("append is limited to directories", dest.path());
+      throw janosh_exception() << record_info({"append is limited to directories", dest});
     }
 
     src.fetch();
@@ -802,10 +820,14 @@ namespace janosh {
     string path;
     string value;
 
-    do {
+
+    while(++cnt < n) {
+      if(cnt > 0)
+        src.next();
+
       src.read();
       if(src.isAncestorOf(dest)) {
-        JANOSH_ERROR("can't append an ancestor", src.path());
+        throw janosh_exception() << record_info({"can't append an ancestor", src});
       }
 
       if(src.isDirectory()) {
@@ -814,21 +836,21 @@ namespace janosh {
           target = dest.path().withChild(src.path().name()).asDirectory();
         } else if(dest.isArray()) {
           target = dest.path().withChild(s + cnt).asDirectory();
-        } else
-          assert(false);
-
-        if(src.isAncestorOf(target)) {
-          JANOSH_ERROR("can't append an ancestor",src.path());
+        } else {
+          throw janosh_exception() << record_info({"can't append to a value", dest});
         }
 
+        if(src.isAncestorOf(target)) {
+          throw janosh_exception() << record_info({"can't append an ancestor", src});
+        }
 
         if(!makeDirectory(target, src.getType())) {
-          JANOSH_ERROR("failed to create directory", target.path());
+          throw janosh_exception() << record_info({"failed to create directory", target});
         }
 
         Record wildcard = src.path().asWildcard();
         if(!append(wildcard, target)) {
-          JANOSH_ERROR("failed to append values", target.path());
+          throw janosh_exception() << record_info({"failed to append values", target});
         }
       } else {
         if(dest.isArray()) {
@@ -837,7 +859,7 @@ namespace janosh {
               target,
               src.value()
           )) {
-            JANOSH_ERROR("failed to add", target);
+            throw janosh_exception() << record_info({"add failed", target});
           }
         } else if(dest.isObject()) {
           Path target = dest.path().withChild(src.path().name());
@@ -845,11 +867,11 @@ namespace janosh {
               target,
               src.value()
           )) {
-            JANOSH_ERROR("failed to add",target);
+            throw janosh_exception() << record_info({"add failed",target});
           }
         }
       }
-    } while(++cnt < n && src.next());
+    }
 
     setContainerSize(dest, s + cnt);
     return cnt;
@@ -861,18 +883,18 @@ namespace janosh {
     src.fetch();
     dest.fetch();
     if(dest.exists() && !src.isRange()) {
-      JANOSH_ERROR("Destination already exists", dest.path());
+      throw janosh_exception() << record_info({"destination exists", dest});
     }
 
     if(dest.isRange()) {
-      JANOSH_ERROR("Destination can't be a range", dest.path());
+      throw janosh_exception() << record_info({"destination can't be a range", dest});
     }
 
     if(src == dest)
       return 0;
 
     if(!src.isValue() && !dest.isDirectory()) {
-      JANOSH_ERROR("invalid target", dest.path());
+      throw janosh_exception() << record_info({"invalid target", dest});
     }
 
     if((src.isRange() || src.isDirectory()) && !dest.exists()) {
@@ -895,7 +917,7 @@ namespace janosh {
     srcParent.fetch();
 
     if(!srcParent.isArray() || srcParent != dest.parent()) {
-      JANOSH_ERROR("Move is limited within one array", src.path().key() + "->" + dest.path().key());
+      throw janosh_exception() << record_info({"shift is limited to operate within one array", dest});
     }
 
     size_t parentSize = srcParent.getSize();
@@ -903,7 +925,7 @@ namespace janosh {
     size_t destIndex = dest.getIndex();
 
     if(srcIndex >= parentSize || destIndex >= parentSize) {
-      JANOSH_ERROR("index out of bounds", src.path());
+      throw janosh_exception() << record_info({"index out of bounds", src});
     }
 
     bool back = srcIndex > destIndex;
@@ -911,9 +933,9 @@ namespace janosh {
     Record backRec = src.clone().fetch();
 
     if(back) {
-      assert(forwardRec.previous());
+      forwardRec.previous();
     } else {
-      assert(forwardRec.next());
+      forwardRec.next();
     }
 
     Record tmp;
@@ -927,7 +949,7 @@ namespace janosh {
       this->set(tmp, src.value());
     }
 
-    for(size_t i=0; i < abs(destIndex - srcIndex); ++i) {
+    for(int i=0; i < abs(destIndex - srcIndex); ++i) {
       replace(forwardRec, backRec);
       if(back) {
         backRec.previous();
@@ -974,8 +996,7 @@ namespace janosh {
   }
 
   size_t Janosh::load(const Path& path, const string& value) {
-    LOG_DEBUG_MSG("add", path.key());
-    return Record::db.add(path, value) ? 1 : 0;
+    return Record::db.set(path, value) ? 1 : 0;
   }
 
   size_t Janosh::load(js::Value& v, Path& path) {
@@ -1041,7 +1062,7 @@ void printUsage() {
       << endl
       << "-l             load a json snippet from standard input" << endl
       << endl;
-  exit(1);
+//  exit(1);
 }
 
 std::vector<size_t> sequence() {
@@ -1055,8 +1076,33 @@ std::vector<size_t> sequence() {
 
 kyotocabinet::TreeDB janosh::Record::db;
 
+#include <boost/asio.hpp>
+#include <boost/asio/signal_set.hpp>
+#include <boost/asio/impl/io_service.hpp>
+
 int main(int argc, char** argv) {
+  auto list  = { 1, 1 };
+  std::vector<int> v = list;
+  std::pair<int, int> p({1, 1});
+
+  std::map<std::string, boost::function<bool(const string&)> > m;
+  string hw = "hello world";
+
+  auto fn = [&](const string& s){
+    return hw == s;
+  };
+
+  m["hw"] = fn;
+  std::cerr << m["hw"]("hello world") << std::endl;
+  std::cerr <<  m["hw"]("hello bla") << std::endl;
+
+
+  boost::asio::io_service srv;
+  boost::asio::signal_set signals(srv, SIGINT, SIGTERM, SIGSEGV);
+  signals.add(SIGALRM);
+
   using namespace std;
+  using namespace boost;
   using namespace janosh;
   bool daemon = false;
   int c;
@@ -1072,27 +1118,97 @@ int main(int argc, char** argv) {
   }
 
   if(daemon) {
-    Janosh janosh;
-    janosh.open();
-    for(;;) {
-      std:: cerr << "result: " << janosh.processRequest() << std::endl;
-    };
-    janosh.close();
-  } else {
-    //client passes the argv to the daemon
-    Channel chan;
-    chan.connect();
-    for(int i = 0; i < argc; i++) {
-      chan.writeln(argv[i]);
+    Janosh* janosh = new Janosh();
+    signals.async_wait([=](const boost::system::error_code& error,int signal_number){
+        janosh->close();
+        std::cerr << "signal: " << signal_number << std::endl;
+        exit(error.value());
+    });
+
+    boost::thread t([&](){
+      srv.run();
+    });
+
+    janosh->open();
+    while(janosh->isOpen()) {
+      try {
+        std:: cerr << "result: " << janosh->processRequest() << std::endl;
+      } catch(janosh_exception& ex){
+
+#ifdef JANOSH_DEBUG
+        std::cerr << boost::trace(ex) << std::endl;
+#endif
+        if(auto const* m = get_error_info<msg_info>(ex) )
+          std::cerr << "message: " << *m << std::endl;
+
+        if(auto const* vs = get_error_info<string_info>(ex) ) {
+          for(auto it=vs->begin(); it != vs->end(); ++it) {
+            std::cerr << "info: " << *it << std::endl;
+          }
+        }
+
+        if(auto const* ri = get_error_info<record_info>(ex))
+          std::cerr << ri->first << ": " << ri->second << endl;
+
+        if(auto const* pi = get_error_info<path_info>(ex))
+          std::cerr << pi->first << ": " << pi->second << std::endl;
+
+        if(auto const* vi = get_error_info<value_info>(ex))
+          std::cerr << vi->first << ": " << vi->second << std::endl;
+      }
     }
-    chan.flush(true);
-    bool success = chan.receive(std::cout);
-    chan.close();
+
+    srv.stop();
+    janosh->close();
+  } else {
+    Logger::init(LogLevel::L_DEBUG);
+    //client passes the argv to the daemon
+    Channel* chan = new Channel();
+    signals.async_wait([=](const boost::system::error_code& error,int signal_number){
+      chan->close();
+      std::cerr << "signal: " << signal_number << std::endl;
+      exit(error.value());
+    });
+
+    boost::asio::io_service::work work(srv);
+    bool success = false;
+
+    try {
+      chan->connect();
+
+      for(int i = 0; i < argc; i++) {
+        chan->writeln(argv[i]);
+      }
+
+      chan->flush(true);
+      success = chan->receive(std::cout);
+      chan->close();
+
+      srv.stop();
+    } catch(janosh_exception& ex){
+#ifdef JANOSH_DEBUG
+      std::cerr << boost::trace(ex) << endl;
+#endif
+
+      if(auto const* m = get_error_info<msg_info>(ex) )
+        std::cerr << "message: " << *m << endl;
+
+      if(auto const* vs = get_error_info<string_info>(ex) ) {
+        for(auto it=vs->begin(); it != vs->end(); ++it) {
+          std::cerr << "info: " << *it << endl;
+        }
+      }
+
+      if(auto const* ri = get_error_info<record_info>(ex))
+        std::cerr << ri->first << ": " << ri->second << endl;
+
+      if(auto const* pi = get_error_info<path_info>(ex))
+        std::cerr << pi->first << ": " << pi->second << endl;
+
+      if(auto const* vi = get_error_info<value_info>(ex))
+        std::cerr << vi->first << ": " << vi->second << endl;
+    }
     return success;
   }
-
   return 0;
 }
-   
-
-

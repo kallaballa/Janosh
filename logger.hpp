@@ -75,7 +75,6 @@ namespace janosh {
   #define LOG_WARN_MSG(msg,x) if(Logger::getLevel()>= L_WARNING) TRI_LOG_LEVEL_MSG("WARN", msg, x)
   #define LOG_WARN_MSG(msg,x) if(Logger::getLevel()>= L_WARNING) TRI_LOG_LEVEL_MSG("WARN", msg, x)
   #define LOG_ERR_MSG(msg,x) if(Logger::getLevel()>= L_WARNING) TRI_LOG_LEVEL_MSG("WARN", msg, x)
-  #define JANOSH_ERROR(msg,x) { TRI_LOG_LEVEL_MSG("ERROR", msg, x); return 0; }
   #define LOG_FATAL_MSG(msg,x) if(Logger::getLevel()>= L_FATAL) TRI_LOG_LEVEL_MSG("FATAL", msg, x)
   #define LOG_ULTRA(x) if(Logger::getLevel()>= L_ULTRA) TRI_LOG_LEVEL("ULTRA", x)
   #define LOG_DEBUG(x) if(Logger::getLevel()>= L_DEBUG) TRI_LOG_LEVEL("DEBUG", x)

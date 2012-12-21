@@ -8,7 +8,9 @@ namespace janosh {
       if(this->jump(path.asDirectory())) {
         this->doesExist = true;
         this->pathObj = path;
-        assert(this->readValue());
+        if(!this->readValue())
+          throw record_exception() << path_info({"can't initialize", path});
+
         getCursorPtr()->step();
       } else {
         this->doesExist = false;
@@ -16,12 +18,15 @@ namespace janosh {
     } else if(path.isRoot()) {
       getCursorPtr()->jump("/!");
       this->pathObj = path;
-      assert(this->readValue());
+      if(!this->readValue())
+        throw record_exception() << path_info({"can't initialize", path});
+
       this->doesExist = true;
     } else {
       if(this->jump(path)) {
         this->doesExist = true;
-        assert(this->readValue());
+        if(!this->readValue())
+          throw record_exception() << path_info({"can't initialize", path});
       } else {
         this->doesExist = false;
       }
@@ -66,35 +71,47 @@ namespace janosh {
   }
 
   const size_t Record::getSize() const {
-    assert(hasData());
+    if(!this->hasData())
+      throw record_exception() << path_info({"uninitialized record", this->pathObj});
+
     return value().getSize();
   }
 
   const size_t Record::getIndex() const {
-    assert(isInitialized());
+    if(!isInitialized())
+      throw record_exception() << path_info({"uninitialized record", this->pathObj});
     return path().parseIndex();
   }
 
-  bool Record::remove() {
-    assert(isInitialized());
-    assert(getCursorPtr()->remove());
+  void Record::remove() {
+    if(!isInitialized())
+      throw record_exception() << path_info({"uninitialized record", this->pathObj});
+
+    if(getCursorPtr()->remove())
+      throw record_exception() << path_info({"failed to remove record", this->pathObj});
+
     this->clear();
     readPath();
-    return true;
   }
 
   bool Record::setValue(const string& v) {
-    assert(isInitialized());
+    if(!isInitialized())
+      throw record_exception() << path_info({"uninitialized record", this->pathObj});
+
     return getCursorPtr()->set_value_str(v);
   }
 
   bool Record::get(string& k, string& v) {
-    assert(isInitialized());
+    if(!isInitialized())
+      throw record_exception() << path_info({"uninitialized record", this->pathObj});
+
     return getCursorPtr()->get(&k,&v);
   }
 
   bool Record::jump(const Path& p) {
-    assert(isInitialized());
+    if(!isInitialized())
+      throw record_exception() << path_info({"uninitialized record", this->pathObj});
+
     if(getCursorPtr()->jump(p.key())) {
       readPath();
       return this->path() == p;
@@ -103,12 +120,16 @@ namespace janosh {
   }
 
   bool Record::jump_back(const Path& p) {
-    assert(isInitialized());
+    if(!isInitialized())
+      throw record_exception() << path_info({"uninitialized record", this->pathObj});
+
     return getCursorPtr()->jump_back(p.key());
   }
 
   bool Record::step() {
-    assert(isInitialized());
+    if(!isInitialized())
+      throw record_exception() << path_info({"uninitialized record", this->pathObj});
+
     bool r = getCursorPtr()->step();
     if(r) {
       this->clear();
@@ -118,7 +139,9 @@ namespace janosh {
   }
 
   bool Record::step_back() {
-    assert(isInitialized());
+    if(!isInitialized())
+      throw record_exception() << path_info({"uninitialized record", this->pathObj});
+
     bool r = getCursorPtr()->step_back();
     if(r) {
       this->clear();
@@ -127,26 +150,29 @@ namespace janosh {
     return r;
   }
 
-  bool Record::next() {
-    assert(isInitialized());
-    bool success;
+  void Record::next() {
+    if(!isInitialized())
+      throw record_exception() << path_info({"uninitialized record", this->pathObj});
 
     if(this->isDirectory()) {
       size_t s = this->getSize();
-      success = this->step();
+      if(!this->step())
+        throw record_exception() << path_info({"step failed", this->pathObj});
 
-      for(size_t i = 0; success && i < s; ++i) {
-        success &= this->step();
+      for(size_t i = 0; i < s; ++i) {
+        if(!this->step())
+          throw record_exception() << path_info({"step failed", this->pathObj});
       }
     } else {
-      success = this->step();
+      if(!this->step())
+        throw record_exception() << path_info({"step failed", this->pathObj});
     }
-
-    return success;
   }
 
-  bool Record::previous() {
-    assert(isInitialized());
+  void Record::previous() {
+    if(!isInitialized())
+            throw record_exception() << path_info({"uninitialized record", this->pathObj});
+
     Record parent = this->parent();
 
     Record prev;
@@ -154,15 +180,13 @@ namespace janosh {
 
     do {
       if(!this->step_back())
-        return false;
+        throw record_exception() << path_info({"step back failed", this->pathObj});
       prev = *this;
       prevParent = prev.parent();
     } while(prevParent != parent && parent.isAncestorOf(prev));
 
     this->clear();
     readPath();
-
-    return true;
   }
 
   const bool Record::isAncestorOf(const Record& other) const {
@@ -219,13 +243,19 @@ namespace janosh {
   }
 
   const Value& Record::value() const {
-    assert(isInitialized());
+    if(!isInitialized())
+            throw record_exception() << path_info({"uninitialized record", this->pathObj});
+
     return this->valueObj;
   }
 
   bool Record::readValue() {
-    assert(isInitialized());
-    assert(!empty());
+    if(!isInitialized())
+            throw record_exception() << path_info({"uninitialized record", this->pathObj});
+
+    if(empty())
+      throw record_exception() << path_info({"no value found", this->pathObj});
+
     string v;
     bool s = getCursorPtr()->get_value(&v);
 
@@ -241,7 +271,9 @@ namespace janosh {
   }
 
   bool Record::readPath() {
-    assert(isInitialized());
+    if(!isInitialized())
+            throw record_exception() << path_info({"uninitialized record", this->pathObj});
+
     string k;
     bool s = getCursorPtr()->get_key(&k);
     pathObj = k;
@@ -253,7 +285,9 @@ namespace janosh {
   }
 
   Record& Record::fetch() {
-    assert(isInitialized());
+    if(!isInitialized())
+      throw record_exception() << path_info({"uninitialized record", this->pathObj});
+
     if(!hasData()) {
       init(this->path());
     }
@@ -275,6 +309,14 @@ namespace janosh {
 
   std::ostream& operator<< (std::ostream& os, const janosh::Value& v) {
       os << v.str();
+      return os;
+  }
+
+  std::ostream& operator<< (std::ostream& os, const janosh::Record& r) {
+      os << "path=" << r.path().pretty()
+          << " exists=" << (r.exists() ? "true" : "false")
+          << " value=" <<  (r.isInitialized() && r.value().isInitialized() ? r.value().str() : "N/A");
+
       return os;
   }
 }

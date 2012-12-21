@@ -7,6 +7,9 @@
 #include "ipc.hpp"
 
 namespace janosh {
+  typedef boost::error_info<struct tag_connection_msg,string> con_msg_info;
+  struct channel_exception : virtual boost::exception, virtual std::exception { };
+
   class Channel {
   private:
     ringbuffer_connection* shm_rbuf_in_;
@@ -21,6 +24,7 @@ namespace janosh {
     void connect();
     bool isOpen();
     void close();
+    void remove();
     std::istream& in();
     std::ostream& out();
     void writeln(const string& s);

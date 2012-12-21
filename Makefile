@@ -1,30 +1,34 @@
-    TARGET  := janosh 
-    SRCS    := janosh.cpp Logger.cpp tri_logger/tri_logger.cpp record.cpp
-    OBJS    := ${SRCS:.cpp=.o} 
-    DEPS    := ${SRCS:.cpp=.dep} 
+TARGET  := janosh 
+SRCS    := janosh.cpp logger.cpp tri_logger/tri_logger.cpp record.cpp channel.cpp path.cpp value.cpp backtrace/libs/backtrace/src/backtrace.cpp
+OBJS    := ${SRCS:.cpp=.o} 
+DEPS    := ${SRCS:.cpp=.dep} 
+    
+CXXFLAGS = -DETLOG -std=c++0x -pedantic -Wall -I/usr/local/include/
+LDFLAGS = -s
+LDDEBUGFLAGS = -export-dynamic
+LIBS    = -L/usr/lib64/ -lboost_system -lboost_filesystem -ljson_spirit -lpthread -lboost_thread -lkyotocabinet  -lrt -ldl
 
-CXXFLAGS = -march=native -std=c++0x -I/usr/local/include/ -Os -Wall -DETLOG
-    LDFLAGS = -s 
-    LIBS    = -L/usr/lib64/ -lboost_system -lboost_filesystem -ljson_spirit -lpthread -lboost_thread -lkyotocabinet  -lrt
+.PHONY: all debug clean distclean 
 
-    .PHONY: all clean distclean 
-    all:: ${TARGET} 
+all: debug
 
-    ifneq (${XDEPS},) 
-    include ${XDEPS} 
-    endif 
+release: CXXFLAGS += -g0 -O3 
+release: ${TARGET}
 
-    ${TARGET}: ${OBJS} 
+debug: CXXFLAGS += -DJANOSH_DEBUG -g3 -O0 -rdynamic -I./backtrace/
+debug: ${TARGET}
+
+${TARGET}: ${OBJS} 
 	${CXX} ${LDFLAGS} -o $@ $^ ${LIBS} 
 
-    ${OBJS}: %.o: %.cpp %.dep 
+${OBJS}: %.o: %.cpp %.dep 
 	${CXX} ${CXXFLAGS} -o $@ -c $< 
 
-    ${DEPS}: %.dep: %.cpp Makefile 
+${DEPS}: %.dep: %.cpp Makefile 
 	${CXX} ${CXXFLAGS} -MM $< > $@ 
 
-    clean:: 
-	-rm -f *~ *.o ${TARGET} 
+clean:
+	rm -f *~ *.o backtrace/libs/backtrace/src/*.o ${TARGET} 
 
-    distclean:: clean
+distclean: clean
 

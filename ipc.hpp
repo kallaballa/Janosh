@@ -13,6 +13,10 @@
 #include <boost/interprocess/containers/string.hpp>
 #include <boost/iostreams/stream.hpp>
 #include <boost/thread.hpp>
+#include <boost/chrono.hpp>
+#include "logger.hpp"
+#include <time.h>
+#include <sys/timeb.h>
 
 using boost::interprocess::shared_memory_object;
 using boost::interprocess::interprocess_semaphore;
@@ -21,6 +25,15 @@ using boost::interprocess::create_only_t;
 using boost::interprocess::open_only_t;
 using boost::this_thread::sleep;
 using boost::posix_time::milliseconds;
+
+static void debug(const std::string& s) {
+#ifdef JANOSH_DEBUG
+  timespec ts;
+  clock_gettime(CLOCK_REALTIME, &ts);
+
+  std::cerr << "(" <<  ts.tv_sec << "," << ts.tv_nsec << ")" << s << std::endl;
+#endif
+}
 
 template <std::streamsize T_size, typename T_char_type, typename T_traits = std::char_traits<T_char_type> >
 struct basic_ringbuf {
@@ -32,6 +45,7 @@ struct basic_ringbuf {
 
   std::streamsize rear_ = 0, front_ = 0;
   T_char_type buffer_[T_size];
+  char hi;
 
 
   basic_ringbuf() :
@@ -41,23 +55,38 @@ struct basic_ringbuf {
   {}
 
   inline bool putc(const T_char_type & c) {
-    this->nempty_.wait();
-    this->mutex_.wait();
+    nempty_.wait();
+    mutex_.wait();
 
-    this->buffer_[++this->front_ % T_size ] = c;
+    buffer_[++front_ % T_size ] = c;
 
-    this->mutex_.post();
-    this->nstored_.post();
+    mutex_.post();
+    nstored_.post();
     return true;
   }
 
   inline const int_type getc() {
-    this->nstored_.wait();
-    this->mutex_.wait();
-    const T_char_type & c = this->buffer_[++this->rear_ % T_size];
-    this->mutex_.post();
-    this->nempty_.post();
+    nstored_.wait();
+    mutex_.wait();
+    const T_char_type & c = buffer_[++rear_ % T_size];
+    mutex_.post();
+    nempty_.post();
     return T_traits::to_int_type(c);
+  }
+
+  void reset() {
+    debug("reset");
+    while(mutex_.try_wait());
+    mutex_.post();
+
+    while(nstored_.try_wait());
+    while(nempty_.try_wait());
+
+    for(size_t i = 0; i < T_size; ++i) {
+      nempty_.post();
+    }
+    rear_ = 0;
+    front_ = 0;
   }
 };
 
@@ -75,16 +104,15 @@ private:
   bool daemon_;
   const std::string name_;
 
-
- struct shared_buffer : public basic_ringbuf<T_size, char>{
+  struct shared_buffer : public basic_ringbuf<T_size, char>{
     typedef uint8_t t_sync_state;
     typedef boost::interprocess::interprocess_semaphore t_ipc_mutex;
-    const t_sync_state OPEN_ = 0;
     const t_sync_state ACCEPT_ = 1;
     const t_sync_state OFFER_ = 2;
     const t_sync_state CLOSE_ = 3;
+    const t_sync_state OPEN_ = 4;
 
-    t_sync_state state_;
+    volatile t_sync_state state_;
     t_ipc_mutex server_mutex_;
     t_ipc_mutex client_mutex_;
     t_ringbuf rbuf_;
@@ -94,7 +122,7 @@ private:
     }
 
     void close() {
-      this->state_= CLOSE_;
+      setState(CLOSE_);
     }
 
     bool isOpen() {
@@ -105,11 +133,17 @@ private:
       return this->rbuf_.front_ - this->rbuf_.rear_;
     }
 
+    std::streamsize free() {
+      return T_size - this->available();
+    }
+
+
     inline bool putc(const T_char_type & c) {
       return rbuf_.putc(c);
     }
 
     inline const t_ringbuf::int_type getc() {
+      debug("get:" + boost::lexical_cast<std::string>(this->available()));
       return rbuf_.getc();
     }
 
@@ -117,23 +151,36 @@ private:
       this->state_ = s;
     }
 
+    t_sync_state getState() {
+      return this->state_;
+    }
+
     void connect() {
+      debug("buf wait");
       typename shared_buffer::t_sync_state r;
-
       //wait for the server to accept
-      shared_buffer::client_mutex_.wait();
-
-      if (shared_buffer::state_ != shared_buffer::OPEN_)
-        throw new connection_error();
-
 
       shared_buffer::server_mutex_.post();
+      shared_buffer::client_mutex_.wait();
+      if(getState() != OPEN_)
+        throw connection_error();
+
+      debug("buf connect");
     }
 
     void listen() {
-      shared_buffer::setState(shared_buffer::OPEN_);
-      shared_buffer::client_mutex_.post();
+      debug("buf wait");
       shared_buffer::server_mutex_.wait();
+      setState(shared_buffer::OPEN_);
+      this->rbuf_.reset();
+      shared_buffer::client_mutex_.post();
+      debug("buf listen");
+    }
+
+    void finalize() {
+      close();
+      while(client_mutex_.try_wait());
+      client_mutex_.post();
     }
  };
 
@@ -155,16 +202,31 @@ public:
     Sink(shared_buffer* t): t(t) {}
 
     std::streamsize write(const T_char_type* s, std::streamsize n) {
-      if(!t->isOpen())
-        return 0;
+      size_t retries = 0;
+      while(t->free() == 0 && t->isOpen()) {
+        if(++retries > 20) {
+          debug("sink abort");
+          t->close();
+          return 0;
+        }
+        debug("sink wait");
+        boost::this_thread::sleep(milliseconds(5));
+      }
 
+      if(!t->isOpen()) {
+        debug("sink term");
+        t->close();
+        return 0;
+      }
+
+      n = std::min(t->free(), n);
+      debug("sink write:" + boost::lexical_cast<std::string>(n) + "/" + boost::lexical_cast<std::string>(t->free()));
       for(int i = 0; i < n; ++i) {
+        debug("put" + boost::lexical_cast<std::string>(i) + "/"  + boost::lexical_cast<std::string>(t->free()) );
         t->putc(*s);
         ++s;
       }
-
-      if(n == 0)
-        std::cerr << std::endl;
+      debug("sink done");
 
       return n;
     }
@@ -179,10 +241,15 @@ public:
     {}
 
     std::streamsize read(char* s, std::streamsize n) {
+      debug(("source read: "
+          + boost::lexical_cast<std::string>(t->isOpen())
+          + "/" +
+          boost::lexical_cast<std::string>(t->available())));
       t_int_type c;
       std::streamsize num = 0;
+     // size_t retries = 0;
+
       do {
-        try {
           num = std::min(t->available(),
               boost::lexical_cast<std::streamsize>(n));
 
@@ -192,18 +259,21 @@ public:
               ++s;
             }
 
-            if (num == 0)
-              std::cerr << std::endl;
-
             return num;
+          } else {
+            debug("source wait: " + t->available());
+/*            if(++retries > 20) {
+              debug("source abort");
+              t->close();
+              return 0;
+            }*/
+            boost::this_thread::sleep(milliseconds(5));
           }
-        } catch (std::exception& ex) {
-          std::cerr << "what: " << ex.what() << std::endl;
-          std::cout << "what: " << ex.what() << std::endl;
-          std::cout.flush();
-          std::cerr.flush();
-        }
-      } while (t->isOpen() || num > 0);
+      } while (t->isOpen() || t->available() > 0);
+      debug(("source read exit: "
+          + boost::lexical_cast<std::string>(t->isOpen())
+          + "/" +
+          boost::lexical_cast<std::string>(t->available())));
 
       return 0;
     }
@@ -212,25 +282,44 @@ public:
   typedef boost::iostreams::stream<Sink> ostream;
   typedef boost::iostreams::stream<Source> istream;
 
+  typename type::istream* in_;
+  typename type::ostream* out_;
+
   basic_ringbuffer_connection(const char* name) :
       name_(name),
-      shm_init_(false){
+      shm_init_(false),
+      in_(NULL),
+      out_(NULL){
+  }
+
+
+  virtual ~basic_ringbuffer_connection() {
   }
 
   void listen(boost::interprocess::mode_t m) {
     this->daemon_ = true;
 
     if(!this->shm_init_) {
-//    if(1) {
-      shared_memory_object::remove(this->name_.c_str());
+      debug("shm_init");
+
+//      shared_memory_object::remove(this->name_.c_str());
       this->shm_ = shared_memory_object(boost::interprocess::open_or_create, this->name_.c_str() , m);
       this->shm_.truncate(sizeof(shared_buffer));
       //Map the whole shared memory in this process
       this->region_ = mapped_region(shm_, m);
-      this->shm_init_ = true;
-
       this->shm_buf_ = new (this->region_.get_address()) shared_buffer;
+
+      this->shm_init_ = true;
     }
+
+    if(this->in_)
+      delete this->in_;
+    if(this->out_)
+      delete this->out_;
+
+    this->in_ = new istream(shm_buf_);
+    this->out_ = new ostream(shm_buf_);
+
     this->shm_buf_->listen();
   }
 
@@ -242,21 +331,35 @@ public:
     region_ = mapped_region(shm_, m);
 
     this->shm_buf_ = static_cast<shared_buffer*>(region_.get_address());
+
+    if(this->in_)
+      delete this->in_;
+    if(this->out_)
+      delete this->out_;
+
+    this->in_ = new istream(shm_buf_);
+    this->out_ = new ostream(shm_buf_);
+
     this->shm_buf_->connect();
   }
 
+  void remove() {
+    if(this->daemon_) {
+      this->shm_buf_->finalize();
+      shared_memory_object::remove(this->name_.c_str());
+    }
+  }
+
   typename type::istream* make_istream() {
-    return new istream(this->shm_buf_);
+    return this->in_;
   }
 
   typename type::ostream* make_ostream() {
-    return new ostream(this->shm_buf_);
-  }
-
-  virtual ~basic_ringbuffer_connection() {
+    return this->out_;
   }
 
   void close() {
+    debug("close: " + this->name_);
     this->shm_buf_->close();
   }
 

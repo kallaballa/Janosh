@@ -74,6 +74,10 @@ public:
       LOG_ERR_MSG(msg, t);
       exit(exitcode);
     }
+
+    template<typename T> void warn(const string& msg, T t) {
+      LOG_WARN_MSG(msg, t);
+    }
   };
 
   class Settings {
@@ -103,6 +107,7 @@ public:
     Format format;
 
     Channel channel_;
+    bool open_;
     CommandMap cm;
 
     Janosh();
@@ -112,6 +117,7 @@ public:
     Format getFormat();
 
     void open();
+    bool isOpen();
     bool processRequest();
     void close();
     size_t loadJson(const string& jsonfile);

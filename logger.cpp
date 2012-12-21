@@ -10,7 +10,7 @@
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more de0tails.
+ * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
@@ -41,6 +41,7 @@ namespace janosh {
   void Logger::trace(const string& caller, std::initializer_list<janosh::Record> records) {
     TRI_LOG_LEVEL_STR("TRACE", makeCallString(caller, records));
   }
+
 
   const string Logger::makeCallString(const string& caller, std::initializer_list<janosh::Record> records) {
     std::stringstream ss;
