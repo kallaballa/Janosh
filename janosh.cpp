@@ -173,10 +173,10 @@ namespace janosh {
 
 
   Janosh::Janosh() :
-    settings(),
-    triggers(settings.triggerFile, settings.triggerDirs),
-    channel_(),
-    cm(makeCommandMap(this)) {
+        channel_(),
+        settings_(),
+        triggers_(settings_.triggerFile, settings_.triggerDirs),
+        cm(makeCommandMap(this)) {
   }
 
   Janosh::~Janosh() {
@@ -190,11 +190,107 @@ namespace janosh {
     return this->format;
   }
 
+
+  /*
+   * Executes the ExitHandler if it has been set and consumes it.
+   */
+  void Janosh::terminate(int code) {
+    if(!this->exHandler.empty()) {
+      this->exHandler(code);
+      this->exHandler = ExitHandler();
+    }
+    exit(code);
+  }
+
+  void Janosh::setExitHandler(ExitHandler exFunc) {
+    this->exHandler = exFunc;
+ }
+
+  int Janosh::query(int argc, char** argv) {
+    using namespace boost;
+    namespace asio = boost::asio;
+
+    Logger::init(LogLevel::L_DEBUG);
+    //client passes the argv to the daemon
+
+    asio::io_service* srv = new asio::io_service();
+    asio::signal_set signals(*srv, SIGINT, SIGTERM, SIGSEGV);
+    signals.add(SIGALRM);
+
+    Channel* chan = new Channel();
+
+    setExitHandler([=](int code){
+      chan->close();
+      srv->stop();
+    });
+
+    signals.async_wait([=](const boost::system::error_code& error,int signal_number){
+      LOG_DEBUG_MSG("signal received: ", signal_number);
+      terminate(error.value());
+    });
+
+    boost::asio::io_service::work work(*srv);
+    bool success = false;
+
+    try {
+      chan->connect();
+
+      for(int i = 0; i < argc; i++) {
+        chan->writeln(argv[i]);
+      }
+
+      chan->flush(true);
+      success = chan->receive(std::cout);
+
+      terminate(0);
+    } catch(janosh_exception& ex){
+      printException(ex);
+    }
+
+    return success;
+  }
+
+
+  void Janosh::serve() {
+    using namespace boost;
+    namespace asio = boost::asio;
+
+    asio::io_service* srv = new asio::io_service();
+    asio::signal_set signals(*srv, SIGINT, SIGTERM, SIGSEGV);
+    signals.add(SIGALRM);
+
+    this->setExitHandler([=](int code) {
+      this->close();
+      srv->stop();
+    });
+
+    signals.async_wait([=](const system::error_code& error,int signal_number){
+      LOG_DEBUG_MSG("signal received: ", signal_number);
+      this->terminate(error.value());
+    });
+
+    boost::thread t([&](){
+      srv->run();
+    });
+
+    this->open();
+    while(this->isOpen()) {
+      try {
+        std:: cerr << "result: " << this->process() << std::endl;
+      } catch(std::exception& ex) {
+        this->printException(ex);
+        this->terminate(-2);
+      }
+    }
+
+    this->terminate(0);
+  }
+
   void Janosh::open() {
     // open the database
-    if (!Record::db.open(settings.databaseFile.string(),  kc::PolyDB::OTRYLOCK | kc::PolyDB::OAUTOTRAN | kc::PolyDB::OREADER | kc::PolyDB::OWRITER | kc::PolyDB::OCREATE)) {
+    if (!Record::db.open(settings_.databaseFile.string(),  kc::PolyDB::OTRYLOCK | kc::PolyDB::OAUTOTRAN | kc::PolyDB::OREADER | kc::PolyDB::OWRITER | kc::PolyDB::OCREATE)) {
       LOG_ERR_MSG("open error", Record::db.error().name());
-      exit(2);
+      terminate(2);
     }
     open_ = true;
   }
@@ -203,7 +299,7 @@ namespace janosh {
     return this->open_;
   }
 
-  bool Janosh::processRequest() {
+  bool Janosh::process() {
     bool success = false;
     try {
     channel_.accept();
@@ -242,9 +338,8 @@ namespace janosh {
         else if(string(optarg) == "raw")
           f=janosh::Raw;
          else
-           LOG_ERR_MSG("Illegal format:", string(optarg));
            channel_.flush(false);
-           return false;
+           throw janosh_exception() << string_info({"Illegal format", string(optarg)});
         break;
       case 'j':
         f=janosh::Json;
@@ -266,14 +361,13 @@ namespace janosh {
         targetList = optarg;
         break;
       case ':':
-        LOG_ERR_MSG("Illegal option:", c);
         channel_.flush(false);
+        throw janosh_exception() << string_info({"Illegal option", "" + c});
         return false;
         break;
       case '?':
-        LOG_ERR_MSG("Illegal option:", c);
         channel_.flush(false);
-        return false;
+        throw janosh_exception() << string_info({"Illegal option", "" + c});
         break;
       }
     }
@@ -290,10 +384,10 @@ namespace janosh {
     if(((int)args.size()) >= optind + 1) {
       string strCmd = string(args[optind].c_str());
       Command* cmd = this->cm[strCmd];
+
       if(!cmd) {
-        LOG_ERR_MSG("Unknown command", strCmd);
         channel_.flush(false);
-        return false;
+        throw janosh_exception() << string_info({"Unknown command", strCmd});
       }
 
       vecArgs.clear();
@@ -309,7 +403,7 @@ namespace janosh {
       success = r.first ? 1 : 0;
     } else if(!execTargets){
       channel_.flush(false);
-      return false;
+      throw janosh_exception() << msg_info("missing command");
     }
 
     channel_.flush(success);
@@ -339,21 +433,19 @@ namespace janosh {
     size_t retries = 0;
     while(channel_.isOpen()) {
       if(++retries > 200) {
-        channel_.flush(false);
-        channel_.close();
-        break;
+        throw janosh_exception() << msg_info("channel timeout.");
       }
       boost::this_thread::sleep(boost::posix_time::milliseconds(10));
     };
     } catch(janosh_exception& ex) {
-      channel_.flush(false);
-      channel_.close();
-      throw ex;
+      printException(ex);
     } catch(std::exception& ex) {
-      channel_.flush(false);
-      channel_.close();
-      throw ex;
+      printException(ex);
+      this->terminate(-2);
     }
+
+    channel_.close();
+
     return success;
   }
 
@@ -364,6 +456,37 @@ namespace janosh {
     }
 
     channel_.remove();
+  }
+
+
+  void Janosh::printException(std::exception& ex) {
+    std::cerr << "Exception: " << ex.what() << std::endl;
+  }
+
+  void Janosh::printException(janosh::janosh_exception& ex) {
+    using namespace boost;
+
+    std::cerr << "Exception: ";
+  #ifdef JANOSH_DEBUG
+    std::cerr << boost::trace(ex) << std::endl;
+  #endif
+    if(auto const* m = get_error_info<msg_info>(ex) )
+      std::cerr << "message: " << *m << std::endl;
+
+    if(auto const* vs = get_error_info<string_info>(ex) ) {
+      for(auto it=vs->begin(); it != vs->end(); ++it) {
+        std::cerr << "info: " << *it << std::endl;
+      }
+    }
+
+    if(auto const* ri = get_error_info<record_info>(ex))
+      std::cerr << ri->first << ": " << ri->second << endl;
+
+    if(auto const* pi = get_error_info<path_info>(ex))
+      std::cerr << pi->first << ": " << pi->second << std::endl;
+
+    if(auto const* vi = get_error_info<value_info>(ex))
+      std::cerr << vi->first << ": " << vi->second << std::endl;
   }
 
   size_t Janosh::loadJson(const string& jsonfile) {
@@ -816,12 +939,10 @@ namespace janosh {
     size_t n = src.getSize();
     size_t s = dest.getSize();
     size_t cnt = 0;
-
     string path;
     string value;
 
-
-    while(++cnt < n) {
+    for(; cnt < n; ++cnt) {
       if(cnt > 0)
         src.next();
 
@@ -1076,31 +1197,7 @@ std::vector<size_t> sequence() {
 
 kyotocabinet::TreeDB janosh::Record::db;
 
-#include <boost/asio.hpp>
-#include <boost/asio/signal_set.hpp>
-#include <boost/asio/impl/io_service.hpp>
-
 int main(int argc, char** argv) {
-  auto list  = { 1, 1 };
-  std::vector<int> v = list;
-  std::pair<int, int> p({1, 1});
-
-  std::map<std::string, boost::function<bool(const string&)> > m;
-  string hw = "hello world";
-
-  auto fn = [&](const string& s){
-    return hw == s;
-  };
-
-  m["hw"] = fn;
-  std::cerr << m["hw"]("hello world") << std::endl;
-  std::cerr <<  m["hw"]("hello bla") << std::endl;
-
-
-  boost::asio::io_service srv;
-  boost::asio::signal_set signals(srv, SIGINT, SIGTERM, SIGSEGV);
-  signals.add(SIGALRM);
-
   using namespace std;
   using namespace boost;
   using namespace janosh;
@@ -1117,98 +1214,11 @@ int main(int argc, char** argv) {
     }
   }
 
+  Janosh* janosh = new Janosh();
   if(daemon) {
-    Janosh* janosh = new Janosh();
-    signals.async_wait([=](const boost::system::error_code& error,int signal_number){
-        janosh->close();
-        std::cerr << "signal: " << signal_number << std::endl;
-        exit(error.value());
-    });
-
-    boost::thread t([&](){
-      srv.run();
-    });
-
-    janosh->open();
-    while(janosh->isOpen()) {
-      try {
-        std:: cerr << "result: " << janosh->processRequest() << std::endl;
-      } catch(janosh_exception& ex){
-
-#ifdef JANOSH_DEBUG
-        std::cerr << boost::trace(ex) << std::endl;
-#endif
-        if(auto const* m = get_error_info<msg_info>(ex) )
-          std::cerr << "message: " << *m << std::endl;
-
-        if(auto const* vs = get_error_info<string_info>(ex) ) {
-          for(auto it=vs->begin(); it != vs->end(); ++it) {
-            std::cerr << "info: " << *it << std::endl;
-          }
-        }
-
-        if(auto const* ri = get_error_info<record_info>(ex))
-          std::cerr << ri->first << ": " << ri->second << endl;
-
-        if(auto const* pi = get_error_info<path_info>(ex))
-          std::cerr << pi->first << ": " << pi->second << std::endl;
-
-        if(auto const* vi = get_error_info<value_info>(ex))
-          std::cerr << vi->first << ": " << vi->second << std::endl;
-      }
-    }
-
-    srv.stop();
-    janosh->close();
+    janosh->serve();
   } else {
-    Logger::init(LogLevel::L_DEBUG);
-    //client passes the argv to the daemon
-    Channel* chan = new Channel();
-    signals.async_wait([=](const boost::system::error_code& error,int signal_number){
-      chan->close();
-      std::cerr << "signal: " << signal_number << std::endl;
-      exit(error.value());
-    });
-
-    boost::asio::io_service::work work(srv);
-    bool success = false;
-
-    try {
-      chan->connect();
-
-      for(int i = 0; i < argc; i++) {
-        chan->writeln(argv[i]);
-      }
-
-      chan->flush(true);
-      success = chan->receive(std::cout);
-      chan->close();
-
-      srv.stop();
-    } catch(janosh_exception& ex){
-#ifdef JANOSH_DEBUG
-      std::cerr << boost::trace(ex) << endl;
-#endif
-
-      if(auto const* m = get_error_info<msg_info>(ex) )
-        std::cerr << "message: " << *m << endl;
-
-      if(auto const* vs = get_error_info<string_info>(ex) ) {
-        for(auto it=vs->begin(); it != vs->end(); ++it) {
-          std::cerr << "info: " << *it << endl;
-        }
-      }
-
-      if(auto const* ri = get_error_info<record_info>(ex))
-        std::cerr << ri->first << ": " << ri->second << endl;
-
-      if(auto const* pi = get_error_info<path_info>(ex))
-        std::cerr << pi->first << ": " << pi->second << endl;
-
-      if(auto const* vi = get_error_info<value_info>(ex))
-        std::cerr << vi->first << ": " << vi->second << endl;
-    }
-    return success;
+    janosh->query(argc, argv);
   }
-  return 0;
 }
+

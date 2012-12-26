@@ -8,8 +8,6 @@
 #include <boost/algorithm/string.hpp>
 
 using std::string;
-using std::cerr;
-using std::endl;
 
 namespace janosh {
   class BashPrintVisitor {

@@ -319,7 +319,7 @@ namespace janosh {
         return {-1, "Expected a list of triggers"};
       } else {
         BOOST_FOREACH(const string& p, params) {
-          janosh->triggers.executeTrigger(Path(p));
+          janosh->triggers_.executeTrigger(Path(p));
         }
 
         return {params.size(), "Successful"};
@@ -362,7 +362,7 @@ namespace janosh {
         return {-1, "Expected a list of targets"};
 
       BOOST_FOREACH (const string& t, params) {
-        janosh->triggers.executeTarget(t);
+        janosh->triggers_.executeTarget(t);
         ++cnt;
       }
 

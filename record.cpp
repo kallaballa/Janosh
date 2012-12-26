@@ -87,7 +87,7 @@ namespace janosh {
     if(!isInitialized())
       throw record_exception() << path_info({"uninitialized record", this->pathObj});
 
-    if(getCursorPtr()->remove())
+    if(!getCursorPtr()->remove())
       throw record_exception() << path_info({"failed to remove record", this->pathObj});
 
     this->clear();

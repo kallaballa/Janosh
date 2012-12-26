@@ -12,6 +12,10 @@
 #include <exception>
 #include <initializer_list>
 
+
+#include <boost/asio.hpp>
+#include <boost/asio/signal_set.hpp>
+#include <boost/asio/impl/io_service.hpp>
 #include <boost/bind.hpp>
 #include <boost/thread.hpp>
 #include <boost/range.hpp>
@@ -102,24 +106,18 @@ public:
 
   class Janosh {
   public:
-    Settings settings;
-    TriggerBase triggers;
-    Format format;
-
+    typedef boost::function<void(int)> ExitHandler;
     Channel channel_;
-    bool open_;
-    CommandMap cm;
+    Settings settings_;
+    TriggerBase triggers_;
 
-    Janosh();
+      Janosh();
     ~Janosh();
 
-    void setFormat(Format f) ;
-    Format getFormat();
-
-    void open();
-    bool isOpen();
-    bool processRequest();
+    int query(int argc, char** argv);
+    void serve();
     void close();
+
     size_t loadJson(const string& jsonfile);
     size_t loadJson(std::istream& is);
 
@@ -146,6 +144,23 @@ public:
     size_t hash();
     size_t truncate();
   private:
+    Format format;
+
+    bool open_;
+    CommandMap cm;
+    ExitHandler exHandler;
+
+    void setFormat(Format f) ;
+    Format getFormat();
+    void open();
+    bool isOpen();
+    void setExitHandler(ExitHandler fn);
+
+    bool process();
+    void terminate(int code);
+    void printException(janosh_exception& ex);
+    void printException(std::exception& ex);
+
     string filename;
     js::Value rootValue;
 

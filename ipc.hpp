@@ -27,7 +27,7 @@ using boost::this_thread::sleep;
 using boost::posix_time::milliseconds;
 
 static void debug(const std::string& s) {
-#ifdef JANOSH_DEBUG
+#ifdef JANOSH_DEBUG_IPC
   timespec ts;
   clock_gettime(CLOCK_REALTIME, &ts);
 

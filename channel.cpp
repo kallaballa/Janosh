@@ -85,7 +85,6 @@ namespace janosh {
       if(this->daemon_) {
         string l;
         while(std::getline(this->in(), l)) {
-          std::cerr << "read" << l << std::endl;
           if(l == "-d")
             break;
           else
