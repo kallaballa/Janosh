@@ -14,14 +14,16 @@ ifdef DEBUG
  LDFLAGS += -Wl,--export-dynamic
 else
  LDFLAGS += -s
- CXFLAGS += -g0 -03
+ CXXFLAGS += -g0 -03
 endif
 
 all: release
 
 release: ${TARGET}
 
-static: CXXFLAGS += -fvisibility=hidden -fvisibility-inlines-hidden
+reduce: CXXFLAGS = -DETLOG -std=c++0x -pedantic -Wall -I/usr/local/include/ -I./backtrace/ -g0 -Os -fvisibility=hidden -fvisibility-inlines-hidden
+reduce: ${TARGET}
+
 static: LIBS = -Wl,-Bstatic -lboost_system -lboost_filesystem -ljson_spirit -lboost_thread -Wl,-Bdynamic -lkyotocabinet -lpthread -lrt -ldl
 static: ${TARGET}
 
