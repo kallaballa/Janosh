@@ -210,7 +210,11 @@ namespace janosh {
     using namespace boost;
     namespace asio = boost::asio;
 
+#ifdef JANOSH_DEBUG
     Logger::init(LogLevel::L_DEBUG);
+#else
+    Logger::init(LogLevel::L_INFO);
+#endif
     //client passes the argv to the daemon
 
     asio::io_service* srv = new asio::io_service();
@@ -255,17 +259,23 @@ namespace janosh {
     using namespace boost;
     namespace asio = boost::asio;
 
+#ifdef JANOSH_DEBUG
+    Logger::init(LogLevel::L_DEBUG);
+#else
+    Logger::init(LogLevel::L_INFO);
+#endif
+
     asio::io_service* srv = new asio::io_service();
     asio::signal_set signals(*srv, SIGINT, SIGTERM, SIGSEGV);
-    signals.add(SIGALRM);
 
     this->setExitHandler([=](int code) {
+      std::cerr << "exit handler" << std::endl;
+      LOG_INFO_STR("Exit Handler");
       this->close();
-      srv->stop();
     });
 
     signals.async_wait([=](const system::error_code& error,int signal_number){
-      LOG_DEBUG_MSG("signal received: ", signal_number);
+      LOG_INFO_MSG("signal received: ", signal_number);
       this->terminate(error.value());
     });
 
@@ -283,6 +293,7 @@ namespace janosh {
       }
     }
 
+    srv->stop();
     this->terminate(0);
   }
 

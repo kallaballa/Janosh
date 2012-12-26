@@ -93,10 +93,6 @@ namespace janosh {
       const string& pretty() const {
         return this->_pretty;
       }
-
-    /*  operator string() const {
-        return this->key();
-      }*/
     };
 
   class Path {
