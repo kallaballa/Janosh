@@ -4,19 +4,26 @@ OBJS    := ${SRCS:.cpp=.o}
 DEPS    := ${SRCS:.cpp=.dep} 
     
 CXXFLAGS = -DETLOG -std=c++0x -pedantic -Wall -I/usr/local/include/
-LDFLAGS = -s
-LDDEBUGFLAGS = -export-dynamic
-LIBS    = -L/usr/lib64/ -lboost_system -lboost_filesystem -ljson_spirit -lpthread -lboost_thread -lkyotocabinet  -lrt -ldl
+LDFLAGS = -L/usr/lib64/
+LIBS    = -lboost_system -lboost_filesystem -ljson_spirit -lpthread -lboost_thread -lkyotocabinet  -lrt -ldl
 
-.PHONY: all debug clean distclean 
+.PHONY: all release static clean distclean 
 
-all: debug
+ifdef DEBUG
+ CXXFLAGS += -DJANOSH_DEBUG -g3 -O0 -rdynamic -I./backtrace/
+ LDFLAGS += -Wl,--export-dynamic
+else
+ LDFLAGS += -s
+ CXFLAGS += -g0 -03
+endif
 
-release: CXXFLAGS += -g0 -O3 
+all: release
+
 release: ${TARGET}
 
-debug: CXXFLAGS += -DJANOSH_DEBUG -g3 -O0 -rdynamic -I./backtrace/
-debug: ${TARGET}
+static: CXXFLAGS += -fvisibility=hidden -fvisibility-inlines-hidden -I./backtrace/
+static: LIBS = -Wl,-Bstatic -lboost_system -lboost_filesystem -ljson_spirit -lboost_thread -Wl,-Bdynamic -lkyotocabinet -lpthread -lrt -ldl
+static: ${TARGET}
 
 ${TARGET}: ${OBJS} 
 	${CXX} ${LDFLAGS} -o $@ $^ ${LIBS} 
