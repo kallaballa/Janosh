@@ -14,7 +14,7 @@ ifdef DEBUG
  LDFLAGS += -Wl,--export-dynamic
 else
  LDFLAGS += -s
- CXXFLAGS += -g0 -03
+ CXXFLAGS += -g0 -O3
 endif
 
 all: release

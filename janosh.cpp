@@ -478,7 +478,7 @@ namespace janosh {
     using namespace boost;
 
     std::cerr << "Exception: ";
-  #ifdef JANOSH_DEBUG
+  #if 0
     std::cerr << boost::trace(ex) << std::endl;
   #endif
     if(auto const* m = get_error_info<msg_info>(ex) )

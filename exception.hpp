@@ -4,7 +4,7 @@
 #include <string>
 #include <exception>
 #include <boost/exception/all.hpp>
-#ifdef JANOSH_DEBUG
+#if 0
 #include <boost/backtrace.hpp>
 #endif
 
@@ -13,7 +13,7 @@ namespace janosh {
   typedef boost::error_info<struct tag_janosh_string,std::vector<string> > string_info;
 
   struct janosh_exception :
-#ifdef JANOSH_DEBUG
+#if 0
     public boost::backtrace,
 #endif
     virtual boost::exception,
