@@ -1,0 +1,5 @@
+/home/elchaschab/devel/Janosh/json-spirit/json_demo/CMakeFiles/json_demo.dir
+/home/elchaschab/devel/Janosh/json-spirit/json_headers_only_demo/CMakeFiles/json_headers_only_demo.dir
+/home/elchaschab/devel/Janosh/json-spirit/json_map_demo/CMakeFiles/json_map_demo.dir
+/home/elchaschab/devel/Janosh/json-spirit/json_spirit/CMakeFiles/json_spirit.dir
+/home/elchaschab/devel/Janosh/json-spirit/json_test/CMakeFiles/json_test.dir
