@@ -32,7 +32,6 @@
 #include <kcpolydb.h>
 
 #include "logger.hpp"
-#include "channel.hpp"
 #include "record.hpp"
 #include "json_spirit.h"
 #include "json.hpp"
@@ -107,16 +106,14 @@ public:
   class Janosh {
   public:
     typedef boost::function<void(int)> ExitHandler;
-    Channel channel_;
     Settings settings_;
     TriggerBase triggers_;
 
       Janosh();
     ~Janosh();
 
-    int query(int argc, char** argv);
-    void serve();
     void close();
+    bool process(int argc, char** argv);
 
     size_t loadJson(const string& jsonfile);
     size_t loadJson(std::istream& is);
@@ -156,7 +153,6 @@ public:
     bool isOpen();
     void setExitHandler(ExitHandler fn);
 
-    bool process();
     void terminate(int code);
     void printException(janosh_exception& ex);
     void printException(std::exception& ex);

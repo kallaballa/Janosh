@@ -1,5 +1,5 @@
 TARGET  := janosh 
-SRCS    := janosh.cpp logger.cpp tri_logger/tri_logger.cpp record.cpp channel.cpp path.cpp value.cpp backtrace/libs/backtrace/src/backtrace.cpp
+SRCS    := janosh.cpp logger.cpp tri_logger/tri_logger.cpp record.cpp path.cpp value.cpp backtrace/libs/backtrace/src/backtrace.cpp
 OBJS    := ${SRCS:.cpp=.o} 
 DEPS    := ${SRCS:.cpp=.dep} 
     

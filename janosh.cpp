@@ -173,8 +173,7 @@ namespace janosh {
 
 
   Janosh::Janosh() :
-        channel_(),
-        settings_(),
+		settings_(),
         triggers_(settings_.triggerFile, settings_.triggerDirs),
         cm(makeCommandMap(this)) {
   }
@@ -206,97 +205,6 @@ namespace janosh {
     this->exHandler = exFunc;
  }
 
-  int Janosh::query(int argc, char** argv) {
-    using namespace boost;
-    namespace asio = boost::asio;
-
-#ifdef JANOSH_DEBUG
-    Logger::init(LogLevel::L_DEBUG);
-#else
-    Logger::init(LogLevel::L_INFO);
-#endif
-    //client passes the argv to the daemon
-
-    asio::io_service* srv = new asio::io_service();
-    asio::signal_set signals(*srv, SIGINT, SIGTERM, SIGSEGV);
-    signals.add(SIGALRM);
-
-    Channel* chan = new Channel();
-
-    setExitHandler([=](int code){
-      chan->close();
-      srv->stop();
-    });
-
-    signals.async_wait([=](const boost::system::error_code& error,int signal_number){
-      LOG_DEBUG_MSG("signal received: ", signal_number);
-      terminate(error.value());
-    });
-
-    boost::asio::io_service::work work(*srv);
-    bool success = false;
-
-    try {
-      chan->connect();
-
-      for(int i = 0; i < argc; i++) {
-        chan->writeln(argv[i]);
-      }
-
-      chan->flush(true);
-      success = chan->receive(std::cout);
-
-      terminate(0);
-    } catch(janosh_exception& ex){
-      printException(ex);
-    }
-
-    return success;
-  }
-
-
-  void Janosh::serve() {
-    using namespace boost;
-    namespace asio = boost::asio;
-
-#ifdef JANOSH_DEBUG
-    Logger::init(LogLevel::L_DEBUG);
-#else
-    Logger::init(LogLevel::L_INFO);
-#endif
-
-    asio::io_service* srv = new asio::io_service();
-    asio::signal_set signals(*srv, SIGINT, SIGTERM, SIGSEGV);
-
-    this->setExitHandler([=](int code) {
-      std::cerr << "exit handler" << std::endl;
-      LOG_INFO_STR("Exit Handler");
-      this->close();
-    });
-
-    signals.async_wait([=](const system::error_code& error,int signal_number){
-      LOG_INFO_MSG("signal received: ", signal_number);
-      this->terminate(error.value());
-    });
-
-    boost::thread t([&](){
-      srv->run();
-    });
-
-    this->open();
-    while(this->isOpen()) {
-      try {
-        std:: cerr << "result: " << this->process() << std::endl;
-      } catch(std::exception& ex) {
-        this->printException(ex);
-        this->terminate(-2);
-      }
-    }
-
-    srv->stop();
-    this->terminate(0);
-  }
-
   void Janosh::open() {
     // open the database
     if (!Record::db.open(settings_.databaseFile.string(),  kc::PolyDB::OTRYLOCK | kc::PolyDB::OAUTOTRAN | kc::PolyDB::OREADER | kc::PolyDB::OWRITER | kc::PolyDB::OCREATE)) {
@@ -310,20 +218,16 @@ namespace janosh {
     return this->open_;
   }
 
-  bool Janosh::process() {
+  bool Janosh::process(int argc, char** argv) {
+    this->open();
     bool success = false;
     try {
-    channel_.accept();
-    vector<string> args;
-    channel_.receive(args);
 
+    std::vector<string> args;
+    for(int i = 0; i < argc; i++) {
+      args.push_back(string(argv[i]));
+    }
     std::vector<char*> vc;
-
-    std::transform(args.begin(), args.end(), std::back_inserter(vc), [&](const std::string & s){
-      char *pc = new char[s.size()+1];
-      std::strcpy(pc, s.c_str());
-      return pc;
-    });
 
     int c;
     janosh::Format f = janosh::Bash;
@@ -335,9 +239,9 @@ namespace janosh {
     string key;
     string value;
     string targetList;
-    char* const* c_args = (char* const*)&vc[0];
+    char* const* c_args = argv;
     optind=1;
-    while ((c = getopt(args.size(), c_args, "dvfjbrte:")) != -1) {
+    while ((c = getopt(argc, c_args, "dvfjbrte:")) != -1) {
       switch (c) {
       case 'd':
         break;
@@ -349,7 +253,6 @@ namespace janosh {
         else if(string(optarg) == "raw")
           f=janosh::Raw;
          else
-           channel_.flush(false);
            throw janosh_exception() << string_info({"Illegal format", string(optarg)});
         break;
       case 'j':
@@ -372,12 +275,10 @@ namespace janosh {
         targetList = optarg;
         break;
       case ':':
-        channel_.flush(false);
         throw janosh_exception() << string_info({"Illegal option", "" + c});
         return false;
         break;
       case '?':
-        channel_.flush(false);
         throw janosh_exception() << string_info({"Illegal option", "" + c});
         break;
       }
@@ -385,19 +286,14 @@ namespace janosh {
 
     this->setFormat(f);
 
-    if(verbose)
-      Logger::init(LogLevel::L_DEBUG);
-    else
-      Logger::init(LogLevel::L_INFO);
 
     vector<std::string> vecArgs;
 
-    if(((int)args.size()) >= optind + 1) {
-      string strCmd = string(args[optind].c_str());
+    if(argc >= optind + 1) {
+      string strCmd = string(argv[optind]);
       Command* cmd = this->cm[strCmd];
 
       if(!cmd) {
-        channel_.flush(false);
         throw janosh_exception() << string_info({"Unknown command", strCmd});
       }
 
@@ -413,11 +309,8 @@ namespace janosh {
       LOG_INFO_MSG(r.second, r.first);
       success = r.first ? 1 : 0;
     } else if(!execTargets){
-      channel_.flush(false);
       throw janosh_exception() << msg_info("missing command");
     }
-
-    channel_.flush(success);
 
     boost::thread th_triggers([=]() {
     if(execTriggers) {
@@ -441,21 +334,12 @@ namespace janosh {
       (*t)(vecTargets);
     }});
 
-    size_t retries = 0;
-    while(channel_.isOpen()) {
-      if(++retries > 200) {
-        throw janosh_exception() << msg_info("channel timeout.");
-      }
-      boost::this_thread::sleep(boost::posix_time::milliseconds(10));
-    };
     } catch(janosh_exception& ex) {
       printException(ex);
     } catch(std::exception& ex) {
       printException(ex);
       this->terminate(-2);
     }
-
-    channel_.close();
 
     return success;
   }
@@ -465,8 +349,6 @@ namespace janosh {
       open_ = false;
       Record::db.close();
     }
-
-    channel_.remove();
   }
 
 
@@ -864,7 +746,7 @@ namespace janosh {
     size_t cnt = 0;
 
     while(cur->get(&key, &value, true)) {
-      this->channel_.out() << "path: " << Path(key).pretty() <<  " value:" << value << endl;
+      std::cout << "path: " << Path(key).pretty() <<  " value:" << value << endl;
       ++cnt;
     }
     delete cur;
@@ -882,7 +764,7 @@ namespace janosh {
       h = hasher(lexical_cast<string>(h) + key + value);
       ++cnt;
     }
-    this->channel_.out() << h << std::endl;
+    std::cout << h << std::endl;
     delete cur;
     return cnt;
   }
@@ -1212,24 +1094,11 @@ int main(int argc, char** argv) {
   using namespace std;
   using namespace boost;
   using namespace janosh;
-  bool daemon = false;
-  int c;
 
-  while ((c = getopt(argc, argv, "dvfjbrte:")) != -1) {
-    switch (c) {
-    case 'd':
-      daemon = true;
-      break;
-    default:
-      break;
-    }
-  }
+  Logger::init(LogLevel::L_DEBUG);
+
 
   Janosh* janosh = new Janosh();
-  if(daemon) {
-    janosh->serve();
-  } else {
-    janosh->query(argc, argv);
-  }
+  janosh->process(argc, argv);
 }
 

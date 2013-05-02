@@ -302,7 +302,7 @@ namespace janosh {
         return {-1, "Expected a path"};
       } else {
         Record p(params.front());
-        janosh->channel_.out() << janosh->size(p) << std::endl;
+        std::cout << janosh->size(p) << std::endl;
       }
       return {0, "Successful"};
     }
@@ -340,7 +340,7 @@ namespace janosh {
         bool found_all = true;
         BOOST_FOREACH(const string& p, params) {
           Record rec(p);
-          found_all = found_all && janosh->get(rec, janosh->channel_.out());
+          found_all = found_all && janosh->get(rec, std::cout);
         }
 
         if (!found_all)
