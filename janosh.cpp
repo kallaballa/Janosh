@@ -35,7 +35,7 @@ namespace janosh {
       warn("Target not found", name);
       return -1;
     }
-    LOG_DEBUG_MSG("Execute target", name);
+    LOG_INFO_MSG("Execute target", name);
     return system((*it).second.c_str());
   }
 
@@ -189,27 +189,12 @@ namespace janosh {
     return this->format;
   }
 
-
-  /*
-   * Executes the ExitHandler if it has been set and consumes it.
-   */
-  void Janosh::terminate(int code) {
-    if(!this->exHandler.empty()) {
-      this->exHandler(code);
-      this->exHandler = ExitHandler();
-    }
-    exit(code);
-  }
-
-  void Janosh::setExitHandler(ExitHandler exFunc) {
-    this->exHandler = exFunc;
- }
-
   void Janosh::open() {
     // open the database
-    if (!Record::db.open(settings_.databaseFile.string(),  kc::PolyDB::OTRYLOCK | kc::PolyDB::OAUTOTRAN | kc::PolyDB::OREADER | kc::PolyDB::OWRITER | kc::PolyDB::OCREATE)) {
+
+    while (!Record::db.open(settings_.databaseFile.string(),  kc::PolyDB::OTRYLOCK | kc::PolyDB::OAUTOTRAN | kc::PolyDB::OREADER | kc::PolyDB::OWRITER | kc::PolyDB::OCREATE)) {
+      boost::this_thread::sleep(boost::posix_time::millisec(20));
       LOG_ERR_MSG("open error", Record::db.error().name());
-      terminate(2);
     }
     open_ = true;
   }
@@ -220,127 +205,132 @@ namespace janosh {
 
   bool Janosh::process(int argc, char** argv) {
     this->open();
+    LOG_DEBUG("Process");
     bool success = false;
     try {
 
-    std::vector<string> args;
-    for(int i = 0; i < argc; i++) {
-      args.push_back(string(argv[i]));
-    }
-    std::vector<char*> vc;
+      std::vector<string> args;
+      for(int i = 0; i < argc; i++) {
+        LOG_DEBUG_MSG("ARG", argv[i]);
+        args.push_back(string(argv[i]));
+      }
+      std::vector<char*> vc;
 
-    int c;
-    janosh::Format f = janosh::Bash;
+      int c;
+      janosh::Format f = janosh::Bash;
 
-    bool verbose = false;
-    bool execTriggers = false;
-    bool execTargets = false;
+      bool verbose = false;
+      bool execTriggers = false;
+      bool execTargets = false;
 
-    string key;
-    string value;
-    string targetList;
-    char* const* c_args = argv;
-    optind=1;
-    while ((c = getopt(argc, c_args, "dvfjbrte:")) != -1) {
-      switch (c) {
-      case 'd':
-        break;
-      case 'f':
-        if(string(optarg) == "bash")
-          f=janosh::Bash;
-        else if(string(optarg) == "json")
+      string key;
+      string value;
+      string targetList;
+      char* const* c_args = argv;
+      optind=1;
+      while ((c = getopt(argc, c_args, "dvfjbrte:")) != -1) {
+        switch (c) {
+        case 'd':
+          break;
+        case 'f':
+          if(string(optarg) == "bash")
+            f=janosh::Bash;
+          else if(string(optarg) == "json")
+            f=janosh::Json;
+          else if(string(optarg) == "raw")
+            f=janosh::Raw;
+           else
+             throw janosh_exception() << string_info({"Illegal format", string(optarg)});
+          break;
+        case 'j':
           f=janosh::Json;
-        else if(string(optarg) == "raw")
+          break;
+        case 'b':
+          f=janosh::Bash;
+          break;
+        case 'r':
           f=janosh::Raw;
-         else
-           throw janosh_exception() << string_info({"Illegal format", string(optarg)});
-        break;
-      case 'j':
-        f=janosh::Json;
-        break;
-      case 'b':
-        f=janosh::Bash;
-        break;
-      case 'r':
-        f=janosh::Raw;
-        break;
-      case 'v':
-        verbose=true;
-        break;
-      case 't':
-        execTriggers = true;
-        break;
-      case 'e':
-        execTargets = true;
-        targetList = optarg;
-        break;
-      case ':':
-        throw janosh_exception() << string_info({"Illegal option", "" + c});
-        return false;
-        break;
-      case '?':
-        throw janosh_exception() << string_info({"Illegal option", "" + c});
-        break;
-      }
-    }
-
-    this->setFormat(f);
-
-
-    vector<std::string> vecArgs;
-
-    if(argc >= optind + 1) {
-      string strCmd = string(argv[optind]);
-      Command* cmd = this->cm[strCmd];
-
-      if(!cmd) {
-        throw janosh_exception() << string_info({"Unknown command", strCmd});
+          break;
+        case 'v':
+          verbose=true;
+          break;
+        case 't':
+          LOG_DEBUG("Trigger option");
+          execTriggers = true;
+          break;
+        case 'e':
+          execTargets = true;
+          targetList = optarg;
+          break;
+        case ':':
+          throw janosh_exception() << string_info({"Illegal option", "" + c});
+          return false;
+          break;
+        case '?':
+          throw janosh_exception() << string_info({"Illegal option", "" + c});
+          break;
+        }
       }
 
-      vecArgs.clear();
+      this->setFormat(f);
 
-      std::transform(
-          args.begin() + optind + 1, args.end(),
-          std::back_inserter(vecArgs),
-          boost::bind(&std::string::c_str, _1)
-          );
+      vector<std::string> vecArgs;
 
-      Command::Result r = (*cmd)(vecArgs);
-      LOG_INFO_MSG(r.second, r.first);
-      success = r.first ? 1 : 0;
-    } else if(!execTargets){
-      throw janosh_exception() << msg_info("missing command");
-    }
+      if(argc >= optind + 1) {
+        LOG_DEBUG_MSG("Execute command", argv[optind]);
+        string strCmd = string(argv[optind]);
+        Command* cmd = this->cm[strCmd];
 
-    boost::thread th_triggers([=]() {
-    if(execTriggers) {
-      Command* t = cm["triggers"];
-      vector<string> vecTriggers;
+        if(!cmd) {
+          throw janosh_exception() << string_info({"Unknown command", strCmd});
+        }
 
-      for(size_t i = 0; i < vecArgs.size(); i+=2) {
-        vecTriggers.push_back(vecArgs[i].c_str());
-      }
-      (*t)(vecTriggers);
-    }
+        vecArgs.clear();
 
-    if(execTargets) {
-      Command* t = cm["targets"];
-      vector<string> vecTargets;
-      tokenizer<char_separator<char> > tok(targetList, char_separator<char>(","));
-      BOOST_FOREACH (const string& t, tok) {
-        vecTargets.push_back(t);
+        std::transform(
+            args.begin() + optind + 1, args.end(),
+            std::back_inserter(vecArgs),
+            boost::bind(&std::string::c_str, _1)
+            );
+
+        Command::Result r = (*cmd)(vecArgs);
+        LOG_INFO_MSG(r.second, r.first);
+        success = r.first ? 1 : 0;
+      } else if(!execTargets){
+        throw janosh_exception() << msg_info("missing command");
       }
 
-      (*t)(vecTargets);
-    }});
+      this->close();
+
+      if(execTriggers) {
+        LOG_DEBUG("Triggers");
+        Command* t = cm["triggers"];
+        vector<string> vecTriggers;
+
+        for(size_t i = 0; i < vecArgs.size(); i+=2) {
+          LOG_DEBUG_MSG("Execute triggers", vecArgs[i].c_str());
+          vecTriggers.push_back(vecArgs[i].c_str());
+        }
+        (*t)(vecTriggers);
+      }
+
+      if(execTargets) {
+        Command* t = cm["targets"];
+        vector<string> vecTargets;
+        tokenizer<char_separator<char> > tok(targetList, char_separator<char>(","));
+        BOOST_FOREACH (const string& t, tok) {
+          vecTargets.push_back(t);
+        }
+
+        (*t)(vecTargets);
+      }
 
     } catch(janosh_exception& ex) {
       printException(ex);
     } catch(std::exception& ex) {
       printException(ex);
-      this->terminate(-2);
     }
-
+    this->close();
     return success;
   }
 
@@ -350,7 +340,6 @@ namespace janosh {
       Record::db.close();
     }
   }
-
 
   void Janosh::printException(std::exception& ex) {
     std::cerr << "Exception: " << ex.what() << std::endl;
@@ -1096,7 +1085,7 @@ int main(int argc, char** argv) {
   using namespace janosh;
 
   Logger::init(LogLevel::L_DEBUG);
-
+  TRI_LOG_OFF();
 
   Janosh* janosh = new Janosh();
   janosh->process(argc, argv);

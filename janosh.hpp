@@ -145,13 +145,11 @@ public:
 
     bool open_;
     CommandMap cm;
-    ExitHandler exHandler;
 
     void setFormat(Format f) ;
     Format getFormat();
     void open();
     bool isOpen();
-    void setExitHandler(ExitHandler fn);
 
     void terminate(int code);
     void printException(janosh_exception& ex);

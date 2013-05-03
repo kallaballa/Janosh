@@ -37,7 +37,7 @@ ${DEPS}: %.dep: %.cpp Makefile
 	${CXX} ${CXXFLAGS} -MM $< > $@ 
 
 clean:
-	rm -f *~ *.o backtrace/libs/backtrace/src/*.o ${TARGET} 
+	rm -f *~ *.o backtrace/libs/backtrace/src/*.o tri_logger/tri_logger.o ${TARGET} 
 
 distclean: clean
 
