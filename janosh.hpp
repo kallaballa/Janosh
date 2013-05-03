@@ -113,7 +113,7 @@ public:
     ~Janosh();
 
     void close();
-    bool process(int argc, char** argv);
+    size_t process(int argc, char** argv);
 
     size_t loadJson(const string& jsonfile);
     size_t loadJson(std::istream& is);

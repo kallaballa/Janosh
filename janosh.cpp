@@ -203,10 +203,10 @@ namespace janosh {
     return this->open_;
   }
 
-  bool Janosh::process(int argc, char** argv) {
+  size_t Janosh::process(int argc, char** argv) {
     this->open();
     LOG_DEBUG("Process");
-    bool success = false;
+    size_t result = -1;
     try {
 
       std::vector<string> args;
@@ -295,7 +295,7 @@ namespace janosh {
 
         Command::Result r = (*cmd)(vecArgs);
         LOG_INFO_MSG(r.second, r.first);
-        success = r.first ? 1 : 0;
+        result = r.first ? 0 : 1;
       } else if(!execTargets){
         throw janosh_exception() << msg_info("missing command");
       }
@@ -327,11 +327,13 @@ namespace janosh {
 
     } catch(janosh_exception& ex) {
       printException(ex);
+      result = 1;
     } catch(std::exception& ex) {
       printException(ex);
+      result = 1;
     }
     this->close();
-    return success;
+    return result;
   }
 
   void Janosh::close() {
@@ -1088,6 +1090,6 @@ int main(int argc, char** argv) {
   TRI_LOG_OFF();
 
   Janosh* janosh = new Janosh();
-  janosh->process(argc, argv);
+  return janosh->process(argc, argv);
 }
 
