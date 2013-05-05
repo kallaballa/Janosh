@@ -189,10 +189,15 @@ namespace janosh {
     return this->format;
   }
 
-  void Janosh::open() {
+  void Janosh::open(bool reader=false) {
     // open the database
 
-    while (!Record::db.open(settings_.databaseFile.string(),  kc::PolyDB::OTRYLOCK | kc::PolyDB::OAUTOTRAN | kc::PolyDB::OREADER | kc::PolyDB::OWRITER | kc::PolyDB::OCREATE)) {
+    uint32_t mode;
+    if(reader)
+      mode = kc::PolyDB::OAUTOTRAN | kc::PolyDB::OREADER;
+    else
+      mode = kc::PolyDB::OTRYLOCK | kc::PolyDB::OAUTOTRAN | kc::PolyDB::OREADER | kc::PolyDB::OWRITER | kc::PolyDB::OCREATE;
+    while (!Record::db.open(settings_.databaseFile.string(),  mode)) {
       boost::this_thread::sleep(boost::posix_time::millisec(20));
       LOG_ERR_MSG("open error", Record::db.error().name());
     }
@@ -204,14 +209,11 @@ namespace janosh {
   }
 
   size_t Janosh::process(int argc, char** argv) {
-    this->open();
-    LOG_DEBUG("Process");
     size_t result = -1;
     try {
 
       std::vector<string> args;
       for(int i = 0; i < argc; i++) {
-        LOG_DEBUG_MSG("ARG", argv[i]);
         args.push_back(string(argv[i]));
       }
       std::vector<char*> vc;
@@ -279,6 +281,7 @@ namespace janosh {
       if(argc >= optind + 1) {
         LOG_DEBUG_MSG("Execute command", argv[optind]);
         string strCmd = string(argv[optind]);
+
         Command* cmd = this->cm[strCmd];
 
         if(!cmd) {
@@ -1087,7 +1090,6 @@ int main(int argc, char** argv) {
   using namespace janosh;
 
   Logger::init(LogLevel::L_DEBUG);
-  TRI_LOG_OFF();
 
   Janosh* janosh = new Janosh();
   return janosh->process(argc, argv);

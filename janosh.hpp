@@ -112,6 +112,7 @@ public:
       Janosh();
     ~Janosh();
 
+    void open(bool reader);
     void close();
     size_t process(int argc, char** argv);
 
@@ -148,7 +149,7 @@ public:
 
     void setFormat(Format f) ;
     Format getFormat();
-    void open();
+
     bool isOpen();
 
     void terminate(int code);
