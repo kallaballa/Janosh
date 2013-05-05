@@ -257,7 +257,6 @@ namespace janosh {
           verbose=true;
           break;
         case 't':
-          LOG_DEBUG("Trigger option");
           execTriggers = true;
           break;
         case 'e':
