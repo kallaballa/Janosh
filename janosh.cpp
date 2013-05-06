@@ -189,11 +189,11 @@ namespace janosh {
     return this->format;
   }
 
-  void Janosh::open(bool reader=false) {
+  void Janosh::open(bool readOnly=false) {
     // open the database
 
     uint32_t mode;
-    if(reader)
+    if(readOnly)
       mode = kc::PolyDB::OAUTOTRAN | kc::PolyDB::OREADER;
     else
       mode = kc::PolyDB::OTRYLOCK | kc::PolyDB::OAUTOTRAN | kc::PolyDB::OREADER | kc::PolyDB::OWRITER | kc::PolyDB::OCREATE;
@@ -280,6 +280,11 @@ namespace janosh {
       if(argc >= optind + 1) {
         LOG_DEBUG_MSG("Execute command", argv[optind]);
         string strCmd = string(argv[optind]);
+        if(strCmd == "get") {
+          this->open(true);
+        } else {
+          this->open(false);
+        }
 
         Command* cmd = this->cm[strCmd];
 
@@ -1089,7 +1094,6 @@ int main(int argc, char** argv) {
   using namespace janosh;
 
   Logger::init(LogLevel::L_DEBUG);
-  TRI_LOG_OFF();
 
   Janosh* janosh = new Janosh();
   return janosh->process(argc, argv);

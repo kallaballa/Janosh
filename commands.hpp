@@ -41,7 +41,6 @@ public:
 
   virtual Result operator()(const std::vector<string>& params) {
     if (!params.empty()) {
-      janosh->open(false);
       int cnt = 0;
       BOOST_FOREACH(const string& p, params) {
         LOG_DEBUG_MSG("Removing", p);
@@ -71,7 +70,6 @@ public:
       LOG_DEBUG_STR("hash doesn't take any parameters");
       return {0, "Failed"};
     } else {
-      janosh->open(false);
       return {janosh->hash(), "Successful"};
     }
   }
@@ -84,7 +82,6 @@ public:
   }
 
   virtual Result operator()(const vector<string>& params) {
-    janosh->open(false);
     if (params.empty()) {
       janosh->loadJson(std::cin);
     } else {
@@ -106,7 +103,6 @@ public:
     if (params.size() != 1)
       return {0, "Expected one path"};
 
-    janosh->open(false);
     if (janosh->makeArray(Record(params.front())))
       return {1, "Successful"};
     else
@@ -123,7 +119,7 @@ public:
   virtual Result operator()(const vector<string>& params) {
     if (params.size() != 1)
       return {0, "Expected one path"};
-    janosh->open(false);
+
     if (janosh->makeObject(Record(params.front())))
       return {1, "Successful"};
     else
@@ -140,7 +136,7 @@ public:
   virtual Result operator()(const vector<string>& params) {
     if (!params.empty())
       return {0, "Truncate doesn't take any arguments"};
-    janosh->open(false);
+
     return {janosh->truncate(), "Successful"};
   }
 };
@@ -155,7 +151,6 @@ public:
     if (params.size() % 2 != 0) {
       return {-1, "Expected a list of path/value pairs"};
     } else {
-      janosh->open(false);
       const string path = params.front();
 
       for (auto it = params.begin(); it != params.end(); it += 2) {
@@ -178,7 +173,7 @@ public:
     if (params.empty() || params.size() % 2 != 0) {
       return {-1, "Expected a list of path/value pairs"};
     } else {
-      janosh->open(false);
+
       for (auto it = params.begin(); it != params.end(); it += 2) {
         if (!janosh->replace(Record(*it), *(it + 1)))
           return {0, "Failed"};
@@ -199,7 +194,7 @@ public:
     if (params.empty() || params.size() % 2 != 0) {
       return {-1, "Expected a list of path/value pairs"};
     } else {
-      janosh->open(false);
+
       size_t cnt = 0;
       for (auto it = params.begin(); it != params.end(); it += 2) {
         cnt += janosh->set(Record(*it), *(it + 1));
@@ -223,7 +218,6 @@ public:
     if (params.size() != 2) {
       return {-1, "Expected two paths"};
     } else {
-      janosh->open(false);
       Record src(params.front());
       Record dest(params.back());
       src.fetch();
@@ -250,7 +244,6 @@ public:
     if (params.size() != 2) {
       return {-1, "Expected two paths"};
     } else {
-      janosh->open(false);
       Record src(params.front());
       Record dest(params.back());
       src.fetch();
@@ -277,7 +270,6 @@ public:
     if (params.size() < 2) {
       return {-1, "Expected a path and a list of values"};
     } else {
-      janosh->open(false);
       Record target(params.front());
       size_t cnt = janosh->append(params.begin() + 1, params.end(), target);
       return {cnt, "Successful"};
@@ -295,7 +287,6 @@ public:
     if (!params.empty()) {
       return {-1, "Dump doesn't take any parameters"};
     } else {
-      janosh->open(true);
       janosh->dump();
     }
     return {0, "Successful"};
@@ -312,7 +303,6 @@ public:
     if (params.size() != 1) {
       return {-1, "Expected a path"};
     } else {
-      janosh->open(true);
       Record p(params.front());
       std::cout << janosh->size(p) << std::endl;
     }
@@ -330,7 +320,6 @@ public:
     if (params.empty()) {
       return {-1, "Expected a list of triggers"};
     } else {
-      janosh->open(true);
       BOOST_FOREACH(const string& p, params) {
         janosh->triggers_.executeTrigger(Path(p));
       }
@@ -350,8 +339,6 @@ public:
     if (params.empty()) {
       return {-1, "Expected a list of keys"};
     } else {
-      janosh->open(true);
-
       bool found_all = true;
       BOOST_FOREACH(const string& p, params) {
         Record rec(p);
