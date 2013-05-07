@@ -14,6 +14,7 @@ Install required packages:
   apt-get install build-essential g++4.7 libboost-dev libboost-filesystem-dev libboost-system-dev libboost-thread-dev libkyotocabinet-dev
 </pre>
 
+Build:
 <pre>
   cd Janosh
   make
