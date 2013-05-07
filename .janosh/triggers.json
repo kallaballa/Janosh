@@ -1,7 +1,2 @@
 {
-  "osd": [ "showosd", [
-    "/osd/text",
-    "/osd/color",
-    "/osd/align"
-  ] ]
 }

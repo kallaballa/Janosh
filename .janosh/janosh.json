@@ -1,4 +1,4 @@
 {
-  "database" : "/home/elchaschab/devel/Janosh/janosh.db",
-  "triggerDirectories": [ "/home/elchaschab/bin/" ]
+  "database" : "~/.janosh/janosh.db",
+  "triggerDirectories": [ "~/.janosh/triggers" ]
 }
