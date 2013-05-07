@@ -21,3 +21,8 @@ Build:
   cd Janosh
   make
 </pre>
+
+Copy default configuration:
+<pre>
+  cp .janosh ~/
+</pre>
