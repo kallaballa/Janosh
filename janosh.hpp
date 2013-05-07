@@ -33,7 +33,7 @@
 
 #include "logger.hpp"
 #include "record.hpp"
-#include "json_spirit.h"
+#include "json_spirit/json_spirit.h"
 #include "json.hpp"
 #include "bash.hpp"
 

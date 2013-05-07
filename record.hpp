@@ -22,7 +22,6 @@ namespace janosh {
   typedef kc::DB::Cursor Cursor;
 
   class Record : private boost::shared_ptr<kc::DB::Cursor> {
-
     Path pathObj;
     Value valueObj;
     bool doesExist;
