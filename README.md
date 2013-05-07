@@ -146,3 +146,19 @@ $ janosh move /array/. /object/.
  } 
 </pre>
 
+Write document into a file, truncate the database and load the file:
+<pre>
+$ janosh -j get /. > db.json
+$ janosh truncate
+$ janosh load db.json
+$ janosh -j get /.
+{
+"object": {
+"array": [
+"a",
+"d",
+"b" ]
+ }
+ }
+</pre>
+
