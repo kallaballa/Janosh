@@ -16,6 +16,7 @@ Install required packages:
 
 Build:
 <pre>
+  git clone https://github.com/kallaballa/Janosh.git
   cd Janosh
   make
 </pre>
