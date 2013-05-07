@@ -3,7 +3,7 @@ Janosh
 
 A json document database with a shell interface.
 
-Janosh is written in c++11. It is used in the [ScreenInvader](https://github.com/Metalab/ScreenInvader) project.
+Janosh is written in C++11. It is used in the [ScreenInvader](https://github.com/Metalab/ScreenInvader) project.
 
 ## Build
 
@@ -20,4 +20,10 @@ Build:
   git clone https://github.com/kallaballa/Janosh.git
   cd Janosh
   make
+</pre>
+
+Copy janosh binary and default configuration:
+<pre>
+  cp janosh /usr/bin/
+  cp -r .janosh ~/
 </pre>
