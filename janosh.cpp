@@ -1094,7 +1094,7 @@ int main(int argc, char** argv) {
   using namespace janosh;
 
   Logger::init(LogLevel::L_DEBUG);
-
+  TRI_LOG_OFF();
   Janosh* janosh = new Janosh();
   return janosh->process(argc, argv);
 }
