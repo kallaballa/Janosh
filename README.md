@@ -87,4 +87,26 @@ path: /array/#2 value:c
 path: /array/#3 value:d
 </pre>
 
+Shift value of index 3 to index 1:
+<pre>
+$ janosh shift /array/#3 /array/#1
+$ janosh dump
+path: /. value:O2
+path: /array/. value:A4
+path: /array/#0 value:a
+path: /array/#1 value:d
+path: /array/#2 value:b
+path: /array/#3 value:c
+</pre>
+
+Remove index 3:
+<pre>
+$ janosh remove /array/#3
+$ janosh dump
+path: /. value:O2
+path: /array/. value:A4
+path: /array/#0 value:a
+path: /array/#1 value:d
+path: /array/#2 value:b
+</pre>
 
