@@ -135,7 +135,7 @@ $ janosh -j get /.
 
 Move the array into the object:
 <pre>
-$ janosh move /array/. /object/.
+$ janosh move /array/. /object/array/.
 { 
 "object": { 
 "array": [ 
