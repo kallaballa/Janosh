@@ -112,6 +112,12 @@ $ janosh -j get /.
  } 
 </pre>
 
+Get array size:
+<pre>
+$ janosh size /array/.
+3
+</pre>
+
 Create an object:
 <pre>
 $ janosh mkobj /object/.
@@ -125,5 +131,18 @@ $ janosh -j get /.
 "object": { 
  } 
  }
+</pre>
+
+Move the array into the object:
+<pre>
+$ janosh move /array/. /object/.
+{ 
+"object": { 
+"array": [ 
+"a",
+"d",
+"b" ] 
+ } 
+ } 
 </pre>
 
