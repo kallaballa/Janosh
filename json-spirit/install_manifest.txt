@@ -1,6 +1,0 @@
-/usr/local/include/json_spirit.h
-/usr/local/include/json_spirit_reader.h
-/usr/local/include/json_spirit_utils.h
-/usr/local/include/json_spirit_value.h
-/usr/local/include/json_spirit_writer.h
-/usr/local/lib/libjson_spirit.a
