@@ -40,3 +40,51 @@ Choose where you want to store your database file. In the example the db file is
  }
 </pre>
 
+Initialize the database:
+
+<pre>
+$ janosh truncate
+</pre>
+
+Make an array:
+
+<pre>
+$ janosh mkarr /array/.
+</pre>
+
+Append same values to the arry
+
+<pre>
+$ janosh append /array/. a b c d
+</pre>
+
+Print document root recursive as json document:
+<pre>
+$ janosh -j get /.
+{ 
+"array": [ 
+"a",
+"b",
+"c",
+"d" ] 
+ } 
+</pre>
+
+Print document root recursive as bash associative array:
+<pre>
+$ janosh -b get /.
+( [/array/#0]='a' [/array/#1]='b' [/array/#2]='c' [/array/#3]='d' )
+</pre>
+
+Dump document in raw format:
+<pre>
+$ janosh dump
+path: /. value:O1
+path: /array/. value:A4
+path: /array/#0 value:a
+path: /array/#1 value:b
+path: /array/#2 value:c
+path: /array/#3 value:d
+</pre>
+
+
