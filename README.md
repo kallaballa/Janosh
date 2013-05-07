@@ -1,24 +1,15 @@
 Janosh
 ======
 
-A small command line tool for quering/manipulating json files
+A json document database with a shell script interface.
 
-Janosh is written in c++ with json_spirit as its only build dependency. It is used in the [ScreenInvader](https://github.com/Metalab/ScreenInvader) project which needed a tool for manipulating json files in bash script without dragging in more library dependencies.
-
-## Usage
-
-janosh [-s &lt;value&gt;]  &lt;json-file&gt; &lt;path&gt;
-
-&lt;json-file&gt;    the json file to query/manipulate
-&lt;path&gt;         the json path (uses / as separator)
-
-Options:
--s &lt;value&gt;     instead of querieng for a path set its value
+Janosh is written in c++11. It is used in the [ScreenInvader](https://github.com/Metalab/ScreenInvader) project.
 
 ## Build
 
-Install json_spirit (header only library).
-
+### Debian
+v
+apt-get install build-essential g++4.7 libboost-dev libboost-filesystem-dev libboost-system-dev libboost-thread-dev libkyotocabinet-dev
 Build:
 <pre>
   cd Janosh
