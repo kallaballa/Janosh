@@ -27,3 +27,16 @@ Copy janosh binary and default configuration:
   cp janosh /usr/bin/
   cp -r .janosh ~/
 </pre>
+
+## Example Session
+
+First you need to edit the default configuration. For now we'll leave triggers.json as it is and only edit janosh.json.
+Choose where you want to store your database file. In the example the db file is stored in the .janosh directory.
+
+<pre>
+ {
+    "database" : "/home/user/.janosh/janosh.db",   
+    "triggerDirectories": [ "/home/user/.janosh/triggers" ] 
+ }
+</pre>
+
