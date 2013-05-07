@@ -22,7 +22,8 @@ Build:
   make
 </pre>
 
-Copy default configuration:
+Copy janosh default configuration:
 <pre>
-  cp .janosh ~/
+  cp janosh /usr/bin/
+  cp -r .janosh ~/
 </pre>
