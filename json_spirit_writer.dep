@@ -1,2 +1,0 @@
-json_spirit_writer.o: json_spirit_writer.cpp json_spirit_writer.h \
- json_spirit_value.h json_spirit_writer_template.h
