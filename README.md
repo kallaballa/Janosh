@@ -28,4 +28,4 @@ Copy janosh binary and default configuration:
   cp -r .janosh ~/
 </pre>
 
-Please have a look at the [documenation](https://github.com/kallaballa/Janosh/wiki/Home)!
+Please have a look at the [documentation](https://github.com/kallaballa/Janosh/wiki/Home)!
