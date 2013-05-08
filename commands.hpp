@@ -260,6 +260,32 @@ public:
   }
 };
 
+class MoveCommand: public Command {
+public:
+  MoveCommand(janosh::Janosh* janosh) :
+      Command(janosh) {
+  }
+
+  virtual Result operator()(const vector<string>& params) {
+    if (params.size() != 2) {
+      return {-1, "Expected two paths"};
+    } else {
+      Record src(params.front());
+      Record dest(params.back());
+      src.fetch();
+
+      if (!src.exists())
+        return {0, "Source path doesn't exist"};
+
+      size_t n = janosh->move(src, dest);
+      if (n > 0)
+        return {n, "Successful"};
+      else
+        return {0, "Failed"};
+    }
+  }
+};
+
 class AppendCommand: public Command {
 public:
   AppendCommand(janosh::Janosh* janosh) :
@@ -375,18 +401,17 @@ public:
 CommandMap makeCommandMap(Janosh* janosh) {
   CommandMap cm;
   cm.insert( { "load", new LoadCommand(janosh) });
+  cm.insert( { "set", new SetCommand(janosh) });
   cm.insert( { "add", new AddCommand(janosh) });
   cm.insert( { "replace", new ReplaceCommand(janosh) });
-  cm.insert( { "set", new SetCommand(janosh) });
+  cm.insert( { "append", new AppendCommand(janosh) });
+  cm.insert( { "dump", new DumpCommand(janosh) });
+  cm.insert( { "size", new SizeCommand(janosh) });
   cm.insert( { "get", new GetCommand(janosh) });
   cm.insert( { "copy", new CopyCommand(janosh) });
   cm.insert( { "remove", new RemoveCommand(janosh) });
   cm.insert( { "shift", new ShiftCommand(janosh) });
-  cm.insert( { "append", new AppendCommand(janosh) });
-  cm.insert( { "dump", new DumpCommand(janosh) });
-  cm.insert( { "size", new SizeCommand(janosh) });
-  cm.insert( { "triggers", new TriggerCommand(janosh) });
-  cm.insert( { "targets", new TargetCommand(janosh) });
+  cm.insert( { "move", new MoveCommand(janosh) });
   cm.insert( { "truncate", new TruncateCommand(janosh) });
   cm.insert( { "mkarr", new MakeArrayCommand(janosh) });
   cm.insert( { "mkobj", new MakeObjectCommand(janosh) });

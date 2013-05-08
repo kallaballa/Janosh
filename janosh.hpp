@@ -112,6 +112,7 @@ public:
       Janosh();
     ~Janosh();
 
+    void printUsage();
     void open(bool readOnly);
     void close();
     size_t process(int argc, char** argv);

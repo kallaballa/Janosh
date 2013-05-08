@@ -221,7 +221,6 @@ namespace janosh {
       int c;
       janosh::Format f = janosh::Bash;
 
-      bool verbose = false;
       bool execTriggers = false;
       bool execTargets = false;
 
@@ -230,10 +229,8 @@ namespace janosh {
       string targetList;
       char* const* c_args = argv;
       optind=1;
-      while ((c = getopt(argc, c_args, "dvfjbrte:")) != -1) {
+      while ((c = getopt(argc, c_args, "vfjbrthe:")) != -1) {
         switch (c) {
-        case 'd':
-          break;
         case 'f':
           if(string(optarg) == "bash")
             f=janosh::Bash;
@@ -254,7 +251,7 @@ namespace janosh {
           f=janosh::Raw;
           break;
         case 'v':
-          verbose=true;
+          TRI_LOG_ON();
           break;
         case 't':
           execTriggers = true;
@@ -263,12 +260,14 @@ namespace janosh {
           execTargets = true;
           targetList = optarg;
           break;
+        case 'h':
+          printUsage();
+          break;
         case ':':
-          throw janosh_exception() << string_info({"Illegal option", "" + c});
-          return false;
+          printUsage();
           break;
         case '?':
-          throw janosh_exception() << string_info({"Illegal option", "" + c});
+          printUsage();
           break;
         }
       }
@@ -395,6 +394,13 @@ namespace janosh {
     return load(rootValue, path);
   }
 
+
+  /**
+   * Recursively traverses a record and prints it out.
+   * @param rec The record to print out.
+   * @param out The output stream to write to.
+   * @return number of total records affected.
+   */
   size_t Janosh::get(Record rec, std::ostream& out) {
     rec.fetch();
     size_t cnt = 1;
@@ -433,6 +439,11 @@ namespace janosh {
     return cnt;
   }
 
+  /**
+   * Creates a temporary record with the given type.
+   * @param t the type of the record to create.
+   * @return the created record
+   */
   Record Janosh::makeTemp(const Value::Type& t) {
     Record tmp("/tmp/.");
 
@@ -451,6 +462,13 @@ namespace janosh {
     return tmp;
   }
 
+  /**
+   * Creates an array with given size. Optional performs a bounds check.
+   * @param target the array record to create.
+   * @param size the size of the target array.
+   * @param bounds perform bounds check if true.
+   * @return 1 if successful, 0 if not
+   */
   size_t Janosh::makeArray(Record target, size_t size, bool bounds) {
     JANOSH_TRACE({target}, size);
     target.fetch();
@@ -467,6 +485,12 @@ namespace janosh {
     return Record::db.add(target.path(), "A" + lexical_cast<string>(size)) ? 1 : 0;
   }
 
+  /**
+   * Creates an object with given size.
+   * @param target the object record to create.
+   * @param size the size of the target object.
+   * @return 1 if successful, 0 if not
+   */
   size_t Janosh::makeObject(Record target, size_t size) {
     JANOSH_TRACE({target}, size);
     target.fetch();
@@ -485,6 +509,14 @@ namespace janosh {
     return Record::db.add(target.path(), "O" + lexical_cast<string>(size)) ? 1 : 0;
   }
 
+
+  /**
+   * Creates an either and array or an object with given size.
+   * @param target the directory record to create.
+   * @param type either Value::Array or Value::Object.
+   * @param size the size of the target directory.
+   * @return 1 if successful, 0 if not
+   */
   size_t Janosh::makeDirectory(Record target, Value::Type type, size_t size) {
     JANOSH_TRACE({target}, size);
     if(type == Value::Array) {
@@ -501,7 +533,7 @@ namespace janosh {
    * Adds a record with the given value to the database.
    * Does not modify an existing record.
    * @param dest destination record
-   * @return TRUE if the destination record didn't exist.
+   * @return 1 if successful, 0 if not
    */
   size_t Janosh::add(Record dest, const string& value) {
     JANOSH_TRACE({dest}, value);
@@ -527,7 +559,7 @@ namespace janosh {
    * Relaces a the value of a record.
    * If the destination record exists create it.
    * @param dest destination record
-   * @return TRUE if the record existed.
+   * @return 1 if successful, 0 if not
    */
   size_t Janosh::replace(Record dest, const string& value) {
     JANOSH_TRACE({dest}, value);
@@ -550,7 +582,7 @@ namespace janosh {
    * If the destination record exists replaces it.
    * @param src source record. Points to the destination record after moving.
    * @param dest destination record.
-   * @return TRUE on success
+   * @return 1 if successful, 0 if not
    */
   size_t Janosh::replace(Record& src, Record& dest) {
     JANOSH_TRACE({src, dest});
@@ -604,15 +636,19 @@ namespace janosh {
    * If the destination record exists replaces it.
    * @param src source record. Points to the destination record after moving.
    * @param dest destination record.
-   * @return TRUE on success
+   * @return number of copied records
    */
   size_t Janosh::move(Record& src, Record& dest) {
     JANOSH_TRACE({src, dest});
     src.fetch();
     dest.fetch();
 
-    if(src.isRange() || !src.exists() || !dest.exists()) {
+    if(src.isRange() || !src.exists()) {
       throw janosh_exception() << record_info({"Invalid src", src});
+    }
+
+    if(dest.path().isRoot()) {
+      throw janosh_exception() << record_info({"Invalid target", dest});
     }
 
     if(!boundsCheck(dest)) {
@@ -627,21 +663,25 @@ namespace janosh {
       else
         target = dest.path().basePath();
 
-      remove(dest);
+      if(dest.exists())
+        remove(dest);
 
       r = this->copy(src,target);
       dest = target;
     } else {
       if(src.isDirectory()) {
         target = dest.parent();
+
+        if(dest.exists())
+          remove(dest);
+
         r = this->copy(src, target);
         dest = target;
       } else {
         r = Record::db.replace(dest.path(), src.value());
       }
     }
-
-
+    remove(src);
     src = dest;
 
     return r;
@@ -651,7 +691,7 @@ namespace janosh {
   /**
    * Sets/replaces the value of a record. If no record exists, creates the record with corresponding value.
    * @param rec The record to manipulate
-   * @return TRUE on success
+   * @return 1 if successful, 0 if not
    */
   size_t Janosh::set(Record rec, const string& value) {
     JANOSH_TRACE({rec}, value);
@@ -673,7 +713,7 @@ namespace janosh {
 
 
   /**
-   * Removes a record from the database.
+   * Recursivley removes a record from the database.
    * @param rec The record to remove. Points to the next record in the database after removal.
    * @return number of total records affected.
    */
@@ -737,6 +777,10 @@ namespace janosh {
     return cnt;
   }
 
+  /**
+   * Prints all records to cout in raw format
+   * @return number of total records printed.
+   */
   size_t Janosh::dump() {
     kc::DB::Cursor* cur = Record::db.cursor();
     string key,value;
@@ -744,13 +788,17 @@ namespace janosh {
     size_t cnt = 0;
 
     while(cur->get(&key, &value, true)) {
-      std::cout << "path: " << Path(key).pretty() <<  " value:" << value << endl;
+      std::cout << "path:" << Path(key).pretty() <<  " value:" << value << endl;
       ++cnt;
     }
     delete cur;
     return cnt;
   }
 
+  /**
+   * Calculates a hash value over all records
+   * @return number of total records hashed.
+   */
   size_t Janosh::hash() {
     kc::DB::Cursor* cur = Record::db.cursor();
     string key,value;
@@ -767,6 +815,10 @@ namespace janosh {
     return cnt;
   }
 
+  /**
+   * Clears an initializes the database.
+   * @return 1 on success, 0 on fail
+   */
   size_t Janosh::truncate() {
     if(Record::db.clear())
       return Record::db.add("/!", "O" + lexical_cast<string>(0)) ? 1 : 0;
@@ -774,6 +826,11 @@ namespace janosh {
       return false;
   }
 
+  /**
+   * Returns the size of a directory record
+   * @param rec the directory record
+   * @return 1 on success, 0 on fail
+   */
   size_t Janosh::size(Record rec) {
     if(!rec.isDirectory()) {
       throw janosh_exception() << record_info({"size is limited to containers", rec});
@@ -782,25 +839,17 @@ namespace janosh {
     return rec.fetch().getSize();
   }
 
-  size_t Janosh::append(Record dest, const string& value) {
-    JANOSH_TRACE({dest}, value);
-    if(!dest.isDirectory()) {
-      throw janosh_exception() << record_info({"append is limited to dest directories", dest});
-    }
-
-    Record target(dest.path().withChild(dest.getSize()));
-    if(!Record::db.add(target.path(), value)) {
-      throw janosh_exception() << record_info({"Failed to add target", target});
-    }
-
-    dest = target;
-    return 1;
-  }
-
+  /**
+   * Append string values from an iterator range to an array record
+   * @param begin the begin iterator
+   * @param end the end iterator
+   * @param rec the array record
+   * @return number of values appended
+   */
   size_t Janosh::append(vector<string>::const_iterator begin, vector<string>::const_iterator end, Record dest) {
     JANOSH_TRACE({dest});
-    if(!dest.isDirectory()) {
-      throw janosh_exception() << record_info({"append is limited to dest directories", dest});
+    if(!dest.isArray()) {
+      throw janosh_exception() << record_info({"append is limited to arrays", dest});
     }
     dest.fetch();
     size_t s = dest.getSize();
@@ -975,7 +1024,8 @@ namespace janosh {
     tmp.fetch();
     replace(tmp,dest);
     remove(tmp);
-
+    Record tmpDir("/tmp/.");
+    remove(tmpDir);
     src = dest;
 
     return 1;
@@ -1063,18 +1113,39 @@ namespace janosh {
 
     return (parent.path().isRoot() || (!parent.isArray() || p.path().parseIndex() <= parent.getSize()));
   }
-}
 
-void printUsage() {
-  std::cerr << "janosh [-l] <path>" << endl
-      << endl
-      << "<path>         the json path (uses / as separator)" << endl
-      << endl
-      << "Options:" << endl
-      << endl
-      << "-l             load a json snippet from standard input" << endl
-      << endl;
-//  exit(1);
+
+  void Janosh::printUsage() {
+    std::cerr << "janosh [options] <command> <paths...>" << endl
+        << endl
+        << "Options:" << endl
+        << "  -j                output json format" << endl
+        << "  -b                output bash format" << endl
+        << "  -t                execute triggers for corresponding paths" << endl
+        << "  -e <target list>  execute given targets" << endl
+        << endl
+        << "Commands: " << endl
+        <<  "  load" << endl
+        <<  "  set"  << endl
+        <<  "  add" << endl
+        <<  "  replace" << endl
+        <<  "  append" << endl
+        <<  "  dump" << endl
+        <<  "  size" << endl
+        <<  "  get"  << endl
+        <<  "  copy" << endl
+        <<  "  remove" << endl
+        <<  "  shift" << endl
+        <<  "  move" << endl
+        <<  "  trigger" << endl
+        <<  "  target" << endl
+        <<  "  truncate" << endl
+        <<  "  mkarr" << endl
+        <<  "  mkobj" << endl
+        <<  "  hash" << endl
+        << endl;
+      exit(0);
+  }
 }
 
 std::vector<size_t> sequence() {
@@ -1094,6 +1165,7 @@ int main(int argc, char** argv) {
   using namespace janosh;
 
   Logger::init(LogLevel::L_INFO);
+  TRI_LOG_OFF();
   Janosh* janosh = new Janosh();
   return janosh->process(argc, argv);
 }
