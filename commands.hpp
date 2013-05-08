@@ -412,6 +412,8 @@ CommandMap makeCommandMap(Janosh* janosh) {
   cm.insert( { "remove", new RemoveCommand(janosh) });
   cm.insert( { "shift", new ShiftCommand(janosh) });
   cm.insert( { "move", new MoveCommand(janosh) });
+  cm.insert( { "trigger", new TriggerCommand(janosh) });
+  cm.insert( { "target", new TargetCommand(janosh) });
   cm.insert( { "truncate", new TruncateCommand(janosh) });
   cm.insert( { "mkarr", new MakeArrayCommand(janosh) });
   cm.insert( { "mkobj", new MakeObjectCommand(janosh) });

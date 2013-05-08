@@ -108,11 +108,14 @@ public:
     typedef boost::function<void(int)> ExitHandler;
     Settings settings_;
     TriggerBase triggers_;
+    CommandMap cm;
 
       Janosh();
     ~Janosh();
 
-    void printUsage();
+    void setFormat(Format f) ;
+    void printException(janosh_exception& ex);
+    void printException(std::exception& ex);
     void open(bool readOnly);
     void close();
     size_t process(int argc, char** argv);
@@ -146,16 +149,12 @@ public:
     Format format;
 
     bool open_;
-    CommandMap cm;
 
-    void setFormat(Format f) ;
     Format getFormat();
 
     bool isOpen();
 
     void terminate(int code);
-    void printException(janosh_exception& ex);
-    void printException(std::exception& ex);
 
     string filename;
     js::Value rootValue;
