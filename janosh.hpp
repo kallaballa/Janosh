@@ -12,10 +12,6 @@
 #include <exception>
 #include <initializer_list>
 
-
-#include <boost/asio.hpp>
-#include <boost/asio/signal_set.hpp>
-#include <boost/asio/impl/io_service.hpp>
 #include <boost/bind.hpp>
 #include <boost/thread.hpp>
 #include <boost/range.hpp>
