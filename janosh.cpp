@@ -145,7 +145,7 @@ namespace janosh {
 
         if(find(jObj, "triggerDirectories", v)) {
           BOOST_FOREACH (const js::Value& vDir, v.get_array()) {
-            triggerDirs.push_back(fs::path(vDir.get_str()));
+            triggerDirs.push_back(fs::path(vDir.get_str() + "/"));
           }
         }
 
