@@ -4,11 +4,15 @@ SRCS    := janosh.cpp logger.cpp tri_logger/tri_logger.cpp record.cpp path.cpp v
 OBJS    := ${SRCS:.cpp=.o} 
 DEPS    := ${SRCS:.cpp=.dep} 
     
-CXXFLAGS = -DETLOG -std=c++0x -stdlib=libc++ -pedantic -Wall -I./backtrace/ -I/opt/local/include
+CXXFLAGS = -DETLOG -std=c++0x -pedantic -Wall -I./backtrace/ -I/opt/local/include
 LDFLAGS = -L/opt/local/lib 
 LIBS    = -lboost_system-mt -lboost_filesystem-mt -lpthread -lboost_thread-mt -lkyotocabinet  -ldl
 
 .PHONY: all release static clean distclean 
+
+ifeq ($(UNAME), Darwin)
+ CXXFLAGS +=  -stdlib=libc++
+endif
 
 ifdef DEBUG
  CXXFLAGS += -DJANOSH_DEBUG -g3 -O0 -rdynamic
