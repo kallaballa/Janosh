@@ -1,2 +1,0 @@
-tri_logger.o: tri_logger/tri_logger.cpp tri_logger/tri_logger.hpp \
- tri_logger/nullstream.hpp

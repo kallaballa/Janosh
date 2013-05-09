@@ -1,2 +1,0 @@
-backtrace.o: backtrace/libs/backtrace/src/backtrace.cpp \
- backtrace/boost/backtrace.hpp
