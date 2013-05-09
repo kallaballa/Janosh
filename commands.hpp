@@ -200,7 +200,7 @@ public:
         cnt += janosh->set(Record(*it), *(it + 1));
       }
 
-      if (cnt < 0)
+      if (cnt == 0)
         return {0, "Failed"};
       else
         return {cnt, "Successful"};
@@ -226,7 +226,7 @@ public:
         return {-1, "Source path doesn't exist"};
 
       size_t cnt = janosh->shift(src, dest);
-      if (cnt < 0)
+      if (cnt == 0)
         return {0, "Failed"};
       else
         return {1, "Successful"};
