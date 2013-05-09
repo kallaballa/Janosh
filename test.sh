@@ -39,8 +39,8 @@ function test_append() {
   janosh append /array/. 0 1 2 3	  || return 1
   [ `janosh size /array/.` -eq 4 ]	|| return 1
   janosh mkobj /object/.		        || return 1
-  janosh append /object/. 0 1 2 3 	|| return 1
-  [ `janosh size /object/.` -eq 4 ] || return 1  
+  janosh append /object/. 0 1 2 3 	&& return 1
+  [ `janosh size /object/.` -eq 0 ] || return 1  
 }
 
 function test_set() {

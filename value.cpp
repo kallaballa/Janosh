@@ -71,7 +71,7 @@ void Value::init(const string& v, bool value) {
     } else if (c == 'O') {
       this->type = Object;
     } else {
-      throw value_exception() << value_info({"unknown directory descriptor", "" + c});
+      throw value_exception() << value_info({"unknown directory descriptor", boost::lexical_cast<string>(c)});
     }
 
     this->size = boost::lexical_cast<size_t>(v.substr(1));
