@@ -1,4 +1,4 @@
-CXX     := c++
+CXX     := clang++
 TARGET  := janosh 
 SRCS    := janosh.cpp logger.cpp tri_logger/tri_logger.cpp record.cpp path.cpp value.cpp backtrace/libs/backtrace/src/backtrace.cpp json_spirit/json_spirit_reader.cpp  json_spirit/json_spirit_value.cpp  json_spirit/json_spirit_writer.cpp
 OBJS    := ${SRCS:.cpp=.o} 
@@ -42,7 +42,7 @@ ${DEPS}: %.dep: %.cpp Makefile
 	${CXX} ${CXXFLAGS} -MM $< > $@ 
 
 clean:
-	rm -f *~ *.o backtrace/libs/backtrace/src/*.o tri_logger/*.o json_spirit/*.o ${TARGET} 
+	rm -f *~ *.dep *.o backtrace/libs/backtrace/src/*.dep backtrace/libs/backtrace/src/*.o tri_logger/*.dep tri_logger/*.o json_spirit/*.dep json_spirit/*.o ${TARGET} 
 
 distclean: clean
 

@@ -216,17 +216,18 @@ namespace janosh {
   }
 
   void Janosh::printException(std::exception& ex) {
-    std::cerr << "error: " << ex.what() << std::endl;
+    std::cerr << "Exception: " << ex.what() << std::endl;
   }
 
   void Janosh::printException(janosh::janosh_exception& ex) {
     using namespace boost;
 
+    std::cerr << "Exception: " << std::endl;
   #if 0
     std::cerr << boost::trace(ex) << std::endl;
   #endif
     if(auto const* m = get_error_info<msg_info>(ex) )
-      std::cerr << "error: " << *m << std::endl;
+      std::cerr << "message: " << *m << std::endl;
 
     if(auto const* vs = get_error_info<string_info>(ex) ) {
       for(auto it=vs->begin(); it != vs->end(); ++it) {
