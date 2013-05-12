@@ -29,7 +29,7 @@ release: ${TARGET}
 reduce: CXXFLAGS = -DETLOG -std=c++0x -pedantic -Wall -I./backtrace/ -g0 -Os -fvisibility=hidden -fvisibility-inlines-hidden
 reduce: ${TARGET}
 
-static: LIBS = -Wl,-Bstatic -lboost_system -lboost_filesystem -ljson_spirit -lboost_thread -Wl,-Bdynamic -lkyotocabinet -lpthread -lrt -ldl
+static: LIBS = -Wl,-Bstatic -lboost_system -lboost_filesystem -ljson_spirit -lboost_thread -lkyotocabinet -Wl,-Bdynamic -lz -lpthread -lrt -ldl
 static: ${TARGET}
 
 ${TARGET}: ${OBJS} 
