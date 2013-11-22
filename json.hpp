@@ -66,7 +66,7 @@ namespace janosh {
         this->out << ',' << endl;
       }
 
-      if (name.length() == 0)
+      if (name.length() == 0 || name.at(0) == '#')
         this->out << "{ " << endl;
       else
         this->out << '"' << name << "\": { " << endl;
