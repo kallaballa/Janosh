@@ -628,9 +628,15 @@ namespace janosh {
           throw db_exception() << record_info({"corrupted array detected", parent});
         }
         if(child.getIndex() > i) {
-          Record indexPos(parent.path().withChild(i));
+          Record indexPos;
+
+          if(child.isDirectory())
+            indexPos = parent.path().withChild(i).asDirectory();
+          else
+            indexPos = parent.path().withChild(i);
+
           copy(child, indexPos);
-          child.remove();
+          remove(child, false);
         } else {
           child.next();
         }
