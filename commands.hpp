@@ -68,7 +68,7 @@ public:
   virtual Result operator()(const vector<string>& params) {
     if (!params.empty()) {
       LOG_DEBUG_STR("hash doesn't take any parameters");
-      return {0, "Failed"};
+      return {-1, "Failed"};
     } else {
       return {janosh->hash(), "Successful"};
     }
@@ -106,7 +106,7 @@ public:
     if (janosh->makeArray(Record(params.front())))
       return {1, "Successful"};
     else
-      return {0, "Failed"};
+      return {-1, "Failed"};
   }
 };
 
@@ -123,7 +123,7 @@ public:
     if (janosh->makeObject(Record(params.front())))
       return {1, "Successful"};
     else
-      return {0, "Failed"};
+      return {-1, "Failed"};
   }
 };
 
@@ -155,7 +155,7 @@ public:
 
       for (auto it = params.begin(); it != params.end(); it += 2) {
         if (!janosh->add(Record(*it), *(it + 1)))
-          return {0, "Failed"};
+          return {-1, "Failed"};
       }
 
       return {params.size()/2, "Successful"};
@@ -176,7 +176,7 @@ public:
 
       for (auto it = params.begin(); it != params.end(); it += 2) {
         if (!janosh->replace(Record(*it), *(it + 1)))
-          return {0, "Failed"};
+          return {-1, "Failed"};
       }
 
       return {params.size()/2, "Successful"};
@@ -201,7 +201,7 @@ public:
       }
 
       if (cnt == 0)
-        return {0, "Failed"};
+        return {-1, "Failed"};
       else
         return {cnt, "Successful"};
     }
@@ -227,7 +227,7 @@ public:
 
       size_t cnt = janosh->shift(src, dest);
       if (cnt == 0)
-        return {0, "Failed"};
+        return {-1, "Failed"};
       else
         return {1, "Successful"};
     }
@@ -255,7 +255,7 @@ public:
       if (n > 0)
         return {n, "Successful"};
       else
-        return {0, "Failed"};
+        return {-1, "Failed"};
     }
   }
 };
@@ -281,7 +281,7 @@ public:
       if (n > 0)
         return {n, "Successful"};
       else
-        return {0, "Failed"};
+        return {-1, "Failed"};
     }
   }
 };
