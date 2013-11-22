@@ -1,4 +1,4 @@
-CXX     := clang++
+CXX     := g++-4.8
 TARGET  := janosh 
 SRCS    := janosh.cpp logger.cpp tri_logger/tri_logger.cpp record.cpp path.cpp value.cpp backtrace/libs/backtrace/src/backtrace.cpp json_spirit/json_spirit_reader.cpp  json_spirit/json_spirit_value.cpp  json_spirit/json_spirit_writer.cpp
 OBJS    := ${SRCS:.cpp=.o} 
@@ -29,7 +29,7 @@ release: ${TARGET}
 reduce: CXXFLAGS = -DETLOG -std=c++0x -pedantic -Wall -I./backtrace/ -g0 -Os -fvisibility=hidden -fvisibility-inlines-hidden
 reduce: ${TARGET}
 
-static: LIBS = -Wl,-Bstatic -lboost_system -lboost_filesystem -ljson_spirit -lboost_thread -lkyotocabinet -Wl,-Bdynamic -lz -lpthread -lrt -ldl
+static: LIBS = -Wl,-Bstatic -lboost_system -lboost_filesystem -lboost_thread -lkyotocabinet  -llzma -llzo2 -Wl,-Bdynamic -lz -lpthread -lrt -ldl
 static: ${TARGET}
 
 ${TARGET}: ${OBJS} 
