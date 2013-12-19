@@ -205,11 +205,23 @@ public:
          }
 
          if (t == Value::Array) {
+           Value::Type parentType;
+           if(hierachy.empty())
+             parentType = Value::Array;
+           else
+             parentType = hierachy.top().second;
+
            hierachy.push({name, Value::Array});
-           vis.beginArray(path, last.isEmpty() || last == parent);
+           vis.beginArray(path, parentType == Value::Array, last.isEmpty() || last == parent);
          } else if (t == Value::Object) {
+           Value::Type parentType;
+           if(hierachy.empty())
+             parentType = Value::Array;
+           else
+             parentType = hierachy.top().second;
+
            hierachy.push({name, Value::Object});
-           vis.beginObject(path, last.isEmpty() || last == parent);
+           vis.beginObject(path, parentType == Value::Array, last.isEmpty() || last == parent);
          } else {
            bool first = last.isEmpty() || last == parent;
            if(!hierachy.empty()){
@@ -245,13 +257,13 @@ public:
         out(out) {
     }
 
-    void beginArray(const Path& p, bool first) {
+    void beginArray(const Path& p, bool parentIsArray, bool first) {
     }
 
     void endArray(const Path& p) {
     }
 
-    void beginObject(const Path& p, bool first) {
+    void beginObject(const Path& p, bool parentIsArray, bool first) {
     }
 
     void endObject(const Path& p) {

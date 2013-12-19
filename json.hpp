@@ -11,21 +11,8 @@ using std::endl;
 
 namespace janosh {
   class JsonPrintVisitor {
-    enum container_type {
-      Object, Array, None
-    };
-
-    struct Frame {
-      string name;
-      container_type type;
-
-      Frame(string name, container_type type) :
-          name(name), type(type) {
-      }
-    };
-
     std::ostream& out;
-    std::stack<Frame> hierachy;
+
     const string escape(const string& s) {
       size_t index = 0;
       string ns = s;
@@ -42,14 +29,13 @@ namespace janosh {
         out(out){
     }
 
-    void beginArray(const Path& p, bool first) {
+    void beginArray(const Path& p, bool parentIsArray, bool first) {
       string name = p.name().pretty();
-
       if (!first) {
         this->out << ',' << endl;
       }
 
-      if (name.length() == 0)
+      if (parentIsArray)
         this->out << "[ " << endl;
       else
         this->out << '"' << name << "\": [ " << endl;
@@ -59,14 +45,13 @@ namespace janosh {
       this->out << " ] " << endl;
     }
 
-    void beginObject(const Path& p, bool first) {
+    void beginObject(const Path& p, bool parentIsArray, bool first) {
       string name = p.name().pretty();
-
       if (!first) {
         this->out << ',' << endl;
       }
 
-      if (name.length() == 0 || name.at(0) == '#')
+      if (parentIsArray)
         this->out << "{ " << endl;
       else
         this->out << '"' << name << "\": { " << endl;
@@ -76,11 +61,11 @@ namespace janosh {
       this->out << " } " << endl;
     }
 
-    void record(const Path& p, const string& value, bool array, bool first) {
+    void record(const Path& p, const string& value, bool parentIsArray, bool first) {
       string name = p.name().pretty();
       string jsonValue = escape(value);
 
-      if (array) {
+      if (parentIsArray) {
         if (!first) {
           this->out << ',' << endl;
         }

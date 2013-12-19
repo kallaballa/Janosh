@@ -18,13 +18,13 @@ namespace janosh {
         out(out){
     }
 
-    void beginArray(const Path& p, bool first) {
+    void beginArray(const Path& p, bool parentIsArray, bool first) {
     }
 
     void endArray(const Path& p) {
     }
 
-    void beginObject(const Path& p, bool first) {
+    void beginObject(const Path& p, bool parentIsArray, bool first) {
     }
 
     void endObject(const Path& p) {
