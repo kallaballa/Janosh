@@ -311,6 +311,7 @@ namespace janosh {
    * @return the created record
    */
   Record Janosh::makeTemp(const Value::Type& t) {
+    JANOSH_TRACE({},t);
     Record tmp("/tmp/.");
 
     if(!tmp.fetch().exists()) {
@@ -468,8 +469,8 @@ namespace janosh {
     if(dest.isDirectory()) {
       if(src.isDirectory()) {
         target = dest.path();
-        Record wildcard = src.path().asWildcard();
-        r = this->copy(wildcard,target);
+        remove(dest,false);
+        r = this->copy(src,target);
       } else {
         target = dest.path().basePath();
         remove(dest, false);
@@ -597,7 +598,7 @@ namespace janosh {
     parent.fetch();
     target.fetch();
 
-    if(target.isDirectory())
+    if(target.isDirectory() || rec.isRange())
       rec.step();
 
     for(size_t i = 0; i < n; ++i) {
@@ -630,13 +631,15 @@ namespace janosh {
         if(child.getIndex() > i) {
           Record indexPos;
 
-          if(child.isDirectory())
+          if(child.isDirectory()) {
             indexPos = parent.path().withChild(i).asDirectory();
-          else
+            copy(child, indexPos);
+            remove(child, false);
+          } else {
             indexPos = parent.path().withChild(i);
-
-          copy(child, indexPos);
-          remove(child, false);
+            copy(child, indexPos);
+            child.remove();
+          }
         } else {
           child.next();
         }
@@ -897,7 +900,6 @@ namespace janosh {
 
     tmp.fetch();
     replace(tmp,dest);
-    remove(tmp);
     Record tmpDir("/tmp/.");
     remove(tmpDir);
     src = dest;
