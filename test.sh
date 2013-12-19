@@ -134,7 +134,7 @@ function test_shift() {
   janosh append /array/#9/. 7 6 5 4      || return 1
   janosh shift /array/#4/. /array/#9/.    || return 1
   [ `janosh size /array/#8/.` -eq 4 ]    || return 1
-  [ `janosh size /array/#9/.` -eq 8 ]    || return 1
+  [ `janosh size /array/#9/.` -eq 4 ]    || return 1
   [ `janosh -r get /array/#8/#0` -eq 7  ] || return 1
 }
 
