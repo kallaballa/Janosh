@@ -11,9 +11,9 @@
 #include <algorithm>
 #include <exception>
 #include <initializer_list>
+#include <unistd.h>
 
 #include <boost/bind.hpp>
-#include <boost/thread.hpp>
 #include <boost/range.hpp>
 #include <boost/tokenizer.hpp>
 #include <boost/lexical_cast.hpp>
