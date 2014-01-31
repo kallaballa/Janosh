@@ -14,16 +14,10 @@ ifeq ($(UNAME), Darwin)
  CXXFLAGS +=  -stdlib=libc++
 endif
 
-ifdef DEBUG
- CXXFLAGS += -DJANOSH_DEBUG -g3 -O0 -rdynamic
- LDFLAGS += -Wl,--export-dynamic
-else
- LDFLAGS += -s
- CXXFLAGS += -g0 -O3
-endif
-
 all: release
 
+release: LDFLAGS += -s
+release: CXXFLAGS += -g0 -O3
 release: ${TARGET}
 
 reduce: CXXFLAGS = -DETLOG -std=c++0x -pedantic -Wall -I./backtrace/ -g0 -Os -fvisibility=hidden -fvisibility-inlines-hidden
@@ -31,6 +25,10 @@ reduce: ${TARGET}
 
 static: LIBS = -Wl,-Bstatic -lboost_system -lboost_filesystem -lkyotocabinet  -llzma -llzo2 -Wl,-Bdynamic -lz -lpthread -lrt -ldl
 static: ${TARGET}
+
+debug: CXXFLAGS += -DJANOSH_DEBUG -g3 -O0 -rdynamic
+debug: LDFLAGS += -Wl,--export-dynamic
+debug: ${TARGET}
 
 ${TARGET}: ${OBJS} 
 	${CXX} ${LDFLAGS} -o $@ $^ ${LIBS} 
