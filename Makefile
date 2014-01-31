@@ -1,6 +1,6 @@
 CXX     := g++-4.8
 TARGET  := janosh 
-SRCS    := janosh.cpp logger.cpp tri_logger/tri_logger.cpp record.cpp path.cpp value.cpp backtrace/libs/backtrace/src/backtrace.cpp json_spirit/json_spirit_reader.cpp  json_spirit/json_spirit_value.cpp  json_spirit/json_spirit_writer.cpp
+SRCS    := janosh.cpp logger.cpp tri_logger/tri_logger.cpp record.cpp path.cpp value.cpp backtrace/libs/backtrace/src/backtrace.cpp json_spirit/json_spirit_reader.cpp  json_spirit/json_spirit_value.cpp  json_spirit/json_spirit_writer.cpp TcpServer.cpp TcpClient.cpp
 OBJS    := ${SRCS:.cpp=.o} 
 DEPS    := ${SRCS:.cpp=.dep} 
     

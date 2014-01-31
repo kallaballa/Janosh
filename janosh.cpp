@@ -1,5 +1,7 @@
 #include "janosh.hpp"
 #include "commands.hpp"
+#include "TcpServer.hpp"
+#include "TcpClient.hpp"
 
 using std::string;
 using std::map;
@@ -213,36 +215,6 @@ namespace janosh {
       open_ = false;
       Record::db.close();
     }
-  }
-
-  void Janosh::printException(std::exception& ex) {
-    std::cerr << "Exception: " << ex.what() << std::endl;
-  }
-
-  void Janosh::printException(janosh::janosh_exception& ex) {
-    using namespace boost;
-
-    std::cerr << "Exception: " << std::endl;
-  #if 0
-    std::cerr << boost::trace(ex) << std::endl;
-  #endif
-    if(auto const* m = get_error_info<msg_info>(ex) )
-      std::cerr << "message: " << *m << std::endl;
-
-    if(auto const* vs = get_error_info<string_info>(ex) ) {
-      for(auto it=vs->begin(); it != vs->end(); ++it) {
-        std::cerr << "info: " << *it << std::endl;
-      }
-    }
-
-    if(auto const* ri = get_error_info<record_info>(ex))
-      std::cerr << ri->first << ": " << ri->second << endl;
-
-    if(auto const* pi = get_error_info<path_info>(ex))
-      std::cerr << pi->first << ": " << pi->second << std::endl;
-
-    if(auto const* vi = get_error_info<value_info>(ex))
-      std::cerr << vi->first << ": " << vi->second << std::endl;
   }
 
   size_t Janosh::loadJson(const string& jsonfile) {
@@ -991,6 +963,35 @@ namespace janosh {
   }
 
 
+  void printException(std::exception& ex) {
+    std::cerr << "Exception: " << ex.what() << std::endl;
+  }
+
+  void printException(janosh::janosh_exception& ex) {
+    using namespace boost;
+
+    std::cerr << "Exception: " << std::endl;
+  #if 0
+    std::cerr << boost::trace(ex) << std::endl;
+  #endif
+    if(auto const* m = get_error_info<msg_info>(ex) )
+      std::cerr << "message: " << *m << std::endl;
+
+    if(auto const* vs = get_error_info<string_info>(ex) ) {
+      for(auto it=vs->begin(); it != vs->end(); ++it) {
+        std::cerr << "info: " << *it << std::endl;
+      }
+    }
+
+    if(auto const* ri = get_error_info<record_info>(ex))
+      std::cerr << ri->first << ": " << ri->second << endl;
+
+    if(auto const* pi = get_error_info<path_info>(ex))
+      std::cerr << pi->first << ": " << pi->second << std::endl;
+
+    if(auto const* vi = get_error_info<value_info>(ex))
+      std::cerr << vi->first << ": " << vi->second << std::endl;
+  }
 
 }
 
@@ -1036,13 +1037,57 @@ void printUsage() {
       exit(0);
 }
 
-int main(int argc, char** argv) {
-  using namespace std;
-  using namespace boost;
-  using namespace janosh;
+using namespace std;
+using namespace boost;
+using namespace janosh;
 
-  bool verbose = false;
-  Janosh* janosh;
+static Janosh* instance;
+
+int run(Format f, string command, vector<string> args, vector<string> vecTriggers, vector<string> vecTargets, bool verbose) {
+  try {
+    instance->setFormat(f);
+
+    if (command != "NONE") {
+      LOG_DEBUG_MSG("Execute command", command);
+      Command* cmd = instance->cm[command];
+
+      if (!cmd) {
+        throw janosh_exception() << string_info( { "Unknown command", command });
+      }
+
+      Command::Result r = (*cmd)(args);
+      if (r.first == -1)
+        throw janosh_exception() << msg_info(r.second);
+
+      LOG_INFO_MSG(r.second, r.first);
+    } else if (vecTargets.empty()) {
+      throw janosh_exception() << msg_info("missing command");
+    }
+
+    if (!vecTriggers.empty()) {
+      LOG_DEBUG("Triggers");
+      Command* t = instance->cm["trigger"];
+      (*t)(vecTriggers);
+    }
+
+    if (!vecTargets.empty()) {
+      Command* t = instance->cm["target"];
+      (*t)(vecTargets);
+    }
+
+  } catch (janosh_exception& ex) {
+    printException(ex);
+    return 1;
+  } catch (std::exception& ex) {
+    printException(ex);
+    return 1;
+  }
+
+  return 0;
+}
+
+
+int main(int argc, char** argv) {
   try {
     std::vector<string> args;
     for (int i = 0; i < argc; i++) {
@@ -1055,14 +1100,19 @@ int main(int argc, char** argv) {
 
     bool execTriggers = false;
     bool execTargets = false;
+    bool verbose = false;
+    bool daemon = false;
 
     string key;
     string value;
     string targetList;
     char* const * c_args = argv;
     optind = 1;
-    while ((c = getopt(argc, c_args, "vfjbrthe:")) != -1) {
+    while ((c = getopt(argc, c_args, "dvfjbrthe:")) != -1) {
       switch (c) {
+      case 'd':
+        daemon = true;
+        break;
       case 'f':
         if (string(optarg) == "bash")
           f = janosh::Bash;
@@ -1103,77 +1153,56 @@ int main(int argc, char** argv) {
         break;
       }
     }
-    if (verbose)
-      Logger::init(LogLevel::L_DEBUG);
-    else
-      Logger::init(LogLevel::L_INFO);
 
-    janosh = new Janosh();
-    janosh->setFormat(f);
+    if(daemon) {
+      Logger::init(LogLevel::L_DEBUG);
+      instance = new Janosh();
+      instance->open(false);
+
+      TcpServer server(22222);
+      while(true)
+        server.run(run);
+    } else {
 
     vector<std::string> vecArgs;
+    string command = "NONE";
 
     if (argc >= optind + 1) {
-      LOG_DEBUG_MSG("Execute command", argv[optind]);
-      string strCmd = string(argv[optind]);
-      if (strCmd == "get") {
-        janosh->open(true);
-      } else {
-        janosh->open(false);
-      }
-
-      Command* cmd = janosh->cm[strCmd];
-
-      if (!cmd) {
-        throw janosh_exception() << string_info( { "Unknown command", strCmd });
-      }
+      command = string(argv[optind]);
 
       vecArgs.clear();
-
       std::transform(args.begin() + optind + 1, args.end(), std::back_inserter(vecArgs), boost::bind(&std::string::c_str, _1));
-
-      Command::Result r = (*cmd)(vecArgs);
-      if (r.first == -1)
-        throw janosh_exception() << msg_info(r.second);
-
-      LOG_INFO_MSG(r.second, r.first);
     } else if (!execTargets) {
       throw janosh_exception() << msg_info("missing command");
     }
 
-    janosh->close();
-
+    vector<string> vecTriggers;
     if (execTriggers) {
-      LOG_DEBUG("Triggers");
-      Command* t = janosh->cm["trigger"];
-      vector<string> vecTriggers;
-
       for (size_t i = 0; i < vecArgs.size(); i += 2) {
-        LOG_DEBUG_MSG("Execute triggers", vecArgs[i].c_str());
         vecTriggers.push_back(vecArgs[i].c_str());
       }
-      (*t)(vecTriggers);
     }
 
+    vector<string> vecTargets;
     if (execTargets) {
-      Command* t = janosh->cm["target"];
-      vector<string> vecTargets;
       tokenizer<char_separator<char> > tok(targetList, char_separator<char>(","));
       BOOST_FOREACH (const string& t, tok) {
         vecTargets.push_back(t);
       }
-
-      (*t)(vecTargets);
     }
 
+      TcpClient client;
+      client.connect("localhost",22222);
+      return client.run(f, command, vecArgs, vecTriggers, vecTargets, verbose);
+    }
   } catch (janosh_exception& ex) {
-    janosh->printException(ex);
+    printException(ex);
     return 1;
   } catch (std::exception& ex) {
-    janosh->printException(ex);
+    printException(ex);
     return 1;
   }
-  janosh->close();
+
   return 0;
 }
 

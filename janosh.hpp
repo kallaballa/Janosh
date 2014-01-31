@@ -32,6 +32,7 @@
 #include "json_spirit/json_spirit.h"
 #include "json.hpp"
 #include "bash.hpp"
+#include "format.hpp"
 
   namespace kc = kyotocabinet;
   namespace js = json_spirit;
@@ -46,13 +47,6 @@
   using std::ifstream;
   using std::exception;
 namespace janosh {
-
-  enum Format {
-    Bash,
-    Json,
-    Raw
-  };
-
   class TriggerBase {
     typedef std::map<string,string> TargetMap;
     typedef typename TargetMap::value_type Target;
