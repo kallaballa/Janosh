@@ -1160,8 +1160,10 @@ int main(int argc, char** argv) {
       instance->open(false);
 
       TcpServer server(22222);
-      while(true)
+      while(true) {
         server.run(run);
+        server.close();
+      }
     } else {
 
     vector<std::string> vecArgs;
