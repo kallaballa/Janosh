@@ -12,6 +12,7 @@
 #include <assert.h>
 #include "format.hpp"
 #include "exception.hpp"
+#include "logger.hpp"
 
 namespace janosh {
 
@@ -54,6 +55,7 @@ void TcpServer::run(function<int(Format,string,vector<string>, vector<string>, v
 
 	std::string peerAddr = socket->remote_endpoint().address().to_string();
 
+  LOG_DEBUG_MSG("accepted:", peerAddr);
 	string line;
 	boost::asio::streambuf response;
 	boost::asio::read_until(*socket, response,"\n");
@@ -62,6 +64,7 @@ void TcpServer::run(function<int(Format,string,vector<string>, vector<string>, v
 
 	std::getline(response_stream, line);
 
+  LOG_DEBUG_MSG("format:", line);
 	if(line == "BASH") {
 	  format = janosh::Bash;
 	} else if (line == "JSON") {
@@ -72,8 +75,11 @@ void TcpServer::run(function<int(Format,string,vector<string>, vector<string>, v
     throw janosh_exception() << string_info({"Illegal formats line", "l:" +line});
 
 	std::getline(response_stream, command);
+  LOG_DEBUG_MSG("command", command);
 
 	std::getline(response_stream, line);
+  LOG_DEBUG_MSG("args", line);
+
 	stringstream ss(line);
 
 	while(ss) {
@@ -84,6 +90,8 @@ void TcpServer::run(function<int(Format,string,vector<string>, vector<string>, v
 	}
 
   std::getline(response_stream, line);
+  LOG_DEBUG_MSG("triggers", line);
+
   ss.str(line);
 
   while(ss) {
@@ -94,6 +102,7 @@ void TcpServer::run(function<int(Format,string,vector<string>, vector<string>, v
   }
 
   std::getline(response_stream, line);
+  LOG_DEBUG_MSG("targets", line);
   ss.str(line);
 
   while(ss) {
@@ -103,6 +112,7 @@ void TcpServer::run(function<int(Format,string,vector<string>, vector<string>, v
       vecTargets.push_back(target);
   }
   std::getline(response_stream, line);
+  LOG_DEBUG_MSG("verbose", line);
 
   if(line == "TRUE")
     verbose = true;
