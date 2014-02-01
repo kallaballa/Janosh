@@ -128,11 +128,11 @@ void TcpServer::run(function<int(Format,string,vector<string>, vector<string>, v
 
   int rc = f(format, command, vecArgs, vecTriggers, vecTargets, verbose);
 
-//  boost::asio::streambuf request;
- // std::ostream request_stream(&request);
-  //request_stream << std::to_string(rc) << '\n';
- // LOG_DEBUG_MSG("sending", request.size());
- // boost::asio::write(*socket, request);
+  boost::asio::streambuf request;
+  std::ostream request_stream(&request);
+  request_stream << std::to_string(rc) << '\n';
+  LOG_DEBUG_MSG("sending", request.size());
+  boost::asio::write(*socket, request);
   LOG_DEBUG_MSG("sending", request2.size());
   boost::asio::write(*socket, request2);
   std::cout.rdbuf(coutbuf);
