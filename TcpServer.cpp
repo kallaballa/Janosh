@@ -90,7 +90,7 @@ void TcpServer::run(function<int(Format,string,vector<string>, vector<string>, v
       if (!arg.empty())
         vecArgs.push_back(arg);
     }
-
+    line.clear();
     std::getline(response_stream, line);
     LOG_DEBUG_MSG("triggers", line);
 
