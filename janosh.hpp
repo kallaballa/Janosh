@@ -79,6 +79,7 @@ public:
     fs::path databaseFile;
     fs::path triggerFile;
     fs::path logFile;
+    int port;
     vector<fs::path> triggerDirs;
 
     Settings();
