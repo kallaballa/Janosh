@@ -87,9 +87,9 @@ int TcpClient::run(Format f, string command, vector<string> vecArgs, vector<stri
   LOG_DEBUG_MSG("return code", strReturnCode);
 	int returnCode = std::stoi(strReturnCode);
 
-	boost::asio::read_until(socket, response,"\n");
 	string line;
 	while(response_stream) {
+	  boost::asio::read_until(socket, response,"\n");
 	  std::getline(response_stream, line);
 	  std::cout << line << std::endl;
 	}
