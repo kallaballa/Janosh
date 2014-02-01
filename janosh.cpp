@@ -1072,19 +1072,23 @@ int run(Format f, string command, vector<string> args, vector<string> vecTrigger
       throw janosh_exception() << msg_info("missing command");
     }
 
-    std::thread* t = new thread([=](){
-      if (!vecTriggers.empty()) {
+    if (!vecTriggers.empty()) {
+      std::thread t([=](){
         LOG_DEBUG("Triggers");
         Command* t = instance->cm["trigger"];
         (*t)(vecTriggers);
-      }
+      });
+      t.detach();
+    }
 
-      if (!vecTargets.empty()) {
+    if (!vecTargets.empty()) {
+      std::thread t([=](){
+        LOG_DEBUG("Targets");
         Command* t = instance->cm["target"];
         (*t)(vecTargets);
-      }
-    });
-
+      });
+      t.detach();
+    }
   } catch (janosh_exception& ex) {
     printException(ex);
     return 1;
