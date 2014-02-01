@@ -55,7 +55,7 @@ void TcpServer::run(function<int(Format,string,vector<string>, vector<string>, v
 
 	std::string peerAddr = socket->remote_endpoint().address().to_string();
 
-  LOG_DEBUG_MSG("accepted:", peerAddr);
+  LOG_DEBUG_MSG("accepted", peerAddr);
 	string line;
 	boost::asio::streambuf response;
 	boost::asio::read_until(*socket, response,"\n");
@@ -64,7 +64,7 @@ void TcpServer::run(function<int(Format,string,vector<string>, vector<string>, v
 
 	std::getline(response_stream, line);
 
-  LOG_DEBUG_MSG("format:", line);
+  LOG_DEBUG_MSG("format", line);
 	if(line == "BASH") {
 	  format = janosh::Bash;
 	} else if (line == "JSON") {
@@ -72,7 +72,7 @@ void TcpServer::run(function<int(Format,string,vector<string>, vector<string>, v
   } else if (line == "RAW") {
     format = janosh::Raw;
   } else
-    throw janosh_exception() << string_info({"Illegal formats line", "l:" +line});
+    throw janosh_exception() << string_info({"Illegal formats line", line});
 
 	std::getline(response_stream, command);
   LOG_DEBUG_MSG("command", command);
@@ -131,8 +131,9 @@ void TcpServer::run(function<int(Format,string,vector<string>, vector<string>, v
   boost::asio::streambuf request;
   std::ostream request_stream(&request);
   request_stream << std::to_string(rc) << '\n';
-
+  LOG_DEBUG_MSG("sending", request.size());
   boost::asio::write(*socket, request);
+  LOG_DEBUG_MSG("sending", request2.size());
   boost::asio::write(*socket, request2);
   std::cout.rdbuf(coutbuf);
 }

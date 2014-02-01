@@ -243,7 +243,7 @@ namespace janosh {
     rec.fetch();
     size_t cnt = 1;
 
-    LOG_DEBUG_MSG("print", rec.path());
+    LOG_DEBUG_MSG("get", rec.path());
 
     if(!rec.exists()) {
       throw janosh_exception() << record_info({"Path not found", rec});
@@ -1102,14 +1102,18 @@ int main(int argc, char** argv) {
     bool execTargets = false;
     bool verbose = false;
     bool daemon = false;
+    bool single = false;
 
     string key;
     string value;
     string targetList;
     char* const * c_args = argv;
     optind = 1;
-    while ((c = getopt(argc, c_args, "dvfjbrthe:")) != -1) {
+    while ((c = getopt(argc, c_args, "sdvfjbrthe:")) != -1) {
       switch (c) {
+      case 's':
+        single = true;
+        break;
       case 'd':
         daemon = true;
         break;
@@ -1154,48 +1158,54 @@ int main(int argc, char** argv) {
       }
     }
 
-    if(daemon) {
+    if (daemon) {
       Logger::init(LogLevel::L_DEBUG);
       instance = new Janosh();
       instance->open(false);
 
       TcpServer server(22222);
-      while(true) {
+      while (true) {
         server.run(run);
         server.close();
       }
     } else {
+      Logger::init(LogLevel::L_DEBUG);
+      vector<std::string> vecArgs;
+      string command = "NONE";
 
-    vector<std::string> vecArgs;
-    string command = "NONE";
+      if (argc >= optind + 1) {
+        command = string(argv[optind]);
 
-    if (argc >= optind + 1) {
-      command = string(argv[optind]);
-
-      vecArgs.clear();
-      std::transform(args.begin() + optind + 1, args.end(), std::back_inserter(vecArgs), boost::bind(&std::string::c_str, _1));
-    } else if (!execTargets) {
-      throw janosh_exception() << msg_info("missing command");
-    }
-
-    vector<string> vecTriggers;
-    if (execTriggers) {
-      for (size_t i = 0; i < vecArgs.size(); i += 2) {
-        vecTriggers.push_back(vecArgs[i].c_str());
+        vecArgs.clear();
+        std::transform(args.begin() + optind + 1, args.end(), std::back_inserter(vecArgs), boost::bind(&std::string::c_str, _1));
+      } else if (!execTargets) {
+        throw janosh_exception() << msg_info("missing command");
       }
-    }
 
-    vector<string> vecTargets;
-    if (execTargets) {
-      tokenizer<char_separator<char> > tok(targetList, char_separator<char>(","));
-      BOOST_FOREACH (const string& t, tok) {
-        vecTargets.push_back(t);
+      vector<string> vecTriggers;
+      if (execTriggers) {
+        for (size_t i = 0; i < vecArgs.size(); i += 2) {
+          vecTriggers.push_back(vecArgs[i].c_str());
+        }
       }
-    }
 
-      TcpClient client;
-      client.connect("localhost",22222);
-      return client.run(f, command, vecArgs, vecTriggers, vecTargets, verbose);
+      vector<string> vecTargets;
+      if (execTargets) {
+        tokenizer<char_separator<char> > tok(targetList, char_separator<char>(","));
+        BOOST_FOREACH (const string& t, tok) {
+          vecTargets.push_back(t);
+        }
+      }
+
+      if(!single) {
+        TcpClient client;
+        client.connect("localhost", 22222);
+        return client.run(f, command, vecArgs, vecTriggers, vecTargets, verbose);
+      } else {
+        instance = new Janosh();
+        instance->open(false);
+        return run(f, command, vecArgs, vecTriggers, vecTargets, verbose);
+      }
     }
   } catch (janosh_exception& ex) {
     printException(ex);

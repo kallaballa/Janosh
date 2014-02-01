@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include "TcpClient.hpp"
+#include "logger.hpp"
 
 namespace janosh {
 
@@ -16,6 +17,7 @@ TcpClient::TcpClient() : socket(io_service) {
 }
 
 TcpClient::~TcpClient() {
+  this->close();
 }
 
 void TcpClient::connect(string host, int port) {
@@ -82,6 +84,7 @@ int TcpClient::run(Format f, string command, vector<string> vecArgs, vector<stri
 
 	string strReturnCode;
 	std::getline(response_stream, strReturnCode);
+  LOG_DEBUG_MSG("return code", strReturnCode);
 	int returnCode = std::stoi(strReturnCode);
 
 	string line;
