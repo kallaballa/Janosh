@@ -47,11 +47,11 @@ void splitAndPushBack(string& s, vector<string>& vec) {
   std::size_t lasti = 0;
   string arg;
 
-  while((i = s.find(",")) != string::npos) {
+  while((i = s.find(",", lasti)) != string::npos) {
     arg = s.substr(lasti, i);
     if(!arg.empty())
       vec.push_back(arg);
-    lasti = i;
+    lasti = i + 1;
   }
 
   arg = s.substr(lasti, s.size());
