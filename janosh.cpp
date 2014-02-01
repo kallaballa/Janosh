@@ -154,11 +154,16 @@ namespace janosh {
         if(find(jObj, "database", v)) {
           this->databaseFile = fs::path(v.get_str());
         } else {
+          error(this->janoshFile.string(), "No database file defined");
+        }
 
+        if(find(jObj, "port", v)) {
+          this->port = std::stoi(v.get_str());
+        } else {
           error(this->janoshFile.string(), "No database file defined");
         }
       } catch (exception& e) {
-        error("Unable to load jashon configuration", e.what());
+        error("Unable to load janosh configuration", e.what());
       }
     }
   }
@@ -266,6 +271,8 @@ namespace janosh {
 
       switch(this->getFormat()) {
         case Raw:
+          out << rec.value() << endl;
+          break;
         case Json:
           out << rec.value() << endl;
           break;
@@ -1163,7 +1170,7 @@ int main(int argc, char** argv) {
       instance = new Janosh();
       instance->open(false);
 
-      TcpServer server(22222);
+      TcpServer server(instance->settings_.port);
       while (true) {
         server.run(run);
         server.close();
@@ -1198,8 +1205,9 @@ int main(int argc, char** argv) {
       }
 
       if(!single) {
+        Settings s;
         TcpClient client;
-        client.connect("localhost", 22222);
+        client.connect("localhost", s.port);
         return client.run(f, command, vecArgs, vecTriggers, vecTargets, verbose);
       } else {
         instance = new Janosh();
