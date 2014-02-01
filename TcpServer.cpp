@@ -102,6 +102,7 @@ void TcpServer::run(function<int(Format,string,vector<string>, vector<string>, v
       if (!trigger.empty())
         vecTriggers.push_back(trigger);
     }
+    LOG_DEBUG_MSG("triggers size", vecTriggers.size());
 
     std::getline(response_stream, line);
     LOG_DEBUG_MSG("targets", line);
