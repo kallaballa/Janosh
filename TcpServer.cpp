@@ -134,8 +134,9 @@ void TcpServer::run(function<int(Format,string,vector<string>, vector<string>, v
     boost::asio::write(*socket, request);
     LOG_DEBUG_MSG("sending", request2.size());
     boost::asio::write(*socket, request2);
+    socket->close();
   } catch (std::exception& ex) {
   }
-  std::cout.rdbuf(coutbuf);
+  //std::cout.rdbuf(coutbuf);
 }
 } /* namespace janosh */

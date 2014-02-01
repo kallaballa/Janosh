@@ -39,7 +39,22 @@ namespace janosh {
       return -1;
     }
     LOG_INFO_MSG("Execute target", name);
-    return system((*it).second.c_str());
+
+      FILE* pipe = popen((*it).second.c_str(), "r");
+      if (!pipe)
+        LOG_ERR_MSG("Unable to execute", (*it).second);
+
+      char buffer[1024];
+      int size;
+      //TIME_START
+      while(!feof(pipe)) {
+          size=(int)fread(buffer,1,1024, pipe); //cout<<buffer<<" size="<<size<<endl;
+          std::cout.write(buffer, size);
+          std::cerr << "write:";
+          std::cerr.write(buffer,size);
+      }
+      //TIME_PRINT_
+      return pclose(pipe);
   }
 
   void TriggerBase::executeTrigger(const Path& p) {
@@ -1072,23 +1087,21 @@ int run(Format f, string command, vector<string> args, vector<string> vecTrigger
       throw janosh_exception() << msg_info("missing command");
     }
 
-    if (!vecTriggers.empty()) {
-      std::thread t([=](){
+    std::thread t([=](){
+      if (!vecTriggers.empty()) {
         LOG_DEBUG("Triggers");
         Command* t = instance->cm["trigger"];
         (*t)(vecTriggers);
-      });
-      t.detach();
-    }
 
-    if (!vecTargets.empty()) {
-      std::thread t([=](){
+      }
+
+      if (!vecTargets.empty()) {
         LOG_DEBUG("Targets");
         Command* t = instance->cm["target"];
         (*t)(vecTargets);
-      });
-      t.detach();
-    }
+      }
+    });
+    t.detach();
   } catch (janosh_exception& ex) {
     printException(ex);
     return 1;
@@ -1116,7 +1129,7 @@ int main(int argc, char** argv) {
     bool execTargets = false;
     bool verbose = false;
     bool daemon = false;
-    bool single = false;
+    bool single = true;
 
     string key;
     string value;
@@ -1180,7 +1193,7 @@ int main(int argc, char** argv) {
       TcpServer server(instance->settings_.port);
       while (true) {
         server.run(run);
-        server.close();
+        //server.close();
       }
     } else {
       Logger::init(LogLevel::L_DEBUG);
