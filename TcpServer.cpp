@@ -45,13 +45,18 @@ void TcpServer::close() {
 void splitAndPushBack(string& s, vector<string>& vec) {
   std::size_t i;
   std::size_t lasti = 0;
+  string arg;
 
   while((i = s.find(",")) != string::npos) {
-    vec.push_back(s.substr(lasti, i));
+    arg = s.substr(lasti, i);
+    if(!arg.empty())
+      vec.push_back(arg);
     lasti = i;
   }
 
-  vec.push_back(s.substr(lasti, s.size()));
+  arg = s.substr(lasti, s.size());
+  if(!arg.empty())
+    vec.push_back(arg);
 }
 
 void TcpServer::run(function<int(Format,string,vector<string>, vector<string>, vector<string>, bool)> f) {
