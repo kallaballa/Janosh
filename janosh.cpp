@@ -1,3 +1,4 @@
+#include <thread>
 #include "janosh.hpp"
 #include "commands.hpp"
 #include "TcpServer.hpp"
@@ -1071,16 +1072,18 @@ int run(Format f, string command, vector<string> args, vector<string> vecTrigger
       throw janosh_exception() << msg_info("missing command");
     }
 
-    if (!vecTriggers.empty()) {
-      LOG_DEBUG("Triggers");
-      Command* t = instance->cm["trigger"];
-      (*t)(vecTriggers);
-    }
+    std::thread* t = new thread([=](){
+      if (!vecTriggers.empty()) {
+        LOG_DEBUG("Triggers");
+        Command* t = instance->cm["trigger"];
+        (*t)(vecTriggers);
+      }
 
-    if (!vecTargets.empty()) {
-      Command* t = instance->cm["target"];
-      (*t)(vecTargets);
-    }
+      if (!vecTargets.empty()) {
+        Command* t = instance->cm["target"];
+        (*t)(vecTargets);
+      }
+    });
 
   } catch (janosh_exception& ex) {
     printException(ex);
