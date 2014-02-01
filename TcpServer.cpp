@@ -42,6 +42,18 @@ void TcpServer::close() {
 		socket->close();
 }
 
+void splitAndPushBack(string& s, vector<string>& vec) {
+  std::size_t i;
+  std::size_t lasti = 0;
+
+  while((i = s.find(",")) != string::npos) {
+    vec.push_back(s.substr(lasti, i));
+    lasti = i;
+  }
+
+  vec.push_back(s.substr(lasti, s.size()));
+}
+
 void TcpServer::run(function<int(Format,string,vector<string>, vector<string>, vector<string>, bool)> f) {
 	acceptor.listen();
 	boost::asio::ip::tcp::socket* s = new boost::asio::ip::tcp::socket(io_service);
@@ -82,38 +94,18 @@ void TcpServer::run(function<int(Format,string,vector<string>, vector<string>, v
     std::getline(response_stream, line);
     LOG_DEBUG_MSG("args", line);
 
-    stringstream ss(line);
+    splitAndPushBack(line, vecArgs);
 
-    while (ss) {
-      string arg;
-      std::getline(ss, arg, ',');
-      if (!arg.empty())
-        vecArgs.push_back(arg);
-    }
-    line.clear();
     std::getline(response_stream, line);
     LOG_DEBUG_MSG("triggers", line);
 
-    ss.str(line);
-
-    while (ss) {
-      string trigger;
-      std::getline(ss, trigger, ',');
-      if (!trigger.empty())
-        vecTriggers.push_back(trigger);
-    }
-    LOG_DEBUG_MSG("triggers size", vecTriggers.size());
+    splitAndPushBack(line, vecTriggers);
 
     std::getline(response_stream, line);
     LOG_DEBUG_MSG("targets", line);
-    ss.str(line);
 
-    while (ss) {
-      string target;
-      std::getline(ss, target, ',');
-      if (!target.empty())
-        vecTargets.push_back(target);
-    }
+    splitAndPushBack(line, vecTargets);
+
     std::getline(response_stream, line);
     LOG_DEBUG_MSG("verbose", line);
 
