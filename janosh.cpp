@@ -3,6 +3,7 @@
 #include "commands.hpp"
 #include "TcpServer.hpp"
 #include "TcpClient.hpp"
+#include "janosh_thread.hpp"
 
 using std::string;
 using std::map;
@@ -32,7 +33,7 @@ namespace janosh {
     load(config);
   }
 
-  int TriggerBase::executeTarget(const string& name) {
+  int TriggerBase::executeTarget(const string& name, std::ostream& out) {
     auto it = targets.find(name);
     if(it == targets.end()) {
       warn("Target not found", name);
@@ -49,19 +50,17 @@ namespace janosh {
       //TIME_START
       while(!feof(pipe)) {
           size=(int)fread(buffer,1,1024, pipe); //cout<<buffer<<" size="<<size<<endl;
-          std::cout.write(buffer, size);
-          std::cerr << "write:";
-          std::cerr.write(buffer,size);
+          out.write(buffer, size);
       }
       //TIME_PRINT_
       return pclose(pipe);
   }
 
-  void TriggerBase::executeTrigger(const Path& p) {
+  void TriggerBase::executeTrigger(const Path& p, std::ostream& out) {
     auto it = triggers.find(p);
     if(it != triggers.end()) {
       BOOST_FOREACH(const string& name, (*it).second) {
-        executeTarget(name);
+        executeTarget(name, out);
       }
     }
   }
@@ -198,7 +197,7 @@ namespace janosh {
   Janosh::Janosh() :
 		settings_(),
         triggers_(settings_.triggerFile, settings_.triggerDirs),
-        cm(makeCommandMap(this)) {
+        cm_(makeCommandMap(this)) {
   }
 
   Janosh::~Janosh() {
@@ -651,14 +650,14 @@ namespace janosh {
    * Prints all records to cout in raw format
    * @return number of total records printed.
    */
-  size_t Janosh::dump() {
+  size_t Janosh::dump(std::ostream& out) {
     kc::DB::Cursor* cur = Record::db.cursor();
     string key,value;
     cur->jump();
     size_t cnt = 0;
 
     while(cur->get(&key, &value, true)) {
-      std::cout << "path:" << Path(key).pretty() <<  " value:" << value << endl;
+      out << "path:" << Path(key).pretty() <<  " value:" << value << endl;
       ++cnt;
     }
     delete cur;
@@ -1016,6 +1015,14 @@ namespace janosh {
       std::cerr << vi->first << ": " << vi->second << std::endl;
   }
 
+  Janosh* Janosh::getInstance() {
+      if(instance_ == NULL)
+        instance_ = new Janosh();
+
+      return instance_;
+  }
+
+  Janosh* Janosh::instance_ = NULL;
 }
 
 std::vector<size_t> sequence() {
@@ -1064,54 +1071,6 @@ using namespace std;
 using namespace boost;
 using namespace janosh;
 
-static Janosh* instance;
-
-int run(Format f, string command, vector<string> args, vector<string> vecTriggers, vector<string> vecTargets, bool verbose) {
-  try {
-    instance->setFormat(f);
-
-    if (command != "NONE") {
-      LOG_DEBUG_MSG("Execute command", command);
-      Command* cmd = instance->cm[command];
-
-      if (!cmd) {
-        throw janosh_exception() << string_info( { "Unknown command", command });
-      }
-
-      Command::Result r = (*cmd)(args);
-      if (r.first == -1)
-        throw janosh_exception() << msg_info(r.second);
-
-      LOG_INFO_MSG(r.second, r.first);
-    } else if (vecTargets.empty()) {
-      throw janosh_exception() << msg_info("missing command");
-    }
-
-    std::thread t([=](){
-      if (!vecTriggers.empty()) {
-        LOG_DEBUG("Triggers");
-        Command* t = instance->cm["trigger"];
-        (*t)(vecTriggers);
-
-      }
-
-      if (!vecTargets.empty()) {
-        LOG_DEBUG("Targets");
-        Command* t = instance->cm["target"];
-        (*t)(vecTargets);
-      }
-    });
-    t.detach();
-  } catch (janosh_exception& ex) {
-    printException(ex);
-    return 1;
-  } catch (std::exception& ex) {
-    printException(ex);
-    return 1;
-  }
-
-  return 0;
-}
 
 
 int main(int argc, char** argv) {
@@ -1129,7 +1088,7 @@ int main(int argc, char** argv) {
     bool execTargets = false;
     bool verbose = false;
     bool daemon = false;
-    bool single = true;
+    bool single = false;
 
     string key;
     string value;
@@ -1187,13 +1146,11 @@ int main(int argc, char** argv) {
 
     if (daemon) {
       Logger::init(LogLevel::L_DEBUG);
-      instance = new Janosh();
+      Janosh* instance = Janosh::getInstance();
       instance->open(false);
-
       TcpServer server(instance->settings_.port);
       while (true) {
-        server.run(run);
-        //server.close();
+        server.run();
       }
     } else {
       Logger::init(LogLevel::L_DEBUG);
@@ -1230,9 +1187,12 @@ int main(int argc, char** argv) {
         client.connect("localhost", s.port);
         return client.run(f, command, vecArgs, vecTriggers, vecTargets, verbose);
       } else {
-        instance = new Janosh();
+        Janosh* instance = Janosh::getInstance();
         instance->open(false);
-        return run(f, command, vecArgs, vecTriggers, vecTargets, verbose);
+        JanoshThread jt(f, command, vecArgs, vecTriggers, vecTargets, verbose, std::cout);
+        int rc = jt.run();
+        jt.join();
+        return rc;
       }
     }
   } catch (janosh_exception& ex) {

@@ -57,9 +57,9 @@ namespace janosh {
 public:
     TriggerBase(const fs::path& config, const vector<fs::path>& targetDirs);
 
-    int executeTarget(const string& name);
+    int executeTarget(const string& name, std::ostream& out);
+    void executeTrigger(const Path& p, std::ostream& out);
 
-    void executeTrigger(const Path& p);
     bool findAbsoluteCommand(const string& cmd, string& abs);
     void load(const fs::path& config);
     void load(std::ifstream& is);
@@ -95,11 +95,11 @@ public:
   typedef map<const std::string, Command*> CommandMap;
 
   class Janosh {
-  public:
+public:
     typedef boost::function<void(int)> ExitHandler;
     Settings settings_;
     TriggerBase triggers_;
-    CommandMap cm;
+    CommandMap cm_;
 
       Janosh();
     ~Janosh();
@@ -133,10 +133,12 @@ public:
     size_t copy(Record& src, Record& dest);
     size_t shift(Record& src, Record& dest);
 
-    size_t dump();
+    size_t dump(std::ostream& out);
     size_t hash();
     size_t truncate();
+    static Janosh* getInstance();
   private:
+    static Janosh* instance_;
     Format format;
 
     bool open_;
@@ -276,5 +278,8 @@ public:
       out << stripped << endl;
     }
   };
+
+  void printException(std::exception& ex);
+  void printException(janosh::janosh_exception& ex);
 }
 #endif

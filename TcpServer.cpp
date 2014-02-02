@@ -9,11 +9,11 @@
 #include <sstream>
 #include <functional>
 #include <thread>
-#include "TcpServer.hpp"
 #include <assert.h>
+#include "TcpServer.hpp"
 #include "format.hpp"
-#include "exception.hpp"
 #include "logger.hpp"
+#include "janosh_thread.hpp"
 
 namespace janosh {
 
@@ -22,8 +22,9 @@ using std::string;
 using std::vector;
 using std::stringstream;
 using std::function;
+using std::ostream;
 
-TcpServer::TcpServer(int port) : io_service(), socket(NULL), acceptor(io_service){
+TcpServer::TcpServer(int port) : io_service(), acceptor(io_service){
     tcp::resolver resolver(io_service);
     tcp::resolver::query query("0.0.0.0", std::to_string(port));
     boost::asio::ip::tcp::endpoint endpoint = *resolver.resolve(query);
@@ -34,12 +35,7 @@ TcpServer::TcpServer(int port) : io_service(), socket(NULL), acceptor(io_service
 }
 
 TcpServer::~TcpServer() {
-	this->close();
-}
 
-void TcpServer::close() {
-	if(socket != NULL)
-		socket->close();
 }
 
 void splitAndPushBack(string& s, vector<string>& vec) {
@@ -59,13 +55,12 @@ void splitAndPushBack(string& s, vector<string>& vec) {
     vec.push_back(arg);
 }
 
-void TcpServer::run(function<int(Format,string,vector<string>, vector<string>, vector<string>, bool)> f) {
+void TcpServer::run() {
 	acceptor.listen();
-	boost::asio::ip::tcp::socket* s = new boost::asio::ip::tcp::socket(io_service);
-	acceptor.accept(*s);
-  std::streambuf *coutbuf = std::cout.rdbuf(); //save old buf
-  try {
-    socket = s;
+	boost::asio::ip::tcp::socket* socket = new boost::asio::ip::tcp::socket(io_service);
+	acceptor.accept(*socket);
+
+	try {
     Format format;
     string command;
     vector<string> vecArgs;
@@ -75,7 +70,7 @@ void TcpServer::run(function<int(Format,string,vector<string>, vector<string>, v
 
     std::string peerAddr = socket->remote_endpoint().address().to_string();
 
-    LOG_DEBUG_MSG("accepted", peerAddr);
+//    LOG_DEBUG_MSG("accepted", peerAddr);
     string line;
     boost::asio::streambuf response;
     boost::asio::read_until(*socket, response, "\n");
@@ -83,60 +78,70 @@ void TcpServer::run(function<int(Format,string,vector<string>, vector<string>, v
 
     std::getline(response_stream, line);
 
-    LOG_DEBUG_MSG("format", line);
+ //   LOG_DEBUG_MSG("format", line);
     if (line == "BASH") {
       format = janosh::Bash;
     } else if (line == "JSON") {
       format = janosh::Json;
     } else if (line == "RAW") {
       format = janosh::Raw;
-    } else
-      throw janosh_exception() << string_info( { "Illegal formats line", line });
+    } /*else
+      throw janosh_exception() << string_info( { "Illegal formats line", line });*/
 
     std::getline(response_stream, command);
-    LOG_DEBUG_MSG("command", command);
+  //  LOG_DEBUG_MSG("command", command);
 
     std::getline(response_stream, line);
-    LOG_DEBUG_MSG("args", line);
+  //  LOG_DEBUG_MSG("args", line);
 
     splitAndPushBack(line, vecArgs);
 
     std::getline(response_stream, line);
-    LOG_DEBUG_MSG("triggers", line);
+   // LOG_DEBUG_MSG("triggers", line);
 
     splitAndPushBack(line, vecTriggers);
 
     std::getline(response_stream, line);
-    LOG_DEBUG_MSG("targets", line);
+  //  LOG_DEBUG_MSG("targets", line);
 
     splitAndPushBack(line, vecTargets);
 
     std::getline(response_stream, line);
-    LOG_DEBUG_MSG("verbose", line);
+  //  LOG_DEBUG_MSG("verbose", line);
 
     if (line == "TRUE")
       verbose = true;
     else if (line == "FALSE")
       verbose = false;
-    else
-      throw janosh_exception() << string_info( { "Illegal verbose line", line });
+/*    else
+      throw janosh_exception() << string_info( { "Illegal verbose line", line });*/
 
-    boost::asio::streambuf request2;
-    std::ostream request_stream2(&request2);
-    std::cout.rdbuf(request_stream2.rdbuf());
+    boost::asio::streambuf* out_buf = new boost::asio::streambuf();
+    ostream* out_stream = new ostream(out_buf);
+    std::cout.rdbuf(out_stream->rdbuf());
 
-    int rc = f(format, command, vecArgs, vecTriggers, vecTargets, verbose);
+    JanoshThread* jt = new JanoshThread(format, command, vecArgs, vecTriggers, vecTargets, verbose, *out_stream);
 
-    boost::asio::streambuf request;
-    std::ostream request_stream(&request);
-    request_stream << std::to_string(rc) << '\n';
-    LOG_DEBUG_MSG("sending", request.size());
-    boost::asio::write(*socket, request);
-    LOG_DEBUG_MSG("sending", request2.size());
-    boost::asio::write(*socket, request2);
-    socket->close();
+    int rc = jt->run();
+
+    boost::asio::streambuf rc_buf;
+    ostream rc_stream(&rc_buf);
+    rc_stream << std::to_string(rc) << '\n';
+ //   LOG_DEBUG_MSG("sending", rc_buf.size());
+    boost::asio::write(*socket, rc_buf);
+
+    std::thread flusher([=]{
+      jt->join();
+//      LOG_DEBUG_MSG("sending", out_buf->size());
+      boost::asio::write(*socket, *out_buf);
+      socket->close();
+      delete out_buf;
+      delete out_stream;
+      delete jt;
+    });
+
+    flusher.detach();
   } catch (std::exception& ex) {
   }
-  //std::cout.rdbuf(coutbuf);
 }
 } /* namespace janosh */
