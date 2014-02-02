@@ -138,6 +138,7 @@ void TcpServer::run() {
       delete out_buf;
       delete out_stream;
       delete jt;
+      delete socket;
     });
 
     flusher.detach();
