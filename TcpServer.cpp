@@ -32,6 +32,7 @@ TcpServer::TcpServer(int port) : io_service(), acceptor(io_service){
     acceptor.open(endpoint.protocol());
     acceptor.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
     acceptor.bind(endpoint);
+    acceptor.listen();
 }
 
 TcpServer::~TcpServer() {
@@ -57,7 +58,6 @@ void splitAndPushBack(string& s, vector<string>& vec) {
 }
 
 void TcpServer::run() {
-	acceptor.listen();
 	boost::asio::ip::tcp::socket* socket = new boost::asio::ip::tcp::socket(io_service);
 	acceptor.accept(*socket);
 
