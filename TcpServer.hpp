@@ -10,6 +10,7 @@
 
 #include <boost/asio.hpp>
 #include "format.hpp"
+#include "cache.hpp"
 
 namespace janosh {
 
@@ -17,6 +18,7 @@ class TcpServer {
   boost::asio::io_service io_service;
   boost::asio::ip::tcp::acceptor acceptor;
   static TcpServer* instance_;
+  Cache cache_;
   TcpServer();
 
 public:

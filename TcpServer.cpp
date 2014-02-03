@@ -18,6 +18,7 @@
 #include "logger.hpp"
 #include "janosh_thread.hpp"
 #include "exception.hpp"
+#include "cache.hpp"
 
 
 namespace janosh {
@@ -31,7 +32,7 @@ using std::ostream;
 
 TcpServer* TcpServer::instance_;
 
-TcpServer::TcpServer() : io_service(), acceptor(io_service){
+TcpServer::TcpServer() : io_service(), acceptor(io_service), cache_() {
 }
 
 
@@ -136,31 +137,65 @@ void TcpServer::run() {
     else
       throw janosh_exception() << string_info( { "Illegal verbose line", line });
 
-    boost::asio::streambuf* out_buf = new boost::asio::streambuf();
-    ostream* out_stream = new ostream(out_buf);
 
-    JanoshThread* jt = new JanoshThread(format, command, vecArgs, vecTriggers, vecTargets, verbose, *out_stream);
+    // only "-j get /." is cached
+    bool cacheable = command == "get"
+        && format == janosh::Json
+        && vecTriggers.empty()
+        && vecTargets.empty()
+        && vecArgs.size() == 1
+        && vecArgs[0] == "/.";
 
-    int rc = jt->run();
+    if(!cacheable && (!command.empty() && command != "get" && command != "dump" && command != "hash")) {
+      LOG_DEBUG_STR("Invalidating cache");
+      cache_.invalidate();
+    }
 
-    boost::asio::streambuf rc_buf;
-    ostream rc_stream(&rc_buf);
-    rc_stream << std::to_string(rc) << '\n';
-    LOG_DEBUG_MSG("sending", rc_buf.size());
-    boost::asio::write(*socket, rc_buf);
+    bool cachehit = cacheable && cache_.isValid();
 
-    std::thread flusher([=]{
-      jt->join();
-      LOG_DEBUG_MSG("sending", out_buf->size());
-      boost::asio::write(*socket, *out_buf);
-      socket->close();
-      delete out_buf;
-      delete out_stream;
-      delete jt;
-      delete socket;
-    });
+    LOG_DEBUG_MSG("cacheable", cacheable);
+    LOG_DEBUG_MSG("cachehit", cachehit);
 
-    flusher.detach();
+    if(!cachehit) {
+      boost::asio::streambuf* out_buf = new boost::asio::streambuf();
+      ostream* out_stream = new ostream(out_buf);
+
+      JanoshThread* jt = new JanoshThread(format, command, vecArgs, vecTriggers, vecTargets, verbose, *out_stream);
+
+      int rc = jt->run();
+      boost::asio::streambuf rc_buf;
+      ostream rc_stream(&rc_buf);
+      rc_stream << std::to_string(rc) << '\n';
+      LOG_DEBUG_MSG("sending", rc_buf.size());
+      boost::asio::write(*socket, rc_buf);
+
+      std::thread flusher([=]{
+        jt->join();
+        LOG_DEBUG_MSG("sending", out_buf->size());
+        if(cacheable) {
+          LOG_DEBUG_STR("updating cache");
+          cache_.setData(boost::asio::buffer_cast<const char*>(out_buf->data()), out_buf->size());
+        }
+        boost::asio::write(*socket, *out_buf);
+        socket->close();
+        delete out_buf;
+        delete out_stream;
+        delete jt;
+        delete socket;
+      });
+
+      flusher.detach();
+    } else {
+       boost::asio::streambuf rc_buf;
+       ostream rc_stream(&rc_buf);
+       rc_stream << std::to_string(0) << '\n';
+       LOG_DEBUG_MSG("sending", rc_buf.size());
+       boost::asio::write(*socket, rc_buf);
+       LOG_DEBUG_MSG("sending", cache_.getSize());
+       boost::asio::write(*socket, boost::asio::buffer(cache_.getData(), cache_.getSize()));
+       socket->close();
+       delete socket;
+    }
   } catch (janosh_exception& ex) {
     printException(ex);
   } catch (std::exception& ex) {
