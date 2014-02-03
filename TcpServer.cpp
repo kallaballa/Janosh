@@ -10,11 +10,15 @@
 #include <functional>
 #include <thread>
 #include <assert.h>
+#include <signal.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include "TcpServer.hpp"
 #include "format.hpp"
 #include "logger.hpp"
 #include "janosh_thread.hpp"
 #include "exception.hpp"
+
 
 namespace janosh {
 
@@ -25,19 +29,33 @@ using std::stringstream;
 using std::function;
 using std::ostream;
 
-TcpServer::TcpServer(int port) : io_service(), acceptor(io_service){
-    tcp::resolver resolver(io_service);
-    tcp::resolver::query query("0.0.0.0", std::to_string(port));
-    boost::asio::ip::tcp::endpoint endpoint = *resolver.resolve(query);
+TcpServer* TcpServer::instance_;
 
-    acceptor.open(endpoint.protocol());
-    acceptor.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
-    acceptor.bind(endpoint);
-    acceptor.listen();
+TcpServer::TcpServer() : io_service(), acceptor(io_service){
+}
+
+
+void TcpServer::open(int port) {
+  tcp::resolver resolver(io_service);
+  tcp::resolver::query query("0.0.0.0", std::to_string(port));
+  boost::asio::ip::tcp::endpoint endpoint = *resolver.resolve(query);
+
+  acceptor.open(endpoint.protocol());
+  acceptor.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
+  acceptor.bind(endpoint);
+  acceptor.listen();
 }
 
 TcpServer::~TcpServer() {
+  this->close();
+}
 
+bool TcpServer::isOpen() {
+  return acceptor.is_open();
+}
+
+void TcpServer::close() {
+  acceptor.close();
 }
 
 void splitAndPushBack(string& s, vector<string>& vec) {

@@ -14,13 +14,23 @@
 namespace janosh {
 
 class TcpServer {
-    boost::asio::io_service io_service;
-    boost::asio::ip::tcp::acceptor acceptor;
+  boost::asio::io_service io_service;
+  boost::asio::ip::tcp::acceptor acceptor;
+  static TcpServer* instance_;
+  TcpServer();
+
 public:
-	TcpServer(int port);
 	virtual ~TcpServer();
+	bool isOpen();
+  void open(int port);
 	void close();
 	void run();
+
+	static TcpServer* getInstance() {
+	  if(instance_ == NULL)
+	    instance_ = new TcpServer();
+	  return instance_;
+	}
 };
 
 } /* namespace janosh */

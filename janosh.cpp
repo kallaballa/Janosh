@@ -1041,10 +1041,29 @@ using namespace std;
 using namespace boost;
 using namespace janosh;
 
+
+void handleSigInt(int s) {
+  if(TcpServer::getInstance()->isOpen()) {
+    LOG_DEBUG_MSG("Shutting down tcp server due to sigint", s);
+    TcpServer::getInstance()->close();
+  }
+}
+
+void registerSigIntHandler() {
+  struct sigaction sigIntHandler;
+
+  sigIntHandler.sa_handler = handleSigInt;
+  sigemptyset(&sigIntHandler.sa_mask);
+  sigIntHandler.sa_flags = 0;
+
+  sigaction(SIGINT, &sigIntHandler, NULL);
+}
+
 _INITIALIZE_EASYLOGGINGPP
 
 int main(int argc, char** argv) {
   _START_EASYLOGGINGPP(0, (const char**)NULL);
+  registerSigIntHandler();
   try {
     std::vector<string> args;
     for (int i = 0; i < argc; i++) {
@@ -1119,9 +1138,10 @@ int main(int argc, char** argv) {
       Logger::init(LogLevel::L_DEBUG);
       Janosh* instance = Janosh::getInstance();
       instance->open(false);
-      TcpServer server(instance->settings_.port);
+      TcpServer* server = TcpServer::getInstance();
+      server->open(instance->settings_.port);
       while (true) {
-        server.run();
+        server->run();
       }
     } else {
       Logger::init(LogLevel::L_DEBUG);
