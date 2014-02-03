@@ -3,7 +3,6 @@
 
 #include <string>
 #include "path.hpp"
-#include "exception.hpp"
 
 namespace janosh {
   using std::string;
@@ -41,9 +40,5 @@ namespace janosh {
     size_t size;
     bool initalized;
   };
-
-
-  typedef boost::error_info<struct tag_janosh_path,std::pair<std::string,std::string> > value_info;
-  struct value_exception : virtual janosh_exception { };
 }
 #endif /* VALUE_HPP_ */

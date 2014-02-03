@@ -1,5 +1,6 @@
 #include "value.hpp"
 #include <boost/lexical_cast.hpp>
+#include "exception.hpp"
 
 using namespace janosh;
 

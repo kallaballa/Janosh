@@ -1,4 +1,5 @@
 #include "path.hpp"
+#include "exception.hpp"
 
   using namespace janosh;
   using std::string;

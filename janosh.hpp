@@ -105,8 +105,6 @@ public:
     ~Janosh();
 
     void setFormat(Format f) ;
-    void printException(janosh_exception& ex);
-    void printException(std::exception& ex);
     void open(bool readOnly);
     void close();
     size_t process(int argc, char** argv);
@@ -278,8 +276,5 @@ public:
       out << stripped << endl;
     }
   };
-
-  void printException(std::exception& ex);
-  void printException(janosh::janosh_exception& ex);
 }
 #endif

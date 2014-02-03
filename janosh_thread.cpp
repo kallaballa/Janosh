@@ -9,6 +9,7 @@
 #include "janosh.hpp"
 #include "commands.hpp"
 #include <thread>
+#include "exception.hpp"
 
 namespace janosh {
 

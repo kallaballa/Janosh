@@ -15,7 +15,6 @@
 #include "path.hpp"
 #include "value.hpp"
 #include "logger.hpp"
-#include "exception.hpp"
 
 namespace janosh {
   namespace kc = kyotocabinet;
@@ -84,8 +83,5 @@ namespace janosh {
   std::ostream& operator<< (std::ostream& os, const janosh::Path& p);
   std::ostream& operator<< (std::ostream& os, const janosh::Value& v);
   std::ostream& operator<< (std::ostream& os, const janosh::Record& r);
-
-  typedef boost::error_info<struct tag_janosh_record,std::pair<string,Record> > record_info;
-  struct record_exception : virtual janosh_exception { };
 }
 #endif

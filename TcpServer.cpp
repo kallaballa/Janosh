@@ -14,6 +14,7 @@
 #include "format.hpp"
 #include "logger.hpp"
 #include "janosh_thread.hpp"
+#include "exception.hpp"
 
 namespace janosh {
 
@@ -86,8 +87,8 @@ void TcpServer::run() {
       format = janosh::Json;
     } else if (line == "RAW") {
       format = janosh::Raw;
-    } /*else
-      throw janosh_exception() << string_info( { "Illegal formats line", line });*/
+    } else
+      throw janosh_exception() << string_info( { "Illegal formats line", line });
 
     std::getline(response_stream, command);
     LOG_DEBUG_MSG("command", command);
@@ -114,8 +115,8 @@ void TcpServer::run() {
       verbose = true;
     else if (line == "FALSE")
       verbose = false;
-/*    else
-      throw janosh_exception() << string_info( { "Illegal verbose line", line });*/
+    else
+      throw janosh_exception() << string_info( { "Illegal verbose line", line });
 
     boost::asio::streambuf* out_buf = new boost::asio::streambuf();
     ostream* out_stream = new ostream(out_buf);
@@ -142,7 +143,10 @@ void TcpServer::run() {
     });
 
     flusher.detach();
+  } catch (janosh_exception& ex) {
+    printException(ex);
   } catch (std::exception& ex) {
+    printException(ex);
   }
 }
 } /* namespace janosh */

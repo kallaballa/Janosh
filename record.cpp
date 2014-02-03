@@ -1,4 +1,5 @@
 #include "record.hpp"
+#include "exception.hpp"
 
 namespace janosh {
   typedef  boost::shared_ptr<kc::DB::Cursor> Base;

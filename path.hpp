@@ -12,7 +12,6 @@
 #include <kcpolydb.h>
 #include "logger.hpp"
 #include <bitset>
-#include "exception.hpp"
 
 namespace janosh {
   namespace kc = kyotocabinet;
@@ -139,9 +138,6 @@ public:
     void reset();
     const bool above(const Path& other) const;
   };
-
-  typedef boost::error_info<struct tag_janosh_path,std::pair<string,Path> > path_info;
-  struct path_exception : virtual janosh_exception { };
 }
 
 #endif /* _JANOSH_PATH_HPP_ */
