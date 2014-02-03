@@ -4,9 +4,9 @@ SRCS    := janosh.cpp logger.cpp record.cpp path.cpp value.cpp exception.cpp cac
 OBJS    := ${SRCS:.cpp=.o} 
 DEPS    := ${SRCS:.cpp=.dep} 
     
-CXXFLAGS = -DETLOG -std=c++0x -pedantic -Wall -I./backtrace/ -I/opt/local/include -D_ELPP_THREAD_SAFE
-LDFLAGS = -L/opt/local/lib 
-LIBS    = -lboost_system-mt -lboost_filesystem-mt -lpthread -lboost_thread-mt -lkyotocabinet  -ldl
+CXXFLAGS += -DETLOG -std=c++0x -pedantic -Wall -I./backtrace/ -I/opt/local/include -D_ELPP_THREAD_SAFE  -D_ELPP_DISABLE_LOGGING_FLAGS_FROM_ARG -D_ELPP_DISABLE_DEFAULT_CRASH_HANDLING
+LDFLAGS += -L/opt/local/lib 
+LIBS    += -lboost_system-mt -lboost_filesystem-mt -lpthread -lboost_thread-mt -lkyotocabinet  -ldl
 
 .PHONY: all release static clean distclean 
 
@@ -17,7 +17,7 @@ endif
 all: release
 
 release: LDFLAGS += -s
-release: CXXFLAGS += -g0 -O3 -D_ELPP_DISABLE_DEBUG_LOGS -D_ELPP_DISABLE_LOGGING_FLAGS_FROM_ARG -D_ELPP_DISABLE_DEFAULT_CRASH_HANDLING
+release: CXXFLAGS += -g0 -O3 -D_ELPP_DISABLE_DEBUG_LOGS
 release: ${TARGET}
 
 reduce: CXXFLAGS = -DETLOG -std=c++0x -pedantic -Wall -I./backtrace/ -g0 -Os -fvisibility=hidden -fvisibility-inlines-hidden
@@ -28,7 +28,13 @@ static: CXXFLAGS += -g0 -O3
 static: LIBS = -Wl,-Bstatic -lboost_system -lboost_filesystem -lkyotocabinet  -llzma -llzo2 -Wl,-Bdynamic -lz -lpthread -lrt -ldl
 static: ${TARGET}
 
-debug: CXXFLAGS += -DJANOSH_DEBUG -g3 -O0 -rdynamic
+screeninvader: LDFLAGS += -s
+screeninvader: CXXFLAGS += -mfloat-abi=hard -mfpu=neon -g0 -O3 
+screeninvader: LIBS = -Wl,-Bstatic -lboost_system -lboost_filesystem -lkyotocabinet  -llzma -llzo2 -Wl,-Bdynamic -lz -lpthread -lrt -ldl
+screeninvader: ${TARGET}
+
+
+debug: CXXFLAGS += -g3 -O0 -rdynamic
 debug: LDFLAGS += -Wl,--export-dynamic
 debug: ${TARGET}
 
@@ -45,4 +51,5 @@ clean:
 	rm -f *~ *.dep *.o backtrace/libs/backtrace/src/*.dep backtrace/libs/backtrace/src/*.o tri_logger/*.dep tri_logger/*.o json_spirit/*.dep json_spirit/*.o ${TARGET} 
 
 distclean: clean
+
 
