@@ -1071,9 +1071,10 @@ using namespace std;
 using namespace boost;
 using namespace janosh;
 
-
+_INITIALIZE_EASYLOGGINGPP
 
 int main(int argc, char** argv) {
+  _START_EASYLOGGINGPP(0, (const char**)NULL);
   try {
     std::vector<string> args;
     for (int i = 0; i < argc; i++) {

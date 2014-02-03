@@ -71,7 +71,7 @@ void TcpServer::run() {
 
     std::string peerAddr = socket->remote_endpoint().address().to_string();
 
-//    LOG_DEBUG_MSG("accepted", peerAddr);
+    LOG_DEBUG_MSG("accepted", peerAddr);
     string line;
     boost::asio::streambuf response;
     boost::asio::read_until(*socket, response, "\n");
@@ -79,7 +79,7 @@ void TcpServer::run() {
 
     std::getline(response_stream, line);
 
- //   LOG_DEBUG_MSG("format", line);
+    LOG_DEBUG_MSG("format", line);
     if (line == "BASH") {
       format = janosh::Bash;
     } else if (line == "JSON") {
@@ -90,25 +90,25 @@ void TcpServer::run() {
       throw janosh_exception() << string_info( { "Illegal formats line", line });*/
 
     std::getline(response_stream, command);
-  //  LOG_DEBUG_MSG("command", command);
+    LOG_DEBUG_MSG("command", command);
 
     std::getline(response_stream, line);
-  //  LOG_DEBUG_MSG("args", line);
+    LOG_DEBUG_MSG("args", line);
 
     splitAndPushBack(line, vecArgs);
 
     std::getline(response_stream, line);
-   // LOG_DEBUG_MSG("triggers", line);
+    LOG_DEBUG_MSG("triggers", line);
 
     splitAndPushBack(line, vecTriggers);
 
     std::getline(response_stream, line);
-  //  LOG_DEBUG_MSG("targets", line);
+    LOG_DEBUG_MSG("targets", line);
 
     splitAndPushBack(line, vecTargets);
 
     std::getline(response_stream, line);
-  //  LOG_DEBUG_MSG("verbose", line);
+    LOG_DEBUG_MSG("verbose", line);
 
     if (line == "TRUE")
       verbose = true;
@@ -119,7 +119,6 @@ void TcpServer::run() {
 
     boost::asio::streambuf* out_buf = new boost::asio::streambuf();
     ostream* out_stream = new ostream(out_buf);
-    std::cout.rdbuf(out_stream->rdbuf());
 
     JanoshThread* jt = new JanoshThread(format, command, vecArgs, vecTriggers, vecTargets, verbose, *out_stream);
 
@@ -128,12 +127,12 @@ void TcpServer::run() {
     boost::asio::streambuf rc_buf;
     ostream rc_stream(&rc_buf);
     rc_stream << std::to_string(rc) << '\n';
- //   LOG_DEBUG_MSG("sending", rc_buf.size());
+    LOG_DEBUG_MSG("sending", rc_buf.size());
     boost::asio::write(*socket, rc_buf);
 
     std::thread flusher([=]{
       jt->join();
-//      LOG_DEBUG_MSG("sending", out_buf->size());
+      LOG_DEBUG_MSG("sending", out_buf->size());
       boost::asio::write(*socket, *out_buf);
       socket->close();
       delete out_buf;

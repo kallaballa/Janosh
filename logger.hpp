@@ -23,7 +23,7 @@
 #include <string>
 #include <initializer_list>
 #include <assert.h>
-#include "tri_logger/tri_logger.hpp"
+#include "easylogging++.h"
 #include <sstream>
 #include <boost/lexical_cast.hpp>
 
@@ -55,7 +55,7 @@ namespace janosh {
 
     template<typename Tvalue>
     static void trace(const string& caller, std::initializer_list<janosh::Record> records, Tvalue value) {
-      TRI_LOG_LEVEL_MSG("TRACE", makeCallString(caller, records), boost::lexical_cast<string>(value));
+      LOG(TRACE) << makeCallString(caller, records), boost::lexical_cast<string>(value);
     }
 
   private:
@@ -63,25 +63,25 @@ namespace janosh {
     static Logger* instance;
   };
 
-  #define LOG_ULTRA_STR(x) if(Logger::getLevel()>= L_ULTRA) TRI_LOG_LEVEL_STR("ULTRA", str)
-  #define LOG_DEBUG_STR(str) if(Logger::getLevel()>= L_DEBUG) TRI_LOG_LEVEL_STR("DEBUG", str)
-  #define LOG_INFO_STR(str) if(Logger::getLevel()>= L_INFO) TRI_LOG_LEVEL_STR("INFO", str)
-  #define LOG_WARN_STR(str) if(Logger::getLevel()>= L_WARNING) TRI_LOG_LEVEL_STR("WARN", str)
-  #define LOG_ERR_STR(str) if(Logger::getLevel()>= L_ERROR) TRI_LOG_LEVEL_STR("ERROR", str)
-  #define LOG_FATAL_STR(str) if(Logger::getLevel()>= L_FATAL) TRI_LOG_LEVEL_STR("FATAL", str)
-  #define LOG_ULTRA_MSG(msg,x) if(Logger::getLevel()>= L_ULTRA) TRI_LOG_LEVEL_MSG("ULTRA", msg, x)
-  #define LOG_DEBUG_MSG(msg,x) if(Logger::getLevel()>= L_DEBUG) TRI_LOG_LEVEL_MSG("DEBUG", msg, x)
-  #define LOG_INFO_MSG(msg,x) if(Logger::getLevel()>= L_INFO) TRI_LOG_LEVEL_MSG("INFO", msg, x)
-  #define LOG_WARN_MSG(msg,x) if(Logger::getLevel()>= L_WARNING) TRI_LOG_LEVEL_MSG("WARN", msg, x)
-  #define LOG_WARN_MSG(msg,x) if(Logger::getLevel()>= L_WARNING) TRI_LOG_LEVEL_MSG("WARN", msg, x)
-  #define LOG_ERR_MSG(msg,x) if(Logger::getLevel()>= L_WARNING) TRI_LOG_LEVEL_MSG("WARN", msg, x)
-  #define LOG_FATAL_MSG(msg,x) if(Logger::getLevel()>= L_FATAL) TRI_LOG_LEVEL_MSG("FATAL", msg, x)
-  #define LOG_ULTRA(x) if(Logger::getLevel()>= L_ULTRA) TRI_LOG_LEVEL("ULTRA", x)
-  #define LOG_DEBUG(x) if(Logger::getLevel()>= L_DEBUG) TRI_LOG_LEVEL("DEBUG", x)
-  #define LOG_INFO(x) if(Logger::getLevel()>= L_INFO) TRI_LOG_LEVEL("INFO", x)
-  #define LOG_WARN(x) if(Logger::getLevel()>= L_WARNING) TRI_LOG_LEVEL("WARN", x)
-  #define LOG_ERR(x) if(Logger::getLevel()>= L_ERROR) TRI_LOG_LEVEL("ERROR", x)
-  #define LOG_FATAL(x) if(Logger::getLevel()>= L_FATAL) TRI_LOG_LEVEL("FATAL", x)
+  #define LOG_GLOBA_STR(x) LOG(GLOBAL) << x
+  #define LOG_DEBUG_STR(x) LOG(DEBUG) << x
+  #define LOG_INFO_STR(x) LOG(INFO) << x
+  #define LOG_WARN_STR(x) LOG(WARNING) << x
+  #define LOG_ERR_STR(x) LOG(ERROR) << x
+  #define LOG_FATAL_STR(x) LOG(FATAL) << x;
+  #define LOG_GLOBAL_MSG(msg,x) LOG(GLOBAL) << msg << ":" << x;
+  #define LOG_DEBUG_MSG(msg,x) LOG(DEBUG) << msg << ":" << x;
+  #define LOG_INFO_MSG(msg,x) LOG(INFO) << msg << ":" << x;
+  #define LOG_WARN_MSG(msg,x) LOG(WARNING) << msg << ":" << x;
+  #define LOG_ERR_MSG(msg,x) LOG(ERROR) << msg << ":" << x;
+  #define LOG_FATAL_MSG(msg,x) LOG(FATAL) << msg << ":" << x;
+  #define LOG_GLOBAL(x) LOG(GLOBAL) << x
+  #define LOG_DEBUG(x) LOG(DEBUG) << x
+  #define LOG_INFO(x) LOG(INFO) << x
+  #define LOG_WARN(x) LOG(WARNING) << x
+  #define LOG_ERR(x) LOG(ERROR) << x
+  #define LOG_FATAL(x) LOG(FATAL) << x;
+
   #define JANOSH_TRACE(...) Logger::trace(string(__FUNCTION__), ##__VA_ARGS__);
 }
 

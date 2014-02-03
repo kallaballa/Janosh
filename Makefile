@@ -1,10 +1,10 @@
 CXX     := g++-4.8
 TARGET  := janosh 
-SRCS    := janosh.cpp logger.cpp tri_logger/tri_logger.cpp record.cpp path.cpp value.cpp backtrace/libs/backtrace/src/backtrace.cpp json_spirit/json_spirit_reader.cpp  json_spirit/json_spirit_value.cpp  json_spirit/json_spirit_writer.cpp TcpServer.cpp TcpClient.cpp janosh_thread.cpp commands.cpp
+SRCS    := janosh.cpp logger.cpp record.cpp path.cpp value.cpp backtrace/libs/backtrace/src/backtrace.cpp json_spirit/json_spirit_reader.cpp  json_spirit/json_spirit_value.cpp  json_spirit/json_spirit_writer.cpp TcpServer.cpp TcpClient.cpp janosh_thread.cpp commands.cpp
 OBJS    := ${SRCS:.cpp=.o} 
 DEPS    := ${SRCS:.cpp=.dep} 
     
-CXXFLAGS = -DETLOG -std=c++0x -pedantic -Wall -I./backtrace/ -I/opt/local/include
+CXXFLAGS = -DETLOG -std=c++0x -pedantic -Wall -I./backtrace/ -I/opt/local/include -D_ELPP_THREAD_SAFE
 LDFLAGS = -L/opt/local/lib 
 LIBS    = -lboost_system-mt -lboost_filesystem-mt -lpthread -lboost_thread-mt -lkyotocabinet  -ldl
 
@@ -17,7 +17,7 @@ endif
 all: release
 
 release: LDFLAGS += -s
-release: CXXFLAGS += -g0 -O3
+release: CXXFLAGS += -g0 -O3 -D_ELPP_DISABLE_DEBUG_LOGS -D_ELPP_DISABLE_LOGGING_FLAGS_FROM_ARG -D_ELPP_DISABLE_DEFAULT_CRASH_HANDLING
 release: ${TARGET}
 
 reduce: CXXFLAGS = -DETLOG -std=c++0x -pedantic -Wall -I./backtrace/ -g0 -Os -fvisibility=hidden -fvisibility-inlines-hidden
