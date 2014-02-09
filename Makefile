@@ -47,9 +47,17 @@ ${OBJS}: %.o: %.cpp %.dep
 ${DEPS}: %.dep: %.cpp Makefile 
 	${CXX} ${CXXFLAGS} -MM $< > $@ 
 
+install:
+  mkdir -p ${DESTDIR}/${PREFIX}
+  cp ${TARGET} ${DESTDIR}/${PREFIX}
+
+uninstall:
+  rm ${DESTDIR}/${PREFIX}/${TARGET}
+
 clean:
 	rm -f *~ *.dep *.o backtrace/libs/backtrace/src/*.dep backtrace/libs/backtrace/src/*.o tri_logger/*.dep tri_logger/*.o json_spirit/*.dep json_spirit/*.o ${TARGET} 
 
 distclean: clean
+
 
 
