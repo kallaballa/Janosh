@@ -1,8 +1,8 @@
 #include <thread>
 #include "janosh.hpp"
 #include "commands.hpp"
-#include "TcpServer.hpp"
-#include "TcpClient.hpp"
+#include "tcp_server.hpp"
+#include "tcp_client.hpp"
 #include "janosh_thread.hpp"
 #include "exception.hpp"
 

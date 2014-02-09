@@ -95,21 +95,15 @@ public:
   private:
     static Janosh* instance_;
     Format format;
-
     bool open_;
-
-    Format getFormat();
-
-    bool isOpen();
-
-    void terminate(int code);
-
     string filename;
     js::Value rootValue;
 
+    Format getFormat();
+    bool isOpen();
+    void terminate(int code);
     void setContainerSize(Record rec, const size_t s);
     void changeContainerSize(Record rec, const size_t by);
-
     size_t load(const Path& path, const string& value);
     size_t load(js::Value& v, Path& path);
     size_t load(js::Object& obj, Path& path);
