@@ -31,7 +31,11 @@ namespace janosh {
 
   TriggerBase::TriggerBase(const fs::path& config, const vector<fs::path>& targetDirs) :
     targetDirs(targetDirs) {
-    load(config);
+    try {
+      load(config);
+    } catch (std::exception& ex) {
+      LOG_FATAL_MSG("Loading the trigger base failed", ex.what());
+    }
   }
 
   int TriggerBase::executeTarget(const string& name, std::ostream& out) {
@@ -1153,15 +1157,12 @@ int main(int argc, char** argv) {
 
         vecArgs.clear();
         std::transform(args.begin() + optind + 1, args.end(), std::back_inserter(vecArgs), boost::bind(&std::string::c_str, _1));
+        for(const string& arg : vecArgs) {
+          if(arg.empty() || arg[0] == '-')
+            throw janosh_exception() << string_info( { "Options have to be defined before the command", arg });
+        }
       } else if (!execTargets) {
         throw janosh_exception() << msg_info("missing command");
-      }
-
-      vector<string> vecTriggers;
-      if (execTriggers) {
-        for (size_t i = 0; i < vecArgs.size(); i += 2) {
-          vecTriggers.push_back(vecArgs[i].c_str());
-        }
       }
 
       vector<string> vecTargets;
@@ -1176,11 +1177,11 @@ int main(int argc, char** argv) {
         Settings s;
         TcpClient client;
         client.connect("localhost", s.port);
-        return client.run(f, command, vecArgs, vecTriggers, vecTargets, verbose);
+        return client.run(f, command, vecArgs, vecTargets, execTriggers, verbose);
       } else {
         Janosh* instance = Janosh::getInstance();
         instance->open(false);
-        JanoshThread jt(f, command, vecArgs, vecTriggers, vecTargets, verbose, std::cout);
+        JanoshThread jt(f, command, vecArgs, vecTargets, execTriggers, verbose, std::cout);
         int rc = jt.run();
         jt.join();
         return rc;

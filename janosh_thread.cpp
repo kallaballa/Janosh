@@ -13,11 +13,11 @@
 
 namespace janosh {
 
-JanoshThread::JanoshThread(Format format, string command, vector<string> vecArgs, vector<string> vecTriggers, vector<string> vecTargets, bool verbose, ostream& out) :
+JanoshThread::JanoshThread(Format format, string command, vector<string> vecArgs, vector<string> vecTargets, bool runTriggers, bool verbose, ostream& out) :
     format_(format),
     command_(command),
     vecArgs_(vecArgs),
-    vecTriggers_(vecTriggers),
+    runTriggers_(runTriggers),
     vecTargets_(vecTargets),
     verbose_(verbose),
     out_(out),
@@ -57,10 +57,10 @@ int JanoshThread::run() {
     }
 
     thread_ = new std::thread([=](){
-      if (!vecTriggers_.empty()) {
+      if (runTriggers_) {
         LOG_DEBUG("Triggers");
         Command* t = Janosh::getInstance()->cm_["trigger"];
-        (*t)(vecTriggers_, out_);
+        (*t)(vecArgs_, out_);
       }
 
       if (!vecTargets_.empty()) {

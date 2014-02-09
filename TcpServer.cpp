@@ -77,7 +77,7 @@ void splitAndPushBack(string& s, vector<string>& vec) {
   }
 }
 
-string reconstructCommandLine(Format& format, string& command, vector<string>& vecArgs, vector<string>& vecTriggers, vector<string>& vecTargets, bool& verbose) {
+string reconstructCommandLine(Format& format, string& command, vector<string>& vecArgs, vector<string>& vecTargets, bool& runTriggers, bool& verbose) {
   string cmdline = "janosh ";
 
   if(verbose)
@@ -90,18 +90,8 @@ string reconstructCommandLine(Format& format, string& command, vector<string>& v
   else if(format == janosh::Raw)
     cmdline += "-r ";
 
-   if(!vecTriggers.empty()) {
+  if(runTriggers)
      cmdline += "-t ";
-     bool first = true;
-     for(const string& trigger : vecTriggers) {
-       if(!first)
-         cmdline+=",";
-       cmdline+=trigger;
-
-       first = false;
-     }
-     cmdline += " ";
-   }
 
    if(!vecTargets.empty()) {
      cmdline += "-e ";
@@ -119,7 +109,6 @@ string reconstructCommandLine(Format& format, string& command, vector<string>& v
    cmdline += (command + " ");
 
    if(!vecArgs.empty()) {
-     cmdline += "-e ";
      bool first = true;
      for(const string& arg : vecArgs) {
        if(!first)
@@ -130,6 +119,7 @@ string reconstructCommandLine(Format& format, string& command, vector<string>& v
      }
      cmdline += " ";
    }
+
   return cmdline;
 }
 
@@ -141,9 +131,10 @@ void TcpServer::run() {
     Format format;
     string command;
     vector<string> vecArgs;
-    vector<string> vecTriggers;
     vector<string> vecTargets;
+    bool runTriggers;
     bool verbose;
+
 
     std::string peerAddr = socket->remote_endpoint().address().to_string();
 
@@ -176,7 +167,12 @@ void TcpServer::run() {
     std::getline(response_stream, line);
     LOG_DEBUG_MSG("triggers", line);
 
-    splitAndPushBack(line, vecTriggers);
+    if (line == "TRUE")
+      runTriggers = true;
+    else if (line == "FALSE")
+      runTriggers = false;
+    else
+      throw janosh_exception() << string_info( { "Illegal triggers line", line });
 
     std::getline(response_stream, line);
     LOG_DEBUG_MSG("targets", line);
@@ -193,12 +189,12 @@ void TcpServer::run() {
     else
       throw janosh_exception() << string_info( { "Illegal verbose line", line });
 
-    LOG_DEBUG_MSG("cmd_line", reconstructCommandLine(format, command, vecArgs, vecTriggers, vecTargets, verbose));
+    LOG_INFO_STR(reconstructCommandLine(format, command, vecArgs, vecTargets, runTriggers, verbose));
 
     // only "-j get /." is cached
     bool cacheable = command == "get"
         && format == janosh::Json
-        && vecTriggers.empty()
+        && !runTriggers
         && vecTargets.empty()
         && vecArgs.size() == 1
         && vecArgs[0] == "/.";
@@ -217,7 +213,7 @@ void TcpServer::run() {
       boost::asio::streambuf* out_buf = new boost::asio::streambuf();
       ostream* out_stream = new ostream(out_buf);
 
-      JanoshThread* jt = new JanoshThread(format, command, vecArgs, vecTriggers, vecTargets, verbose, *out_stream);
+      JanoshThread* jt = new JanoshThread(format, command, vecArgs, vecTargets, runTriggers, verbose, *out_stream);
 
       int rc = jt->run();
       boost::asio::streambuf rc_buf;

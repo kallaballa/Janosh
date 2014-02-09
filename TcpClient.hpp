@@ -18,7 +18,7 @@ public:
 	TcpClient();
 	virtual ~TcpClient();
 	void connect(std::string host, int port);
-	int run(Format f, string command, vector<string> args, vector<string> vecTriggers, vector<string> vecTargets, bool verbose);
+	int run(Format f, string command, vector<string> args, vector<string> vecTargets, bool triggers, bool verbose);
 	void close();
 };
 

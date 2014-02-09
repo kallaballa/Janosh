@@ -18,13 +18,13 @@ class JanoshThread {
   Format format_;
   string command_;
   vector<string> vecArgs_;
-  vector<string> vecTriggers_;
+  bool runTriggers_;
   vector<string> vecTargets_;
   bool verbose_;
   ostream& out_;
   std::thread* thread_;
 public:
-  JanoshThread(Format format, string command, vector<string> vecArgs, vector<string> vecTriggers, vector<string> vecTargets, bool verbose, ostream& out);
+  JanoshThread(Format format, string command, vector<string> vecArgs, vector<string> vecTargets, bool runTriggers, bool verbose, ostream& out);
   ~JanoshThread();
   void join();
   int run();

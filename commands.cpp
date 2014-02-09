@@ -1,4 +1,5 @@
 #include "commands.hpp"
+#include "exception.hpp"
 
 namespace janosh {
 class RemoveCommand: public Command {
@@ -316,7 +317,11 @@ public:
     } else {
       BOOST_FOREACH(const string& p, params) {
         LOG_DEBUG_MSG("Exec trigger", p);
+        try {
         janosh->triggers_.executeTrigger(Path(p), out);
+        } catch (path_exception&  ex) {
+          janosh::printException(ex);
+        }
       }
 
       return {params.size(), "Successful"};

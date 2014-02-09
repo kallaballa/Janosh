@@ -27,7 +27,7 @@ void TcpClient::connect(string host, int port) {
 	    boost::asio::connect(socket, iterator);
 }
 
-int TcpClient::run(Format f, string command, vector<string> vecArgs, vector<string> vecTriggers, vector<string> vecTargets, bool verbose) {
+int TcpClient::run(Format f, string command, vector<string> vecArgs, vector<string> vecTargets, bool triggers, bool verbose) {
   boost::asio::streambuf request;
   std::ostream request_stream(&request);
   if(f == janosh::Bash) {
@@ -50,15 +50,10 @@ int TcpClient::run(Format f, string command, vector<string> vecArgs, vector<stri
   }
   request_stream << '\n';
 
-  first = true;
-  for(const string& trigger : vecTriggers) {
-    if(!first)
-      request_stream << ",";
-    request_stream << trigger;
-
-    first = false;
-  }
-  request_stream << '\n';
+  if(triggers)
+      request_stream << "TRUE\n";
+    else
+      request_stream << "FALSE\n";
 
   first = true;
   for(const string& target : vecTargets) {
