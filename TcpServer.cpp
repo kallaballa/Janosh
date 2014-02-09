@@ -77,6 +77,61 @@ void splitAndPushBack(string& s, vector<string>& vec) {
   }
 }
 
+string reconstructCommandLine(Format& format, string& command, vector<string>& vecArgs, vector<string>& vecTriggers, vector<string>& vecTargets, bool& verbose) {
+  string cmdline = "janosh ";
+
+  if(verbose)
+    cmdline += "-v ";
+
+  if(format == janosh::Bash)
+    cmdline += "-b ";
+  else if(format == janosh::Json)
+    cmdline += "-j ";
+  else if(format == janosh::Raw)
+    cmdline += "-r ";
+
+   if(!vecTriggers.empty()) {
+     cmdline += "-t ";
+     bool first = true;
+     for(const string& trigger : vecTriggers) {
+       if(!first)
+         cmdline+=",";
+       cmdline+=trigger;
+
+       first = false;
+     }
+     cmdline += " ";
+   }
+
+   if(!vecTargets.empty()) {
+     cmdline += "-e ";
+     bool first = true;
+     for(const string& target : vecTargets) {
+       if(!first)
+         cmdline+=",";
+       cmdline+=target;
+
+       first = false;
+     }
+     cmdline += " ";
+   }
+
+   cmdline += (command + " ");
+
+   if(!vecArgs.empty()) {
+     cmdline += "-e ";
+     bool first = true;
+     for(const string& arg : vecArgs) {
+       if(!first)
+         cmdline+=" ";
+       cmdline+=arg;
+
+       first = false;
+     }
+     cmdline += " ";
+   }
+}
+
 void TcpServer::run() {
 	boost::asio::ip::tcp::socket* socket = new boost::asio::ip::tcp::socket(io_service);
 	acceptor.accept(*socket);
@@ -137,6 +192,7 @@ void TcpServer::run() {
     else
       throw janosh_exception() << string_info( { "Illegal verbose line", line });
 
+    LOG_DEBUG_MSG("cmd_line", reconstructCommandLine(format, command, vecArgs, vecTriggers, vecTargets, verbose));
 
     // only "-j get /." is cached
     bool cacheable = command == "get"
