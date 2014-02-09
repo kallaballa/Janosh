@@ -130,6 +130,7 @@ string reconstructCommandLine(Format& format, string& command, vector<string>& v
      }
      cmdline += " ";
    }
+  return cmdline;
 }
 
 void TcpServer::run() {
