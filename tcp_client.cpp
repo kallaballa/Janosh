@@ -6,7 +6,7 @@
  */
 
 #include <iostream>
-#include "TcpClient.hpp"
+#include "tcp_client.hpp"
 #include "logger.hpp"
 
 namespace janosh {

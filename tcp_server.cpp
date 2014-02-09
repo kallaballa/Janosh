@@ -13,7 +13,7 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "TcpServer.hpp"
+#include "tcp_server.hpp"
 #include "format.hpp"
 #include "logger.hpp"
 #include "janosh_thread.hpp"
