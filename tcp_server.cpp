@@ -130,7 +130,7 @@ void TcpServer::run() {
         && req.vecArgs_.size() == 1
         && req.vecArgs_[0] == "/.";
 
-    if(!cacheable && (!req.command_.empty() && req.command_ != "get" && req.command_ != "dump" && req.command_ != "hash")) {
+    if(!cacheable && (!req.command_.empty() && (req.command_ != "get" && req.command_ != "dump" && req.command_ != "hash"))) {
       LOG_DEBUG_STR("Invalidating cache");
       cache_.invalidate();
     }

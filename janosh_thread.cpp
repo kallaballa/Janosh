@@ -34,7 +34,7 @@ int JanoshThread::run() {
     Janosh* instance = Janosh::getInstance();
     instance->setFormat(req_.format_);
 
-    if (req_.command_ != "NONE") {
+    if (!req_.command_.empty()) {
       LOG_DEBUG_MSG("Execute command", req_.command_);
       Command* cmd = instance->cm_[req_.command_];
 
