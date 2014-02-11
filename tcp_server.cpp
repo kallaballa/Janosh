@@ -59,24 +59,6 @@ void TcpServer::close() {
   acceptor.close();
 }
 
-void splitAndPushBack(string& s, vector<string>& vec) {
-  std::size_t i;
-  std::size_t lasti = 0;
-  string arg;
-  while((i = s.find(" ", lasti)) != string::npos) {
-    arg = s.substr(lasti, i - lasti);
-    if(!arg.empty()) {
-      vec.push_back(arg);
-    }
-    lasti = i + 1;
-  }
-
-  arg = s.substr(lasti, s.size());
-  if(!arg.empty()) {
-    vec.push_back(arg);
-  }
-}
-
 string reconstructCommandLine(Request& req) {
   string cmdline = "janosh ";
 
