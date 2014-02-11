@@ -95,7 +95,7 @@ string reconstructCommandLine(Request& req) {
      for(const string& arg : req.vecArgs_) {
        if(!first)
          cmdline+=" ";
-       cmdline+=arg;
+       cmdline+= ("\"" + arg + "\"");
 
        first = false;
      }
