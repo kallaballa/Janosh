@@ -935,7 +935,7 @@ int main(int argc, char** argv) {
     po::store(po::command_line_parser(argc, argv).options(cmdline_options).positional(p).run(), vm);
     po::notify(vm);
 
-    janosh::Format f;
+    janosh::Format f = janosh::Bash;
     bool execTriggers = vm.count("triggers");
     bool execTargets = vm.count("targets");
     bool verbose = vm.count("verbose");
