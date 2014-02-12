@@ -40,8 +40,12 @@ int TcpClient::run(Request& req) {
 
 	string strReturnCode;
 	std::getline(response_stream, strReturnCode);
-  LOG_DEBUG_MSG("return code", strReturnCode);
 	int returnCode = std::stoi(strReturnCode);
+
+	if(returnCode == 0 )
+	  LOG_INFO_STR("Successful");
+	else
+	  LOG_INFO_STR("Failed");
 
 	try {
 	  string line;

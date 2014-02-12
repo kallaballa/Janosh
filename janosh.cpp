@@ -963,8 +963,12 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-    if (daemon) {
+    if (verbose)
       Logger::init(LogLevel::L_DEBUG);
+    else
+      Logger::init(LogLevel::L_INFO);
+
+    if (daemon) {
       Janosh* instance = Janosh::getInstance();
       instance->open(false);
       TcpServer* server = TcpServer::getInstance();
@@ -973,8 +977,6 @@ int main(int argc, char** argv) {
         server->run();
       }
     } else {
-      Logger::init(LogLevel::L_DEBUG);
-
       if (command.empty() && !execTargets) {
         throw janosh_exception() << msg_info("missing command");
       }
