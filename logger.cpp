@@ -25,27 +25,7 @@
 namespace janosh {
   Logger* Logger::instance = NULL;
 
-  void configureLogger() {
-    el::Configurations defaultConf;
-    defaultConf.setToDefault();
-
-    defaultConf.set(el::Level::Info, el::ConfigurationType::Format,
-        "%datetime %msg");
-    defaultConf.set(el::Level::Fatal, el::ConfigurationType::Format,
-        "%datetime %level %loc %msg");
-    defaultConf.set(el::Level::Debug, el::ConfigurationType::Format,
-        "%datetime %level %loc %msg");
-
-    // default logger uses default configurations
-  //  el::Loggers::reconfigureLogger("default", defaultConf);
-
-    // To set GLOBAL configurations you may use
-    defaultConf.setGlobally(el::ConfigurationType::Format, "%datetime %level %msg");
-    el::Loggers::reconfigureLogger("default", defaultConf);
-  }
-
   void Logger::init(const LogLevel l) {
-    configureLogger();
     Logger::instance = new Logger(l);
   }
 
