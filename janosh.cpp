@@ -55,9 +55,8 @@ namespace janosh {
       mode = kc::PolyDB::OAUTOTRAN | kc::PolyDB::OREADER;
     else
       mode = kc::PolyDB::OTRYLOCK | kc::PolyDB::OAUTOTRAN | kc::PolyDB::OREADER | kc::PolyDB::OWRITER | kc::PolyDB::OCREATE;
-    while (!Record::db.open(settings_.databaseFile.string(),  mode)) {
-			usleep(20000);
-			LOG_ERR_MSG("open error: " + settings_.databaseFile.string(), Record::db.error().message());
+    if(!Record::db.open(settings_.databaseFile.string(),  mode)) {
+			LOG_FATAL_MSG("open error: " + settings_.databaseFile.string(), Record::db.error().message());
     }
     open_ = true;
   }
