@@ -63,6 +63,7 @@ public:
 
     void setFormat(Format f) ;
     void open(bool readOnly);
+    bool isOpen();
     void close();
     size_t process(int argc, char** argv);
 
@@ -100,7 +101,6 @@ public:
     js::Value rootValue;
 
     Format getFormat();
-    bool isOpen();
     void terminate(int code);
     void setContainerSize(Record rec, const size_t s);
     void changeContainerSize(Record rec, const size_t by);
