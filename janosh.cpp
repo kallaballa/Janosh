@@ -881,6 +881,11 @@ void handleSigInt(int s) {
     LOG_DEBUG_MSG("Shutting down tcp server due to sigint", s);
     TcpServer::getInstance()->close();
   }
+
+  if(Janosh::getInstance()->isOpen()) {
+    LOG_DEBUG_MSG("Shutting down janosh server due to sigint", s);
+    Janosh::getInstance()->close();
+  }
 }
 
 void registerSigIntHandler() {

@@ -48,6 +48,8 @@ int TriggerBase::executeTarget(const string& name, std::ostream& out) {
 }
 
 void TriggerBase::executeTrigger(const Path& p, std::ostream& out) {
+  LOG_INFO_MSG("Execute target", p.pretty());
+
   auto it = triggers.find(p);
   if(it != triggers.end()) {
     for(const string& name: (*it).second) {
