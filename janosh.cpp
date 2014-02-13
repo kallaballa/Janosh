@@ -909,7 +909,7 @@ int main(int argc, char** argv) {
       ("help,h", "Produce help message")
       ("verbose,v", "Enable verbose output")
       ("daemon,d", "Run in daemon mode")
-      ("stand-alone,s", "Run in stand alone mode")
+      ("single,s", "Run in stand alone mode")
       ("json,j", "Produce json output")
       ("raw,r", "Produce raw output")
       ("bash,b", "Produce bash output")
