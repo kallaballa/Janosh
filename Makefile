@@ -29,7 +29,7 @@ static: LIBS = -Wl,-Bstatic -lboost_serialization -lboost_program_options -lboos
 static: ${TARGET}
 
 screeninvader: LDFLAGS += -s
-screeninvader: CXXFLAGS += -mfloat-abi=hard -mfpu=neon -g0 -O3 
+screeninvader: CXXFLAGS += -D_JANOSH_DEBUG -mfloat-abi=hard -mfpu=neon -g0 -O3 
 screeninvader: LIBS = -Wl,-Bstatic -lboost_serialization -lboost_program_options -lboost_system -lboost_filesystem -lkyotocabinet  -llzma -llzo2 -Wl,-Bdynamic -lz -lpthread -lrt -ldl
 screeninvader: ${TARGET}
 
