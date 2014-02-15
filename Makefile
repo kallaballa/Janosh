@@ -1,6 +1,6 @@
 CXX     := g++-4.8
 TARGET  := janosh 
-SRCS    := janosh.cpp logger.cpp record.cpp path.cpp value.cpp exception.cpp cache.cpp backtrace/libs/backtrace/src/backtrace.cpp json_spirit/json_spirit_reader.cpp  json_spirit/json_spirit_value.cpp  json_spirit/json_spirit_writer.cpp tcp_server.cpp tcp_client.cpp janosh_thread.cpp commands.cpp trigger_base.cpp settings.cpp request.cpp tracker.cpp
+SRCS    := janosh.cpp logger.cpp record.cpp path.cpp value.cpp exception.cpp cache.cpp json_spirit/json_spirit_reader.cpp  json_spirit/json_spirit_value.cpp  json_spirit/json_spirit_writer.cpp tcp_server.cpp tcp_client.cpp janosh_thread.cpp commands.cpp trigger_base.cpp settings.cpp request.cpp tracker.cpp backward.cpp
 OBJS    := ${SRCS:.cpp=.o} 
 DEPS    := ${SRCS:.cpp=.dep} 
     
@@ -34,8 +34,9 @@ screeninvader: LIBS = -Wl,-Bstatic -lboost_serialization -lboost_program_options
 screeninvader: ${TARGET}
 
 
-debug: CXXFLAGS += -g3 -O0 -rdynamic
+debug: CXXFLAGS += -g3 -O0 -rdynamic -D_JANOSH_DEBUG
 debug: LDFLAGS += -Wl,--export-dynamic
+debug: LIBS+= -lbfd
 debug: ${TARGET}
 
 ${TARGET}: ${OBJS} 

@@ -5,12 +5,13 @@
 #include <exception>
 #include <iostream>
 #include <boost/exception/all.hpp>
-#if 0
-#include <boost/backtrace.hpp>
-#endif
 #include "record.hpp"
 #include "path.hpp"
 #include "value.hpp"
+
+#ifdef _JANOSH_DEBUG
+#include "backward.hpp"
+#endif
 
 namespace janosh {
   typedef boost::error_info<struct tag_janosh_msg,std::string> msg_info;
@@ -20,12 +21,21 @@ namespace janosh {
   typedef boost::error_info<struct tag_janosh_path,std::pair<std::string,std::string> > value_info;
 
   struct janosh_exception :
-#if 0
-    public boost::backtrace,
-#endif
     virtual boost::exception,
     virtual std::exception
-  {};
+  {
+      janosh_exception() {
+      #ifdef _JANOSH_DEBUG
+        using namespace backward;
+        StackTrace st;
+        st.load_here(32);
+
+        Printer printer;
+        printer.print(st, stderr);
+      #endif
+      }
+
+  };
 
   struct db_exception : virtual janosh_exception
   {};

@@ -9,9 +9,7 @@ namespace janosh {
     using namespace boost;
 
     std::cerr << "Exception: " << std::endl;
-  #if 0
-    std::cerr << boost::trace(ex) << std::endl;
-  #endif
+
     if(auto const* m = get_error_info<msg_info>(ex) )
       std::cerr << "message: " << *m << std::endl;
 
