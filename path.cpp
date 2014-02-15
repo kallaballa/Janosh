@@ -49,6 +49,10 @@
       throw path_exception() << string_info({"illegal path", p});
     }
 
+    if(p.find(' ') != string::npos) {
+      throw path_exception() << string_info({"spaces not allowed in paths", p});
+    }
+
     char_separator<char> ssep("[/", "", boost::keep_empty_tokens);
     tokenizer<char_separator<char> > tokComponents(p, ssep);
     this->components.clear();
