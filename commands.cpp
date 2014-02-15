@@ -316,7 +316,7 @@ public:
       return {-1, "Expected a list of triggers"};
     } else {
       BOOST_FOREACH(const string& p, params) {
-        LOG_DEBUG_MSG("Exec trigger", p);
+        LOG_INFO_MSG("Execute trigger", p);
         try {
         janosh->triggers_.executeTrigger(Path(p), out);
         } catch (path_exception&  ex) {

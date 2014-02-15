@@ -23,25 +23,32 @@
 #include <sstream>
 
 namespace janosh {
-  Logger* Logger::instance = NULL;
+  Logger* Logger::instance_ = NULL;
 
   void Logger::init(const LogLevel l) {
-    Logger::instance = new Logger(l);
+    Logger::instance_ = new Logger(l);
   }
 
   Logger& Logger::getInstance() {
-    assert(Logger::instance != NULL);
-    return *Logger::instance;
+    assert(Logger::instance_ != NULL);
+    return *Logger::instance_;
   }
 
   LogLevel Logger::getLevel() {
-    return Logger::getInstance().level;
+    return Logger::getInstance().level_;
+  }
+
+  bool Logger::isTracing() {
+    return Logger::getInstance().tracing_;
+  }
+
+  void Logger::setTracing(bool t) {
+    Logger::getInstance().tracing_ = t;
   }
 
   void Logger::trace(const string& caller, std::initializer_list<janosh::Record> records) {
     LOG(TRACE) << makeCallString(caller, records);
   }
-
 
   const string Logger::makeCallString(const string& caller, std::initializer_list<janosh::Record> records) {
     std::stringstream ss;

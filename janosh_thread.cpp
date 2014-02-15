@@ -10,6 +10,7 @@
 #include "commands.hpp"
 #include <thread>
 #include "exception.hpp"
+#include "tracker.hpp"
 
 namespace janosh {
 
@@ -32,6 +33,7 @@ void JanoshThread::join() {
 int JanoshThread::run() {
   try {
     Janosh* instance = Janosh::getInstance();
+    Tracker* tracker = Tracker::getInstance();
     instance->setFormat(req_.format_);
 
     if (!req_.command_.empty()) {
@@ -52,10 +54,18 @@ int JanoshThread::run() {
     }
 
     thread_ = new std::thread([=](){
+      tracker->reset();
+
       if (req_.runTriggers_) {
-        LOG_DEBUG("Triggers");
         Command* t = Janosh::getInstance()->cm_["trigger"];
-        (*t)(req_.vecArgs_, out_);
+        map<string, size_t>& keysModified = tracker->get(Tracker::WRITE);
+
+        vector<string> triggers;
+        for(auto iter : keysModified) {
+          triggers.push_back(iter.first);
+        }
+
+        (*t)(triggers, out_);
       }
 
       if (!req_.vecTargets_.empty()) {

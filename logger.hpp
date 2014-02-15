@@ -44,13 +44,15 @@ namespace janosh {
   class Logger {
   private:
     static const string makeCallString(const string& caller, std::initializer_list<janosh::Record> records);
+    bool tracing_;
   public:
-    LogLevel level;
+    LogLevel level_;
 
     static void init(const LogLevel l);
     static Logger& getInstance();
     static LogLevel getLevel();
-
+    static bool isTracing();
+    static void setTracing(bool t);
     static void trace(const string& caller, std::initializer_list<janosh::Record> records);
 
     template<typename Tvalue>
@@ -59,7 +61,7 @@ namespace janosh {
     }
 
   private:
-    Logger(const LogLevel l) : level(l) {
+    Logger(const LogLevel l) : tracing_(false), level_(l) {
       el::Configurations defaultConf;
       defaultConf.setToDefault();
 
@@ -75,7 +77,7 @@ namespace janosh {
       el::Loggers::reconfigureLogger("default", defaultConf);
     }
 
-    static Logger* instance;
+    static Logger* instance_;
   };
 
   #define LOG_GLOBA_STR(x) if(Logger::getLevel() >= L_GLOBAL) LOG(GLOBAL) << x;
@@ -97,7 +99,7 @@ namespace janosh {
   #define LOG_ERR(x) if(Logger::getLevel() >= L_ERROR) LOG(ERROR) << x;
   #define LOG_FATAL(x) if(Logger::getLevel() >= L_FATAL) LOG(FATAL) << x;
 
-  #define JANOSH_TRACE(...) Logger::trace(string(__FUNCTION__), ##__VA_ARGS__);
+  #define JANOSH_TRACE(...) if(Logger::isTracing()) Logger::trace(string(__FUNCTION__), ##__VA_ARGS__);
 }
 
 #endif /* LOGGER_H_ */

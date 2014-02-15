@@ -6,7 +6,7 @@
 #include "tcp_client.hpp"
 #include "janosh_thread.hpp"
 #include "exception.hpp"
-
+#include "tracker.hpp"
 using std::string;
 using std::map;
 using std::vector;
@@ -37,6 +37,10 @@ namespace janosh {
   }
 
   Janosh::~Janosh() {
+  }
+
+  void updateTracker(const string& str, const Tracker::Operation& op) {
+    Tracker::getInstance()->update(str, op);
   }
 
   void Janosh::setFormat(Format f) {
@@ -95,10 +99,11 @@ namespace janosh {
    * @return number of total records affected.
    */
   size_t Janosh::get(Record rec, std::ostream& out) {
+    JANOSH_TRACE({rec});
     rec.fetch();
     size_t cnt = 1;
 
-    LOG_DEBUG_MSG("get", rec.path());
+    LOG_DEBUG_MSG("get", rec.path().pretty());
 
     if(!rec.exists()) {
       throw janosh_exception() << record_info({"Path not found", rec});
@@ -178,6 +183,7 @@ namespace janosh {
       throw janosh_exception() << record_info({"Out of array bounds",target});
     }
     changeContainerSize(target.parent(), 1);
+    updateTracker(target.path().pretty(), Tracker::WRITE);
     return Record::db.add(target.path(), "A" + lexical_cast<string>(size)) ? 1 : 0;
   }
 
@@ -202,6 +208,8 @@ namespace janosh {
 
     if(!target.path().isRoot())
       changeContainerSize(target.parent(), 1);
+
+    updateTracker(target.path().pretty(), Tracker::WRITE);
     return Record::db.add(target.path(), "O" + lexical_cast<string>(size)) ? 1 : 0;
   }
 
@@ -242,6 +250,7 @@ namespace janosh {
       throw janosh_exception() << record_info({"Out of array bounds",dest});
     }
 
+    updateTracker(dest.path().pretty(), Tracker::WRITE);
     if(Record::db.add(dest.path(), value)) {
 //      if(!dest.path().isRoot())
         changeContainerSize(dest.parent(), 1);
@@ -269,6 +278,7 @@ namespace janosh {
       throw janosh_exception() << record_info({"Out of array bounds", dest});
     }
 
+    updateTracker(dest.path().pretty(), Tracker::WRITE);
     return Record::db.replace(dest.path(), value);
   }
 
@@ -317,6 +327,7 @@ namespace janosh {
         dest = target;
 
       } else {
+        updateTracker(dest.path().pretty(), Tracker::WRITE);
         r = Record::db.replace(dest.path(), src.value());
       }
     }
@@ -374,6 +385,7 @@ namespace janosh {
         r = this->copy(src, target);
         dest = target;
       } else {
+        updateTracker(dest.path().pretty(), Tracker::WRITE);
         r = Record::db.replace(dest.path(), src.value());
       }
     }
@@ -432,6 +444,7 @@ namespace janosh {
 
     for(size_t i = 0; i < n; ++i) {
        if(!rec.isDirectory()) {
+         updateTracker(rec.path().pretty(), Tracker::DELETE);
          rec.remove();
          ++cnt;
        } else {
@@ -440,6 +453,7 @@ namespace janosh {
      }
 
     if(target.isDirectory()) {
+      updateTracker(target.path().pretty(), Tracker::DELETE);
       target.remove();
       changeContainerSize(parent, -1);
     } else {
@@ -467,6 +481,7 @@ namespace janosh {
           } else {
             indexPos = parent.path().withChild(i);
             copy(child, indexPos);
+            updateTracker(child.path().pretty(), Tracker::DELETE);
             child.remove();
           }
         } else {
@@ -562,6 +577,7 @@ namespace janosh {
     size_t cnt = 0;
 
     for(; begin != end; ++begin) {
+      updateTracker(dest.path().withChild(s + cnt).pretty(), Tracker::WRITE);
       if(!Record::db.add(dest.path().withChild(s + cnt), *begin)) {
         throw janosh_exception() << record_info({"Failed to add target", dest});
       }
@@ -591,6 +607,8 @@ namespace janosh {
     for(; cnt < n; ++cnt) {
       if(cnt > 0)
         src.next();
+      else if(src.isRange())
+        src.step();
 
       src.read();
       if(src.isAncestorOf(dest)) {
@@ -622,6 +640,8 @@ namespace janosh {
       } else {
         if(dest.isArray()) {
           Path target = dest.path().withChild(s + cnt);
+          updateTracker(target.pretty(), Tracker::WRITE);
+
           if(!Record::db.add(
               target,
               src.value()
@@ -630,6 +650,7 @@ namespace janosh {
           }
         } else if(dest.isObject()) {
           Path target = dest.path().withChild(src.path().name());
+          updateTracker(target.pretty(), Tracker::WRITE);
           if(!Record::db.add(
               target,
               src.value()
@@ -755,6 +776,7 @@ namespace janosh {
        (boost::format("%c%d") % t % (s)).str();
 
     container.setValue(new_value);
+    updateTracker(container.path().pretty(), Tracker::WRITE);
   }
 
   void Janosh::changeContainerSize(Record container, const size_t by) {
@@ -763,6 +785,7 @@ namespace janosh {
   }
 
   size_t Janosh::load(const Path& path, const string& value) {
+    updateTracker(path.pretty(), Tracker::WRITE);
     return Record::db.set(path, value) ? 1 : 0;
   }
 
@@ -907,18 +930,21 @@ int main(int argc, char** argv) {
     string targetList;
     string command;
     vector<string> arguments;
+    int trackingLevel;
 
     po::options_description genericDesc("Options");
     genericDesc.add_options()
       ("help,h", "Produce help message")
-      ("verbose,v", "Enable verbose output")
       ("daemon,d", "Run in daemon mode")
       ("single,s", "Run in stand alone mode")
       ("json,j", "Produce json output")
       ("raw,r", "Produce raw output")
       ("bash,b", "Produce bash output")
       ("triggers,t", "Execute triggers")
-      ("targets,e", po::value<string>(&targetList), "Execute a comma separated list of targets");
+      ("targets,e", po::value<string>(&targetList), "Execute a comma separated list of targets")
+      ("verbose,v", "Enable verbose output")
+      ("tracing,p", "Enable tracing output")
+      ("tracking,k", po::value<int>(&trackingLevel)->composing(), "Print tracking statistics. 0 = Don't print. 1 = Print meta data. 2 = Print full.");
 
     po::options_description hidden("Hidden options");
     hidden.add_options()
@@ -945,6 +971,15 @@ int main(int argc, char** argv) {
     bool verbose = vm.count("verbose");
     bool daemon = vm.count("daemon");
     bool single = vm.count("single");
+    bool tracing = vm.count("tracing");
+    Tracker::PrintDirective printDirective = Tracker::DONTPRINT;
+
+    if(trackingLevel == 1)
+      printDirective = Tracker::PRINTMETA;
+    else if(trackingLevel == 2)
+      printDirective = Tracker::PRINTFULL;
+    else
+      printDirective = Tracker::DONTPRINT;
 
     if((vm.count("json") && (vm.count("bash") || vm.count("raw"))) || (vm.count("bash") && vm.count("raw"))) {
       LOG_FATAL_STR("Only one format at a time may be specified");
@@ -971,6 +1006,9 @@ int main(int argc, char** argv) {
       Logger::init(LogLevel::L_DEBUG);
     else
       Logger::init(LogLevel::L_INFO);
+
+    Logger::setTracing(tracing);
+    Tracker::setPrintDirective(printDirective);
 
     if (daemon) {
       Janosh* instance = Janosh::getInstance();
