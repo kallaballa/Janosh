@@ -1,10 +1,3 @@
-#include <stack>
-#include <boost/program_options.hpp>
-#include <boost/functional/hash.hpp>
-#include <boost/tokenizer.hpp>
-#include <boost/token_functions.hpp>
-#include <boost/format.hpp>
-
 #include "janosh.hpp"
 #include "commands.hpp"
 #include "tcp_server.hpp"
@@ -16,6 +9,14 @@
 #include "json.hpp"
 #include "bash.hpp"
 #include "raw.hpp"
+
+#include <stack>
+#include <boost/program_options.hpp>
+#include <boost/functional/hash.hpp>
+#include <boost/tokenizer.hpp>
+#include <boost/token_functions.hpp>
+#include <boost/format.hpp>
+#include "json_spirit/json_spirit.h"
 
 using std::string;
 using std::endl;

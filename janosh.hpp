@@ -9,7 +9,6 @@
 #include "trigger_base.hpp"
 #include "settings.hpp"
 #include "record.hpp"
-#include "json_spirit/json_spirit.h"
 #include "format.hpp"
 #include "print_visitor.hpp"
 
@@ -17,9 +16,6 @@ namespace janosh {
 
 namespace js = json_spirit;
 namespace fs = boost::filesystem;
-using std::cerr;
-using std::cout;
-using std::endl;
 using std::string;
 using std::vector;
 using std::map;

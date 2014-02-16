@@ -2,7 +2,7 @@ CXX     := g++-4.8
 TARGET  := janosh
 SRCS    := janosh.cpp logger.cpp record.cpp path.cpp value.cpp exception.cpp cache.cpp json_spirit/json_spirit_reader.cpp  json_spirit/json_spirit_value.cpp  json_spirit/json_spirit_writer.cpp tcp_server.cpp tcp_client.cpp janosh_thread.cpp commands.cpp trigger_base.cpp settings.cpp request.cpp tracker.cpp backward.cpp component.cpp json.cpp bash.cpp raw.cpp
 #precompiled headers
-HEADERS := json_spirit/json_spirit_error_position.h json_spirit/json_spirit.gch json_spirit/json_spirit.h json_spirit/json_spirit_reader.h json_spirit/json_spirit_reader_template.h json_spirit/json_spirit_stream_reader.h json_spirit/json_spirit_utils.h json_spirit/json_spirit_value.h json_spirit/json_spirit_writer.h json_spirit/json_spirit_writer_template.h
+HEADERS := backward.h easylogging++.h json_spirit/json_spirit.h
 GCH    := ${HEADERS:.h=.gch}
 OBJS    := ${SRCS:.cpp=.o} 
 DEPS    := ${SRCS:.cpp=.dep} 

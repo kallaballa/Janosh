@@ -1,8 +1,6 @@
 #ifndef _JANOSH_BASH_HPP
 #define _JANOSH_BASH_HPP
 
-#include <string>
-#include "path.hpp"
 #include "print_visitor.hpp"
 
 namespace janosh {

@@ -3,15 +3,11 @@
 
 #include <string>
 #include <exception>
-#include <iostream>
+
 #include <boost/exception/all.hpp>
 #include "record.hpp"
 #include "path.hpp"
 #include "value.hpp"
-
-#ifdef _JANOSH_DEBUG
-#include "backward.hpp"
-#endif
 
 namespace janosh {
   typedef boost::error_info<struct tag_janosh_msg,std::string> msg_info;
@@ -24,17 +20,7 @@ namespace janosh {
     virtual boost::exception,
     virtual std::exception
   {
-      janosh_exception() {
-      #ifdef _JANOSH_DEBUG
-        using namespace backward;
-        StackTrace st;
-        st.load_here(32);
-
-        Printer printer;
-        printer.print(st, stderr);
-      #endif
-      }
-
+      janosh_exception();
   };
 
   struct db_exception : virtual janosh_exception
