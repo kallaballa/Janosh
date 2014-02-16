@@ -1,9 +1,10 @@
-#include <thread>
+#include <stack>
 #include <boost/program_options.hpp>
 #include <boost/functional/hash.hpp>
 #include <boost/tokenizer.hpp>
 #include <boost/token_functions.hpp>
 #include <boost/format.hpp>
+
 #include "janosh.hpp"
 #include "commands.hpp"
 #include "tcp_server.hpp"
@@ -11,8 +12,13 @@
 #include "janosh_thread.hpp"
 #include "exception.hpp"
 #include "tracker.hpp"
+#include "logger.hpp"
+#include "json.hpp"
+#include "bash.hpp"
+#include "raw.hpp"
 
 using std::string;
+using std::endl;
 using std::map;
 using std::vector;
 using boost::make_iterator_range;
@@ -144,6 +150,85 @@ namespace janosh {
     return cnt;
   }
 
+  size_t recurse(Record& travRoot, PrintVisitor vis) {
+    JANOSH_TRACE( { travRoot });
+    size_t cnt = 0;
+    std::stack<std::pair<const Component, const Value::Type> > hierachy;
+    Record root("/.");
+
+    Record rec(travRoot);
+    vis.begin();
+
+    Path last;
+    do {
+      rec.fetch();
+      const Path& path = rec.path();
+      const Value& value = rec.value();
+      const Value::Type& t = rec.getType();
+      const Path& parent = path.parent();
+
+      const Component& name = path.name();
+      const Component& parentName = parent.name();
+
+      if (!hierachy.empty()) {
+        if (!travRoot.isAncestorOf(path)) {
+          break;
+        }
+
+        if (!last.above(path) && ((!last.isDirectory() && parentName != last.parentName()) || (last.isDirectory() && parentName != last.name()))) {
+          while (!hierachy.empty() && hierachy.top().first != parentName) {
+            if (hierachy.top().second == Value::Array) {
+              vis.endArray(path);
+            } else if (hierachy.top().second == Value::Object) {
+              vis.endObject(path);
+            }
+            hierachy.pop();
+          }
+        }
+      }
+
+      if (t == Value::Array) {
+        Value::Type parentType;
+        if (hierachy.empty())
+          parentType = Value::Array;
+        else
+          parentType = hierachy.top().second;
+
+        hierachy.push( { name, Value::Array });
+        vis.beginArray(path, parentType == Value::Array, last.isEmpty() || last == parent);
+      } else if (t == Value::Object) {
+        Value::Type parentType;
+        if (hierachy.empty())
+          parentType = Value::Array;
+        else
+          parentType = hierachy.top().second;
+
+        hierachy.push( { name, Value::Object });
+        vis.beginObject(path, parentType == Value::Array, last.isEmpty() || last == parent);
+      } else {
+        bool first = last.isEmpty() || last == parent;
+        if (!hierachy.empty()) {
+          vis.record(path, value, hierachy.top().second == Value::Array, first);
+        } else {
+          vis.record(path, value, false, first);
+        }
+      }
+      last = path;
+      ++cnt;
+    } while (rec.step());
+
+    while (!hierachy.empty()) {
+      if (hierachy.top().second == Value::Array) {
+        vis.endArray("");
+      } else if (hierachy.top().second == Value::Object) {
+        vis.endObject("");
+      }
+      hierachy.pop();
+    }
+
+    vis.close();
+    return cnt;
+  }
   /**
    * Creates a temporary record with the given type.
    * @param t the type of the record to create.
@@ -868,16 +953,8 @@ std::vector<size_t> sequence() {
 
 kyotocabinet::TreeDB janosh::Record::db;
 
-void printUsage() {
-    std::cerr << "janosh [options] <command> <paths...>" << endl
-        << endl
-        << "Options:" << endl
-        << "  -v                enable verbose output" << endl
-        << "  -j                output json format" << endl
-        << "  -b                output bash format" << endl
-        << "  -t                execute triggers for corresponding paths" << endl
-        << "  -e <target list>  execute given targets" << endl
-        << endl
+void printCommands() {
+    std::cerr
         << "Commands: " << endl
         <<  "  load" << endl
         <<  "  set"  << endl
@@ -1006,6 +1083,7 @@ int main(int argc, char** argv) {
     if (vm.count("help")) {
         std::cerr << "Usage: janosh [options] command ...\n";
         std::cerr << visible;
+        printCommands();
         return 0;
     }
 
