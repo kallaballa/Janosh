@@ -54,8 +54,6 @@ int JanoshThread::run() {
     }
 
     thread_ = new std::thread([=](){
-      tracker->reset();
-
       if (req_.runTriggers_) {
         Command* t = Janosh::getInstance()->cm_["trigger"];
         map<string, size_t>& keysModified = tracker->get(Tracker::WRITE);
@@ -67,12 +65,13 @@ int JanoshThread::run() {
 
         (*t)(triggers, out_);
       }
-
+      tracker->reset();
       if (!req_.vecTargets_.empty()) {
         LOG_DEBUG("Targets");
         Command* t = Janosh::getInstance()->cm_["target"];
         (*t)(req_.vecTargets_, out_);
       }
+
     });
   } catch (janosh_exception& ex) {
     printException(ex);
