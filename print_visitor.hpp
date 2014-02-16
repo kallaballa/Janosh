@@ -8,9 +8,9 @@
 namespace janosh {
 
 class PrintVisitor {
+public:
   std::ostream& out;
 
-public:
   PrintVisitor(std::ostream& out) :
       out(out) {
   }

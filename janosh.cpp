@@ -150,7 +150,7 @@ namespace janosh {
     return cnt;
   }
 
-  size_t recurse(Record& travRoot, PrintVisitor vis) {
+  size_t Janosh::recurse(Record& travRoot, PrintVisitor vis) {
     JANOSH_TRACE( { travRoot });
     size_t cnt = 0;
     std::stack<std::pair<const Component, const Value::Type> > hierachy;
