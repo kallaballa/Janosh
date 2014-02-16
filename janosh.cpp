@@ -1,5 +1,9 @@
 #include <thread>
 #include <boost/program_options.hpp>
+#include <boost/functional/hash.hpp>
+#include <boost/tokenizer.hpp>
+#include <boost/token_functions.hpp>
+#include <boost/format.hpp>
 #include "janosh.hpp"
 #include "commands.hpp"
 #include "tcp_server.hpp"
@@ -7,6 +11,7 @@
 #include "janosh_thread.hpp"
 #include "exception.hpp"
 #include "tracker.hpp"
+
 using std::string;
 using std::map;
 using std::vector;
@@ -807,7 +812,7 @@ namespace janosh {
     cnt+=this->load(path, (boost::format("O%d") % obj.size()).str());
     path.pop();
 
-    BOOST_FOREACH(js::Pair& p, obj) {
+    for(js::Pair& p : obj) {
       path.pushMember(p.name_);
       cnt+=load(p.value_, path);
       path.pop();
@@ -824,7 +829,7 @@ namespace janosh {
     cnt+=this->load(path, (boost::format("A%d") % array.size()).str());
     path.pop();
 
-    BOOST_FOREACH(js::Value& v, array){
+    for(js::Value& v : array){
       path.pushIndex(index++);
       cnt+=load(v, path);
       path.pop();
@@ -944,6 +949,7 @@ int main(int argc, char** argv) {
       ("targets,e", po::value<string>(&targetList), "Execute a comma separated list of targets")
       ("verbose,v", "Enable verbose output")
       ("tracing,p", "Enable tracing output")
+      ("dblog,m", "Enable db logging")
       ("tracking,k", po::value<int>(&trackingLevel)->composing(), "Print tracking statistics. 0 = Don't print. 1 = Print meta data. 2 = Print full.");
 
     po::options_description hidden("Hidden options");
@@ -972,6 +978,7 @@ int main(int argc, char** argv) {
     bool daemon = vm.count("daemon");
     bool single = vm.count("single");
     bool tracing = vm.count("tracing");
+    bool dblog = vm.count("dblog");
     Tracker::PrintDirective printDirective = Tracker::DONTPRINT;
 
     if(trackingLevel == 1)
@@ -1008,6 +1015,7 @@ int main(int argc, char** argv) {
       Logger::init(LogLevel::L_INFO);
 
     Logger::setTracing(tracing);
+    Logger::setDBLogging(dblog);
     Tracker::setPrintDirective(printDirective);
 
     if (daemon) {
@@ -1026,7 +1034,7 @@ int main(int argc, char** argv) {
       vector<string> vecTargets;
       if (execTargets) {
         tokenizer<char_separator<char> > tok(targetList, char_separator<char>(","));
-        BOOST_FOREACH (const string& t, tok) {
+        for (const string& t : tok) {
           vecTargets.push_back(t);
         }
       }

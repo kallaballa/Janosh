@@ -6,7 +6,7 @@
 
 namespace backward {
 
-backward::SignalHandling sh;
+//backward::SignalHandling sh;
 
 } // namespace backward
 

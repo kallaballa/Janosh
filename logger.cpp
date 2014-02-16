@@ -25,6 +25,30 @@
 namespace janosh {
   Logger* Logger::instance_ = NULL;
 
+  DBLogger::~DBLogger() {
+    _assert_(true);
+  }
+
+  void DBLogger::log(const char* file, int32_t line, const char* func, Kind kind, const char* message) {
+    std::stringstream ss;
+    ss << "DB: " << "(" << file << ":" << line << " in " << func << "):" << message;
+
+    switch (kind) {
+    case DEBUG:
+      LOG(DEBUG) << ss.str();
+      break;
+      case INFO:
+      LOG(INFO) << ss.str();
+      break;
+      case WARN:
+      LOG(WARNING) << ss.str();
+      break;
+      case ERROR:
+      LOG(ERROR) << ss.str();
+      break;
+    }
+  }
+
   void Logger::init(const LogLevel l) {
     Logger::instance_ = new Logger(l);
   }
@@ -44,6 +68,18 @@ namespace janosh {
 
   void Logger::setTracing(bool t) {
     Logger::getInstance().tracing_ = t;
+  }
+
+  bool Logger::isDBLogging() {
+    return Logger::getInstance().dblog_;
+  }
+
+  void Logger::setDBLogging(bool enabled) {
+    Logger::getInstance().dblog_ = enabled;
+    Record::db.tune_logger(&Logger::getInstance().dblogger_, kc::BasicDB::Logger::DEBUG
+        | kc::BasicDB::Logger::INFO
+        | kc::BasicDB::Logger::WARN
+        | kc::BasicDB::Logger::ERROR);
   }
 
   void Logger::trace(const string& caller, std::initializer_list<janosh::Record> records) {

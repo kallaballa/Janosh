@@ -4,28 +4,10 @@
 #include <map>
 #include <vector>
 #include <string>
-#include <sstream>
-#include <fstream>
+#include <stack>
 #include <iostream>
 #include <functional>
-#include <algorithm>
-#include <exception>
-#include <initializer_list>
-#include <unistd.h>
 
-#include <boost/bind.hpp>
-#include <boost/range.hpp>
-#include <boost/tokenizer.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/functional/hash.hpp>
-#include <boost/function.hpp>
-#include <boost/interprocess/creation_tags.hpp>
-#include <boost/iostreams/stream.hpp>
-#include <boost/format.hpp>
-#include <boost/foreach.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/algorithm/string/predicate.hpp>
-#include <kcpolydb.h>
 #include "trigger_base.hpp"
 #include "settings.hpp"
 #include "logger.hpp"
@@ -35,25 +17,24 @@
 #include "bash.hpp"
 #include "format.hpp"
 
-  namespace kc = kyotocabinet;
-  namespace js = json_spirit;
-  namespace fs = boost::filesystem;
-  using std::cerr;
-  using std::cout;
-  using std::endl;
-  using std::string;
-  using std::vector;
-  using std::map;
-  using std::istringstream;
-  using std::ifstream;
-  using std::exception;
 namespace janosh {
-  class Command;
+
+namespace js = json_spirit;
+namespace fs = boost::filesystem;
+using std::cerr;
+using std::cout;
+using std::endl;
+using std::string;
+using std::vector;
+using std::map;
+using std::istream;
+using std::ostream;
+
+class Command;
   typedef map<const std::string, Command*> CommandMap;
 
   class Janosh {
 public:
-    typedef boost::function<void(int)> ExitHandler;
     Settings settings_;
     TriggerBase triggers_;
     CommandMap cm_;
@@ -68,7 +49,7 @@ public:
     size_t process(int argc, char** argv);
 
     size_t loadJson(const string& jsonfile);
-    size_t loadJson(std::istream& is);
+    size_t loadJson(istream& is);
 
     size_t makeArray(Record target, size_t size = 0, bool boundsCheck=true);
     size_t makeObject(Record target, size_t size = 0);
@@ -101,7 +82,6 @@ public:
     js::Value rootValue;
 
     Format getFormat();
-    void terminate(int code);
     void setContainerSize(Record rec, const size_t s);
     void changeContainerSize(Record rec, const size_t by);
     size_t load(const Path& path, const string& value);

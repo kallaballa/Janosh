@@ -26,9 +26,18 @@
 #include "easylogging++.h"
 #include <sstream>
 #include <boost/lexical_cast.hpp>
+#include <kcdb.h>
+#include <sstream>
 
 namespace janosh {
   using std::string;
+  namespace kc = kyotocabinet;
+
+  class DBLogger: public kc::BasicDB::Logger {
+  public:
+    virtual ~DBLogger();
+    virtual void log(const char* file, int32_t line, const char* func, Kind kind, const char* message);
+  };
 
   enum LogLevel {
     L_FATAL = 0,
@@ -45,6 +54,8 @@ namespace janosh {
   private:
     static const string makeCallString(const string& caller, std::initializer_list<janosh::Record> records);
     bool tracing_;
+    bool dblog_;
+    DBLogger dblogger_;
   public:
     LogLevel level_;
 
@@ -53,6 +64,8 @@ namespace janosh {
     static LogLevel getLevel();
     static bool isTracing();
     static void setTracing(bool t);
+    static bool isDBLogging();
+    static void setDBLogging(bool l);
     static void trace(const string& caller, std::initializer_list<janosh::Record> records);
 
     template<typename Tvalue>

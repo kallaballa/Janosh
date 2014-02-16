@@ -1,6 +1,7 @@
 #include "record.hpp"
 #include "exception.hpp"
 #include "tracker.hpp"
+#include "logger.hpp"
 
 namespace janosh {
   typedef  boost::shared_ptr<kc::DB::Cursor> Base;
