@@ -122,17 +122,7 @@ namespace janosh {
     }
 
     if (rec.isDirectory()) {
-      switch(this->getFormat()) {
-        case Json:
-          cnt = recurse(rec, JsonPrintVisitor(out));
-          break;
-        case Bash:
-          cnt = recurse(rec, BashPrintVisitor(out));
-          break;
-        case Raw:
-          cnt = recurse(rec, RawPrintVisitor(out));
-          break;
-      }
+      recurse(rec, out);
     } else {
       string value;
 
@@ -151,14 +141,28 @@ namespace janosh {
     return cnt;
   }
 
-  size_t Janosh::recurse(Record& travRoot, PrintVisitor vis) {
+  size_t Janosh::recurse(Record& travRoot, ostream& out) {
     JANOSH_TRACE( { travRoot });
+
+    PrintVisitor* vis = NULL;
+    switch(this->getFormat()) {
+      case Json:
+        vis = new JsonPrintVisitor(out);
+        break;
+      case Bash:
+        vis = new BashPrintVisitor(out);
+        break;
+      case Raw:
+        vis = new RawPrintVisitor(out);
+        break;
+    }
+
     size_t cnt = 0;
     std::stack<std::pair<const Component, const Value::Type> > hierachy;
     Record root("/.");
 
     Record rec(travRoot);
-    vis.begin();
+    vis->begin();
 
     Path last;
     do {
@@ -179,9 +183,9 @@ namespace janosh {
         if (!last.above(path) && ((!last.isDirectory() && parentName != last.parentName()) || (last.isDirectory() && parentName != last.name()))) {
           while (!hierachy.empty() && hierachy.top().first != parentName) {
             if (hierachy.top().second == Value::Array) {
-              vis.endArray(path);
+              vis->endArray(path);
             } else if (hierachy.top().second == Value::Object) {
-              vis.endObject(path);
+              vis->endObject(path);
             }
             hierachy.pop();
           }
@@ -196,7 +200,7 @@ namespace janosh {
           parentType = hierachy.top().second;
 
         hierachy.push( { name, Value::Array });
-        vis.beginArray(path, parentType == Value::Array, last.isEmpty() || last == parent);
+        vis->beginArray(path, parentType == Value::Array, last.isEmpty() || last == parent);
       } else if (t == Value::Object) {
         Value::Type parentType;
         if (hierachy.empty())
@@ -205,13 +209,13 @@ namespace janosh {
           parentType = hierachy.top().second;
 
         hierachy.push( { name, Value::Object });
-        vis.beginObject(path, parentType == Value::Array, last.isEmpty() || last == parent);
+        vis->beginObject(path, parentType == Value::Array, last.isEmpty() || last == parent);
       } else {
         bool first = last.isEmpty() || last == parent;
         if (!hierachy.empty()) {
-          vis.record(path, value, hierachy.top().second == Value::Array, first);
+          vis->record(path, value, hierachy.top().second == Value::Array, first);
         } else {
-          vis.record(path, value, false, first);
+          vis->record(path, value, false, first);
         }
       }
       last = path;
@@ -220,14 +224,15 @@ namespace janosh {
 
     while (!hierachy.empty()) {
       if (hierachy.top().second == Value::Array) {
-        vis.endArray("");
+        vis->endArray("");
       } else if (hierachy.top().second == Value::Object) {
-        vis.endObject("");
+        vis->endObject("");
       }
       hierachy.pop();
     }
 
-    vis.close();
+    vis->close();
+    delete vis;
     return cnt;
   }
   /**

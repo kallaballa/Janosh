@@ -83,7 +83,7 @@ private:
   bool boundsCheck(Record p);
   Record makeTemp(const Value::Type& t);
 
-  size_t recurse(Record& travRoot, PrintVisitor vis);
+  size_t recurse(Record& travRoot, ostream& out);
 };
 
 }
