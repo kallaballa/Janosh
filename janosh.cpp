@@ -982,26 +982,25 @@ using namespace boost;
 using namespace janosh;
 namespace po = boost::program_options;
 
-void handleSigInt(int s) {
-  if(TcpServer::getInstance()->isOpen()) {
-    LOG_DEBUG_MSG("Shutting down tcp server due to sigint", s);
-    TcpServer::getInstance()->close();
-  }
+void handleSigInt(const boost::system::error_code& error,
+    int s) {
+  if(!error) {
+    if(TcpServer::getInstance()->isOpen()) {
+      LOG_DEBUG_MSG("Shutting down tcp server due to sigint", s);
+      TcpServer::getInstance()->close();
+    }
 
-  if(Janosh::getInstance()->isOpen()) {
-    LOG_DEBUG_MSG("Shutting down janosh server due to sigint", s);
-    Janosh::getInstance()->close();
+    if(Janosh::getInstance()->isOpen()) {
+      LOG_DEBUG_MSG("Shutting down janosh server due to sigint", s);
+      Janosh::getInstance()->close();
+    }
   }
 }
 
 void registerSigIntHandler() {
-  struct sigaction sigIntHandler;
-
-  sigIntHandler.sa_handler = handleSigInt;
-  sigemptyset(&sigIntHandler.sa_mask);
-  sigIntHandler.sa_flags = 0;
-
-  sigaction(SIGINT, &sigIntHandler, NULL);
+  boost::asio::io_service io_service;
+  boost::asio::signal_set signals(io_service, SIGINT, SIGTERM);
+  signals.async_wait(handleSigInt);
 }
 
 _INITIALIZE_EASYLOGGINGPP
