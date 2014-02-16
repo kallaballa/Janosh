@@ -154,14 +154,22 @@ void TcpServer::run() {
       boost::asio::write(*socket, rc_buf);
 
       std::thread flusher([=]{
-        jt->join();
-        LOG_DEBUG_MSG("sending", out_buf->size());
-        if(cacheable) {
-          LOG_DEBUG_STR("updating cache");
-          cache_.setData(boost::asio::buffer_cast<const char*>(out_buf->data()), out_buf->size());
+        try {
+          jt->join();
+          LOG_DEBUG_MSG("sending", out_buf->size());
+          if(cacheable) {
+            LOG_DEBUG_STR("updating cache");
+            cache_.setData(boost::asio::buffer_cast<const char*>(out_buf->data()), out_buf->size());
+          }
+          boost::asio::write(*socket, *out_buf);
+        } catch(std::exception& ex) {
+          janosh::printException(ex);
         }
-        boost::asio::write(*socket, *out_buf);
-        socket->close();
+        try {
+          socket->close();
+        } catch(std::exception& ex) {
+          janosh::printException(ex);
+        }
         delete out_buf;
         delete out_stream;
         delete jt;
@@ -170,15 +178,31 @@ void TcpServer::run() {
 
       flusher.detach();
     } else {
-       boost::asio::streambuf rc_buf;
-       ostream rc_stream(&rc_buf);
-       rc_stream << std::to_string(0) << '\n';
-       LOG_DEBUG_MSG("sending", rc_buf.size());
-       boost::asio::write(*socket, rc_buf);
-       LOG_DEBUG_MSG("sending", cache_.getSize());
-       boost::asio::write(*socket, boost::asio::buffer(cache_.getData(), cache_.getSize()));
-       socket->close();
-       delete socket;
+      std::thread cacheWriter([=](){
+         cache_.lock();
+         try {
+           boost::asio::streambuf rc_buf;
+           ostream rc_stream(&rc_buf);
+           rc_stream << std::to_string(0) << '\n';
+           LOG_DEBUG_MSG("sending", rc_buf.size());
+           boost::asio::write(*socket, rc_buf);
+           LOG_DEBUG_MSG("sending", cache_.getSize());
+           boost::asio::write(*socket, boost::asio::buffer(cache_.getData(), cache_.getSize()));
+         } catch(std::exception& ex) {
+           janosh::printException(ex);
+         }
+         cache_.unlock();
+
+         try {
+           socket->close();
+         } catch(std::exception& ex) {
+           janosh::printException(ex);
+         }
+
+         delete socket;
+      });
+
+      cacheWriter.detach();
     }
   } catch (janosh_exception& ex) {
     printException(ex);
