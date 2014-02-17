@@ -7,7 +7,7 @@
 
 namespace janosh {
 janosh_exception::janosh_exception() {
-#ifdef _JANOSH_DEBUG
+#if 0
   using namespace backward;
   StackTrace st;
   st.load_here(32);

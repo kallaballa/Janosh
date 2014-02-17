@@ -22,8 +22,14 @@
 #include <iostream>
 #include <sstream>
 
+namespace el {
+  namespace base {
+    ThreadNameLookup* ThreadNameLookup::instance_ = NULL;
+  }
+}
 namespace janosh {
   Logger* Logger::instance_ = NULL;
+
 
   DBLogger::~DBLogger() {
     _assert_(true);
@@ -80,6 +86,16 @@ namespace janosh {
         | kc::BasicDB::Logger::INFO
         | kc::BasicDB::Logger::WARN
         | kc::BasicDB::Logger::ERROR);
+  }
+
+  void Logger::registerThread(const string& name) {
+    el::base::ThreadNameLookup::set(std::this_thread::get_id(),name);
+    LOG_DEBUG("Register thread");
+  }
+
+  void Logger::removeThread() {
+    LOG_DEBUG("Remove thread");
+    el::base::ThreadNameLookup::remove(std::this_thread::get_id());
   }
 
   void Logger::trace(const string& caller, std::initializer_list<janosh::Record> records) {

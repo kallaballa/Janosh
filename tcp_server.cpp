@@ -154,7 +154,7 @@ void TcpServer::run() {
       boost::asio::write(*socket, rc_buf);
 
       std::thread flusher([=]{
-        LOG_DEBUG("Starting flusher thread");
+        Logger::registerThread("Flusher");
         try {
           jt->join();
           LOG_DEBUG_MSG("sending", out_buf->size());
@@ -167,7 +167,7 @@ void TcpServer::run() {
           janosh::printException(ex);
         }
         try {
-          LOG_DEBUG_STR("Closing socket (flusher)");
+          LOG_DEBUG_STR("Closing socket");
           socket->close();
         } catch(std::exception& ex) {
           janosh::printException(ex);
@@ -176,13 +176,13 @@ void TcpServer::run() {
         delete out_stream;
         delete jt;
         delete socket;
-        LOG_DEBUG("Terminating flusher thread");
+        Logger::removeThread();
       });
 
       flusher.detach();
     } else {
       std::thread cacheWriter([=](){
-        LOG_DEBUG("Starting cacheWriter thread");
+        Logger::registerThread("CacheWriter");
          cache_.lock();
          try {
            boost::asio::streambuf rc_buf;
@@ -205,7 +205,7 @@ void TcpServer::run() {
          }
 
          delete socket;
-         LOG_DEBUG("Terminating cacheWriter thread");
+         Logger::removeThread();
       });
 
       cacheWriter.detach();

@@ -66,6 +66,8 @@ namespace janosh {
     static void setTracing(bool t);
     static bool isDBLogging();
     static void setDBLogging(bool l);
+    static void registerThread(const string& name);
+    static void removeThread();
     static void trace(const string& caller, std::initializer_list<janosh::Record> records);
 
     template<typename Tvalue>

@@ -1055,6 +1055,12 @@ int main(int argc, char** argv) {
     bool single = vm.count("single");
     bool tracing = vm.count("tracing");
     bool dblog = vm.count("dblog");
+    if (verbose)
+      Logger::init(LogLevel::L_DEBUG);
+    else
+      Logger::init(LogLevel::L_INFO);
+
+    Logger::registerThread("Main");
     Tracker::PrintDirective printDirective = Tracker::DONTPRINT;
 
     if(trackingLevel == 1)
@@ -1086,10 +1092,6 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-    if (verbose)
-      Logger::init(LogLevel::L_DEBUG);
-    else
-      Logger::init(LogLevel::L_INFO);
 
     Logger::setTracing(tracing);
     Logger::setDBLogging(dblog);

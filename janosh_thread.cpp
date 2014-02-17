@@ -53,26 +53,30 @@ int JanoshThread::run() {
       throw janosh_exception() << msg_info("missing command");
     }
 
-    thread_ = new std::thread([=](){
-      if (req_.runTriggers_) {
-        Command* t = Janosh::getInstance()->cm_["trigger"];
-        map<string, size_t>& keysModified = tracker->get(Tracker::WRITE);
+    assert(thread_ == NULL);
+    if(req_.runTriggers_ || !req_.vecTargets_.empty()) {
+      thread_ = new std::thread([=](){
+        Logger::registerThread("Trigger");
+        if (req_.runTriggers_) {
+          Command* t = Janosh::getInstance()->cm_["trigger"];
+          map<string, size_t>& keysModified = tracker->get(Tracker::WRITE);
 
-        vector<string> triggers;
-        for(auto iter : keysModified) {
-          triggers.push_back(iter.first);
+          vector<string> triggers;
+          for(auto iter : keysModified) {
+            triggers.push_back(iter.first);
+          }
+
+          (*t)(triggers, out_);
         }
-
-        (*t)(triggers, out_);
-      }
-      tracker->reset();
-      if (!req_.vecTargets_.empty()) {
-        LOG_DEBUG("Targets");
-        Command* t = Janosh::getInstance()->cm_["target"];
-        (*t)(req_.vecTargets_, out_);
-      }
-
-    });
+        tracker->reset();
+        if (!req_.vecTargets_.empty()) {
+          LOG_DEBUG("Targets");
+          Command* t = Janosh::getInstance()->cm_["target"];
+          (*t)(req_.vecTargets_, out_);
+        }
+        Logger::removeThread();
+      });
+    }
   } catch (janosh_exception& ex) {
     printException(ex);
     return 1;
