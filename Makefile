@@ -56,7 +56,7 @@ ${DEPS}: %.dep: %.cpp Makefile
 	${CXX} ${CXXFLAGS} -MM $< > $@ 
 
 ${GCH}: %.gch: ${HEADERS} 
-	${CXX} ${CXXFLAGS} -o $@ -c $<
+	${CXX} ${CXXFLAGS} -o $@ -c ${@:.gch=.h}
 
 install:
 	mkdir -p ${DESTDIR}/${PREFIX}
