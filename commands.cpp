@@ -340,14 +340,13 @@ public:
     if (params.empty()) {
       return {-1, "Expected a list of keys"};
     } else {
-      bool found_all = true;
+      std::vector<Record> recs;
       for(const string& p : params) {
-        Record rec(p);
-        found_all = found_all && janosh->get(rec, out);
+        recs.push_back(Record(p));
       }
 
-      if (!found_all)
-        return {-1, "Unknown keys encounted"};
+      if (!janosh->get(recs, out))
+        return {-1, "Fetching failed"};
     }
     return {params.size(), "Successful"};
   }

@@ -46,7 +46,7 @@ public:
   size_t makeArray(Record target, size_t size = 0, bool boundsCheck = true);
   size_t makeObject(Record target, size_t size = 0);
   size_t makeDirectory(Record target, Value::Type type, size_t size = 0);
-  size_t get(Record target, std::ostream& out);
+  size_t get(vector<Record> targets, std::ostream& out);
   size_t size(Record target);
   size_t remove(Record& target, bool pack = true);
 
@@ -83,7 +83,7 @@ private:
   bool boundsCheck(Record p);
   Record makeTemp(const Value::Type& t);
 
-  size_t recurse(Record& travRoot, ostream& out);
+  size_t recurse(Record& travRoot, PrintVisitor* vis, ostream& out);
 };
 
 }

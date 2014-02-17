@@ -110,59 +110,53 @@ namespace janosh {
    * @param out The output stream to write to.
    * @return number of total records affected.
    */
-  size_t Janosh::get(Record rec, std::ostream& out) {
-    JANOSH_TRACE({rec});
-    rec.fetch();
+  size_t Janosh::get(vector<Record> recs, std::ostream& out) {
+    PrintVisitor* vis = NULL;
+    switch (this->getFormat()) {
+    case Json:
+      vis = new JsonPrintVisitor(out);
+      break;
+    case Bash:
+      vis = new BashPrintVisitor(out);
+      break;
+    case Raw:
+      vis = new RawPrintVisitor(out);
+      break;
+    }
+    vis->begin();
+
     size_t cnt = 1;
 
-    LOG_DEBUG_MSG("get", rec.path().pretty());
+    for (Record& rec : recs) {
+      JANOSH_TRACE( { rec });
+      rec.fetch();
 
-    if(!rec.exists()) {
-      throw janosh_exception() << record_info({"Path not found", rec});
-    }
+      LOG_DEBUG_MSG("get", rec.path().pretty());
 
-    if (rec.isDirectory()) {
-      recurse(rec, out);
-    } else {
-      string value;
+      if (!rec.exists()) {
+        throw janosh_exception() << record_info( { "Path not found", rec });
+      }
 
-      switch(this->getFormat()) {
-        case Raw:
-          out << rec.value() << endl;
-          break;
-        case Json:
-          out << rec.value() << endl;
-          break;
-        case Bash:
-          out << "\"( [" << rec.path() << "]='" << rec.value() << "' )\"" << endl;
-          break;
+      if (rec.isDirectory()) {
+        recurse(rec, vis, out);
+      } else {
+        vis->record(rec.path(), rec.value(), false, false);
       }
     }
+
+    vis->close();
+    delete vis;
     return cnt;
   }
 
-  size_t Janosh::recurse(Record& travRoot, ostream& out) {
+  size_t Janosh::recurse(Record& travRoot, PrintVisitor* vis, ostream& out) {
     JANOSH_TRACE( { travRoot });
-
-    PrintVisitor* vis = NULL;
-    switch(this->getFormat()) {
-      case Json:
-        vis = new JsonPrintVisitor(out);
-        break;
-      case Bash:
-        vis = new BashPrintVisitor(out);
-        break;
-      case Raw:
-        vis = new RawPrintVisitor(out);
-        break;
-    }
 
     size_t cnt = 0;
     std::stack<std::pair<const Component, const Value::Type> > hierachy;
     Record root("/.");
 
     Record rec(travRoot);
-    vis->begin();
 
     Path last;
     do {
@@ -231,8 +225,6 @@ namespace janosh {
       hierachy.pop();
     }
 
-    vis->close();
-    delete vis;
     return cnt;
   }
   /**
