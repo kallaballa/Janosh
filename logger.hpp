@@ -79,14 +79,14 @@ namespace janosh {
       defaultConf.setToDefault();
 
       defaultConf.set(el::Level::Info, el::ConfigurationType::Format,
-          "%datetime %msg");
+          "%thread %datetime %msg");
       defaultConf.set(el::Level::Fatal, el::ConfigurationType::Format,
-          "%datetime %level %loc %msg");
+          "%thread %datetime %level %loc %msg");
       defaultConf.set(el::Level::Debug, el::ConfigurationType::Format,
-          "%datetime %level %loc %msg");
+          "%thread %datetime %level %loc %msg");
 
       // To set GLOBAL configurations you may use
-      defaultConf.setGlobally(el::ConfigurationType::Format, "%datetime %level %msg");
+      defaultConf.setGlobally(el::ConfigurationType::Format, "%thread %datetime %level %msg");
       el::Loggers::reconfigureLogger("default", defaultConf);
     }
 
