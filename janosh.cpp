@@ -1019,7 +1019,7 @@ int main(int argc, char** argv) {
     string targetList;
     string command;
     vector<string> arguments;
-    int trackingLevel;
+    int trackingLevel = 0;
 
     po::options_description genericDesc("Options");
     genericDesc.add_options()
