@@ -166,7 +166,7 @@ void TcpServer::run() {
           janosh::printException(ex);
         }
         try {
-          LOG_DEBUG_STR("Closing socket");
+          LOG_DEBUG_STR("Closing socket (flusher)");
           socket->close();
         } catch(std::exception& ex) {
           janosh::printException(ex);
@@ -195,7 +195,7 @@ void TcpServer::run() {
          cache_.unlock();
 
          try {
-           LOG_DEBUG_STR("Closing socket");
+           LOG_DEBUG_STR("Closing socket (cacheWriter)");
            socket->close();
          } catch(std::exception& ex) {
            janosh::printException(ex);
