@@ -26,7 +26,7 @@ public:
 	bool isOpen();
   void open(int port);
 	void close();
-	void run();
+	bool run();
 
 	static TcpServer* getInstance() {
 	  if(instance_ == NULL)

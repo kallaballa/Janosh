@@ -1102,8 +1102,7 @@ int main(int argc, char** argv) {
       instance->open(false);
       TcpServer* server = TcpServer::getInstance();
       server->open(instance->settings_.port);
-      while (true) {
-        server->run();
+      while (server->run()) {
       }
     } else {
       if (command.empty() && !execTargets) {

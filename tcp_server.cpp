@@ -105,53 +105,102 @@ string reconstructCommandLine(Request& req) {
   return cmdline;
 }
 
-void TcpServer::run() {
-	boost::asio::ip::tcp::socket* socket = new boost::asio::ip::tcp::socket(io_service);
-	acceptor.accept(*socket);
+bool TcpServer::run() {
+	boost::asio::ip::tcp::socket* socket = NULL;
+
+	try  {
+	  socket = new boost::asio::ip::tcp::socket(io_service);
+	  acceptor.accept(*socket);
+	} catch(std::exception& ex) {
+    LOG_DEBUG_STR("Closing socket");
+    if (socket != NULL) {
+      socket->close();
+      delete socket;
+    }
+	  janosh::printException(ex);
+	  return false;
+	}
 
 	try {
-    std::string peerAddr = socket->remote_endpoint().address().to_string();
-
-    LOG_DEBUG_MSG("accepted", peerAddr);
-    boost::asio::streambuf response;
-    boost::asio::read_until(*socket, response, "\n");
-    std::istream response_stream(&response);
-
     Request req;
-    readRequest(req, response_stream);
+    bool cacheable=false;
+    bool cachehit=false;
+	  try {
+      std::string peerAddr = socket->remote_endpoint().address().to_string();
+      LOG_DEBUG_MSG("accepted", peerAddr);
+      boost::asio::streambuf response;
+      boost::asio::read_until(*socket, response, "\n");
+      std::istream response_stream(&response);
 
-    LOG_INFO_STR(reconstructCommandLine(req));
+      readRequest(req, response_stream);
+      LOG_INFO_STR(reconstructCommandLine(req));
 
-    // only "-j get /." is cached
-    bool cacheable = req.command_ == "get"
-        && req.format_ == janosh::Json
-        && !req.runTriggers_
-        && req.vecTargets_.empty()
-        && req.vecArgs_.size() == 1
-        && req.vecArgs_[0] == "/.";
+      // only "-j get /." is cached
+      cacheable = req.command_ == "get"
+          && req.format_ == janosh::Json
+          && !req.runTriggers_
+          && req.vecTargets_.empty()
+          && req.vecArgs_.size() == 1
+          && req.vecArgs_[0] == "/.";
 
-    if(!cacheable && (!req.command_.empty() && (req.command_ != "get" && req.command_ != "dump" && req.command_ != "hash" && req.command_ != "size"))) {
-      LOG_DEBUG_STR("Invalidating cache");
-      cache_.invalidate();
-    }
+      if(!cacheable && (!req.command_.empty() && (req.command_ != "get" && req.command_ != "dump" && req.command_ != "hash" && req.command_ != "size"))) {
+        LOG_DEBUG_STR("Invalidating cache");
+        cache_.invalidate();
+      }
 
-    bool cachehit = cacheable && cache_.isValid();
+      cachehit = cacheable && cache_.isValid();
 
-    LOG_DEBUG_MSG("cacheable", cacheable);
-    LOG_DEBUG_MSG("cachehit", cachehit);
+      LOG_DEBUG_MSG("cacheable", cacheable);
+      LOG_DEBUG_MSG("cachehit", cachehit);
+	  } catch (std::exception& ex) {
+      try {
+        LOG_DEBUG_STR("Closing socket");
+        if (socket != NULL) {
+          socket->close();
+          delete socket;
+        }
+      } catch (std::exception& ex) {
+        janosh::printException(ex);
+      }
+      return true;
+	  }
 
     if(!cachehit) {
-      boost::asio::streambuf* out_buf = new boost::asio::streambuf();
-      ostream* out_stream = new ostream(out_buf);
+      boost::asio::streambuf* out_buf = NULL;
+      ostream* out_stream = NULL;
+      JanoshThread* jt = NULL;
 
-      JanoshThread* jt = new JanoshThread(req, *out_stream);
+      try {
+        out_buf = new boost::asio::streambuf();
+        out_stream = new ostream(out_buf);
+        jt = new JanoshThread(req, *out_stream);
 
-      int rc = jt->run();
-      boost::asio::streambuf rc_buf;
-      ostream rc_stream(&rc_buf);
-      rc_stream << std::to_string(rc) << '\n';
-      LOG_DEBUG_MSG("sending", rc_buf.size());
-      boost::asio::write(*socket, rc_buf);
+        int rc = jt->run();
+        boost::asio::streambuf rc_buf;
+        ostream rc_stream(&rc_buf);
+        rc_stream << std::to_string(rc) << '\n';
+        LOG_DEBUG_MSG("sending", rc_buf.size());
+        boost::asio::write(*socket, rc_buf);
+      } catch (std::exception& ex) {
+        try {
+          LOG_DEBUG_STR("Closing socket");
+          if (socket != NULL) {
+            socket->close();
+            delete socket;
+          }
+        } catch (std::exception& ex) {
+          janosh::printException(ex);
+        }
+
+        if(out_buf)
+          delete out_buf;
+        if(out_stream)
+          delete out_stream;
+        if(jt)
+          delete jt;
+
+        return true;
+      }
 
       std::thread flusher([=]{
         Logger::registerThread("Flusher");
@@ -168,44 +217,49 @@ void TcpServer::run() {
         }
         try {
           LOG_DEBUG_STR("Closing socket");
-          socket->close();
-        } catch(std::exception& ex) {
+          if (socket) {
+            socket->close();
+            delete socket;
+          }
+        } catch (std::exception& ex) {
           janosh::printException(ex);
         }
-        delete out_buf;
-        delete out_stream;
-        delete jt;
-        delete socket;
+        if(out_buf)
+          delete out_buf;
+        if(out_stream)
+          delete out_stream;
+        if(jt)
+          delete jt;
         Logger::removeThread();
       });
 
       flusher.detach();
     } else {
-      std::thread cacheWriter([=](){
+      std::thread cacheWriter([=]() {
         Logger::registerThread("CacheWriter");
-         cache_.lock();
-         try {
-           boost::asio::streambuf rc_buf;
-           ostream rc_stream(&rc_buf);
-           rc_stream << std::to_string(0) << '\n';
-           LOG_DEBUG_MSG("sending", rc_buf.size());
-           boost::asio::write(*socket, rc_buf);
-           LOG_DEBUG_MSG("sending", cache_.getSize());
-           boost::asio::write(*socket, boost::asio::buffer(cache_.getData(), cache_.getSize()));
-         } catch(std::exception& ex) {
-           janosh::printException(ex);
-         }
-         cache_.unlock();
-
-         try {
-           LOG_DEBUG_STR("Closing socket");
-           socket->close();
-         } catch(std::exception& ex) {
-           janosh::printException(ex);
-         }
-
-         delete socket;
-         Logger::removeThread();
+        cache_.lock();
+        try {
+          boost::asio::streambuf rc_buf;
+          ostream rc_stream(&rc_buf);
+          rc_stream << std::to_string(0) << '\n';
+          LOG_DEBUG_MSG("sending", rc_buf.size());
+          boost::asio::write(*socket, rc_buf);
+          LOG_DEBUG_MSG("sending", cache_.getSize());
+          boost::asio::write(*socket, boost::asio::buffer(cache_.getData(), cache_.getSize()));
+        } catch(std::exception& ex) {
+          janosh::printException(ex);
+        }
+        cache_.unlock();
+        try {
+          LOG_DEBUG_STR("Closing socket");
+          if (socket != NULL) {
+            socket->close();
+            delete socket;
+          }
+        } catch (std::exception& ex) {
+          janosh::printException(ex);
+        }
+        Logger::removeThread();
       });
 
       cacheWriter.detach();
@@ -215,5 +269,6 @@ void TcpServer::run() {
   } catch (std::exception& ex) {
     printException(ex);
   }
+  return true;
 }
 } /* namespace janosh */
