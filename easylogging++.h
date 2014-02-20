@@ -3785,7 +3785,7 @@ class DefaultLogBuilder : public api::LogBuilder {
         if (logFormat->hasFlag(base::FormatFlags::ThreadId)) {
             // Thread ID
             base::utils::Str::replaceFirstWithEscape(logLine, base::consts::kThreadIdFormatSpecifier,
-                    pad(ThreadNameLookup::get(std::this_thread::get_id()), 12));
+                    pad(ThreadNameLookup::get(std::this_thread::get_id()), 18));
         }
         if (logFormat->hasFlag(base::FormatFlags::DateTime)) {
             // DateTime
