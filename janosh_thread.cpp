@@ -68,6 +68,7 @@ int JanoshThread::run() {
 
           (*t)(triggers, out_);
         }
+        LOG_DEBUG("Reset tracker");
         tracker->reset();
         if (!req_.vecTargets_.empty()) {
           LOG_DEBUG("Targets");
