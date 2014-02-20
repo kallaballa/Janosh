@@ -59,8 +59,9 @@ int JanoshThread::run() {
         Logger::registerThread("Trigger");
         if (req_.runTriggers_) {
           Command* t = Janosh::getInstance()->cm_["trigger"];
-          map<string, size_t>& keysModified = tracker->get(Tracker::WRITE);
-
+          map<string, size_t> keysModified = tracker->get(Tracker::WRITE);
+          LOG_DEBUG("Reset tracker");
+          tracker->reset();
           vector<string> triggers;
           for(auto iter : keysModified) {
             triggers.push_back(iter.first);
@@ -68,8 +69,7 @@ int JanoshThread::run() {
 
           (*t)(triggers, out_);
         }
-        LOG_DEBUG("Reset tracker");
-        tracker->reset();
+
         if (!req_.vecTargets_.empty()) {
           LOG_DEBUG("Targets");
           Command* t = Janosh::getInstance()->cm_["target"];
