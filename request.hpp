@@ -15,6 +15,7 @@
 #include <vector>
 #include <iostream>
 #include "format.hpp"
+#include "util.hpp"
 
 namespace janosh {
 
@@ -32,17 +33,19 @@ public:
   vector<string> vecTargets_;
   bool runTriggers_ = false;
   bool verbose_ = false;
+  ProcessInfo pinfo_;
 
   Request() {
   }
 
-  Request(Format& format, string& command, vector<string>& vecArgs, vector<string>& vecTargets, bool& triggers, bool& verbose) :
+  Request(Format& format, string& command, vector<string>& vecArgs, vector<string>& vecTargets, bool& triggers, bool& verbose, ProcessInfo pinfo_) :
    format_(format),
    command_(command),
    vecArgs_(vecArgs),
    vecTargets_(vecTargets),
    runTriggers_(triggers),
-   verbose_(verbose){
+   verbose_(verbose),
+   pinfo_(pinfo_) {
   }
 
   Request(const Request& other) {
@@ -52,6 +55,7 @@ public:
     this->vecTargets_ = other.vecTargets_;
     this->runTriggers_ = other.runTriggers_;
     this->verbose_ = other.verbose_;
+    this->pinfo_ = other.pinfo_;
   }
   virtual ~Request() {}
 
@@ -63,11 +67,12 @@ public:
       ar & vecTargets_;
       ar & runTriggers_;
       ar & verbose_;
+      ar & pinfo_;
   }
 };
 
-void readRequest(Request& req, istream& is);
-void writeRequest(Request& req, ostream& os);
+void read_request(Request& req, istream& is);
+void write_request(Request& req, ostream& os);
 
 } /* namespace janosh */
 

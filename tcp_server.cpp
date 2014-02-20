@@ -132,7 +132,10 @@ bool TcpServer::run() {
       boost::asio::read_until(*socket, response, "\n");
       std::istream response_stream(&response);
 
-      readRequest(req, response_stream);
+      read_request(req, response_stream);
+
+      LOG_DEBUG_MSG("ppid", req.pinfo_.pid_);
+      LOG_DEBUG_MSG("cmdline", req.pinfo_.cmdline_);
       LOG_INFO_STR(reconstructCommandLine(req));
 
       // only "-j get /." is cached

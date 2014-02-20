@@ -1117,7 +1117,7 @@ int main(int argc, char** argv) {
         }
       }
 
-      Request req(f, command, arguments, vecTargets, execTriggers, verbose);
+      Request req(f, command, arguments, vecTargets, execTriggers, verbose, get_parent_info());
       if(!single) {
         Settings s;
         TcpClient client;

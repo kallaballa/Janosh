@@ -31,7 +31,7 @@ int TcpClient::run(Request& req) {
   boost::asio::streambuf request;
   std::ostream request_stream(&request);
 
-  writeRequest(req, request_stream);
+  write_request(req, request_stream);
 
   boost::asio::write(socket, request);
 	boost::asio::streambuf response;
