@@ -115,7 +115,7 @@ bool TcpServer::run() {
 	  acceptor_.accept(*socket);
 	} catch(std::exception& ex) {
     if (socket != NULL) {
-      LOG_DEBUG_STR("Closing socket");
+      LOG_DEBUG_MSG("Closing socket", socket);
       socket->close();
       delete socket;
     }
@@ -130,6 +130,8 @@ bool TcpServer::run() {
 	  try {
       std::string peerAddr = socket->remote_endpoint().address().to_string();
       LOG_DEBUG_MSG("accepted", peerAddr);
+      LOG_DEBUG_MSG("socket", socket);
+
       boost::asio::streambuf response;
       boost::asio::read_until(*socket, response, "\n");
       std::istream response_stream(&response);
@@ -159,7 +161,7 @@ bool TcpServer::run() {
       LOG_DEBUG_MSG("cachehit", cachehit);
 	  } catch (std::exception& ex) {
       try {
-        LOG_DEBUG_STR("Closing socket");
+        LOG_DEBUG_MSG("Closing socket", socket);
         socket->close();
         delete socket;
       } catch (std::exception& ex) {
@@ -186,7 +188,7 @@ bool TcpServer::run() {
         boost::asio::write(*socket, rc_buf);
       } catch (std::exception& ex) {
         try {
-          LOG_DEBUG_STR("Closing socket");
+          LOG_DEBUG_MSG("Closing socket", socket);
           socket->close();
           delete socket;
         } catch (std::exception& ex) {
@@ -217,7 +219,7 @@ bool TcpServer::run() {
           janosh::printException(ex);
         }
         try {
-          LOG_DEBUG_STR("Closing socket");
+          LOG_DEBUG_MSG("Closing socket", socket);
           socket->close();
           delete socket;
         } catch (std::exception& ex) {
@@ -250,7 +252,7 @@ bool TcpServer::run() {
         }
         cache_.unlock();
         try {
-          LOG_DEBUG_STR("Closing socket");
+          LOG_DEBUG_MSG("Closing socket", socket);
           socket->close();
           delete socket;
         } catch (std::exception& ex) {
