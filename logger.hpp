@@ -56,6 +56,8 @@ namespace janosh {
     bool tracing_;
     bool dblog_;
     DBLogger dblogger_;
+    Logger(const LogLevel l);
+    static Logger* instance_;
   public:
     LogLevel level_;
 
@@ -74,25 +76,6 @@ namespace janosh {
     static void trace(const string& caller, std::initializer_list<janosh::Record> records, Tvalue value) {
       LOG(TRACE) << makeCallString(caller, records), boost::lexical_cast<string>(value);
     }
-
-  private:
-    Logger(const LogLevel l) : tracing_(false), level_(l) {
-      el::Configurations defaultConf;
-      defaultConf.setToDefault();
-
-      defaultConf.set(el::Level::Info, el::ConfigurationType::Format,
-          "%thread %datetime %msg");
-      defaultConf.set(el::Level::Fatal, el::ConfigurationType::Format,
-          "%thread %datetime %level %loc %msg");
-      defaultConf.set(el::Level::Debug, el::ConfigurationType::Format,
-          "%thread %datetime %level %loc %msg");
-
-      // To set GLOBAL configurations you may use
-      defaultConf.setGlobally(el::ConfigurationType::Format, "%thread %datetime %level %msg");
-      el::Loggers::reconfigureLogger("default", defaultConf);
-    }
-
-    static Logger* instance_;
   };
 
   #define LOG_GLOBA_STR(x) if(Logger::getLevel() >= L_GLOBAL) LOG(GLOBAL) << x;

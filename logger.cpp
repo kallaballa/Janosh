@@ -31,6 +31,22 @@ namespace janosh {
   Logger* Logger::instance_ = NULL;
 
 
+  Logger::Logger(const LogLevel l) : tracing_(false), dblog_(false), level_(l) {
+    el::Configurations defaultConf;
+    defaultConf.setToDefault();
+
+    defaultConf.set(el::Level::Info, el::ConfigurationType::Format,
+        "%thread %datetime %msg (%loc)");
+    defaultConf.set(el::Level::Fatal, el::ConfigurationType::Format,
+        "%thread %datetime %level %msg (%loc)");
+    defaultConf.set(el::Level::Debug, el::ConfigurationType::Format,
+        "%thread %datetime %level %msg (%loc)");
+
+    // To set GLOBAL configurations you may use
+    defaultConf.setGlobally(el::ConfigurationType::Format, "%thread %datetime %level %msg (%loc)");
+    el::Loggers::reconfigureLogger("default", defaultConf);
+  }
+
   DBLogger::~DBLogger() {
     _assert_(true);
   }

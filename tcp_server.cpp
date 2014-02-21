@@ -58,7 +58,6 @@ bool TcpServer::isOpen() {
 }
 
 void TcpServer::close() {
-  LOG_DEBUG("Shutting down TcpServer");
   io_service_.stop();
 }
 
@@ -115,8 +114,8 @@ bool TcpServer::run() {
 	  socket = new boost::asio::ip::tcp::socket(io_service_);
 	  acceptor_.accept(*socket);
 	} catch(std::exception& ex) {
-    LOG_DEBUG_STR("Closing socket");
     if (socket != NULL) {
+      LOG_DEBUG_STR("Closing socket");
       socket->close();
       delete socket;
     }
@@ -161,10 +160,8 @@ bool TcpServer::run() {
 	  } catch (std::exception& ex) {
       try {
         LOG_DEBUG_STR("Closing socket");
-        if (socket != NULL) {
-          socket->close();
-          delete socket;
-        }
+        socket->close();
+        delete socket;
       } catch (std::exception& ex) {
         janosh::printException(ex);
       }
@@ -190,10 +187,8 @@ bool TcpServer::run() {
       } catch (std::exception& ex) {
         try {
           LOG_DEBUG_STR("Closing socket");
-          if (socket != NULL) {
-            socket->close();
-            delete socket;
-          }
+          socket->close();
+          delete socket;
         } catch (std::exception& ex) {
           janosh::printException(ex);
         }
@@ -223,10 +218,8 @@ bool TcpServer::run() {
         }
         try {
           LOG_DEBUG_STR("Closing socket");
-          if (socket) {
-            socket->close();
-            delete socket;
-          }
+          socket->close();
+          delete socket;
         } catch (std::exception& ex) {
           janosh::printException(ex);
         }
@@ -258,10 +251,8 @@ bool TcpServer::run() {
         cache_.unlock();
         try {
           LOG_DEBUG_STR("Closing socket");
-          if (socket != NULL) {
-            socket->close();
-            delete socket;
-          }
+          socket->close();
+          delete socket;
         } catch (std::exception& ex) {
           janosh::printException(ex);
         }

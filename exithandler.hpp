@@ -1,10 +1,3 @@
-/*
- * exithandler.hpp
- *
- *  Created on: Feb 21, 2014
- *      Author: elchaschab
- */
-
 #ifndef EXITHANDLER_HPP_
 #define EXITHANDLER_HPP_
 

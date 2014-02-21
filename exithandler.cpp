@@ -1,13 +1,4 @@
-/*
- * exithandler.cpp
- *
- *  Created on: Feb 21, 2014
- *      Author: elchaschab
- */
-
-
 #include <signal.h>
-#include <boost/bind.hpp>
 
 #include "logger.hpp"
 #include "exithandler.hpp"
@@ -32,8 +23,6 @@ void ExitHandler::addExitFunc(ExitFunc e) {
 }
 
 void ExitHandler::runExitFuncs(const boost::system::error_code& error, int signal_number) {
-  std::cerr << "exit funcs" << std::endl;
-  LOG_DEBUG_MSG("Running exit functions due to signal", signal_number);
   for(auto& e : exitFuncs_)
     e();
 }

@@ -67,7 +67,6 @@ namespace janosh {
 
   void Janosh::open(bool readOnly=false) {
     // open the database
-
     uint32_t mode;
     if(readOnly)
       mode = kc::PolyDB::OAUTOTRAN | kc::PolyDB::OREADER;
@@ -85,7 +84,6 @@ namespace janosh {
   }
 
   void Janosh::close() {
-    LOG_DEBUG("Shutting down database");
     if(isOpen()) {
       open_ = false;
       Record::db.close();
