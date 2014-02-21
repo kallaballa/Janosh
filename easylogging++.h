@@ -3698,7 +3698,7 @@ class Storage : base::NoCopy, public base::threading::ThreadSafe {
         setApplicationArguments(argc, const_cast<char**>(argv));
     }
 };
-extern std::unique_ptr<base::Storage> elStorage;
+extern base::Storage* elStorage;
 #define ELPP el::base::elStorage
 using std::string;
 class ThreadNameLookup {
@@ -5675,7 +5675,7 @@ static T* checkNotNull(T* ptr, const char* name, const char* loggerId = _CURRENT
 #define _INITIALIZE_EASYLOGGINGPP \
     namespace el {                \
         namespace base {          \
-            std::unique_ptr<base::Storage> elStorage(new base::Storage(api::LogBuilderPtr(new base::DefaultLogBuilder())));       \
+            base::Storage* elStorage = new base::Storage(api::LogBuilderPtr(new base::DefaultLogBuilder()));       \
         }                                                                        \
         base::debug::CrashHandler elCrashHandler(_ELPP_USE_DEF_CRASH_HANDLER);   \
     }

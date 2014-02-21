@@ -15,8 +15,8 @@
 namespace janosh {
 
 class TcpServer {
-  boost::asio::io_service io_service;
-  boost::asio::ip::tcp::acceptor acceptor;
+  boost::asio::io_service io_service_;
+  boost::asio::ip::tcp::acceptor acceptor_;
   static TcpServer* instance_;
   Cache cache_;
   TcpServer();

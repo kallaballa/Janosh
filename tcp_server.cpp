@@ -13,13 +13,15 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <boost/bind.hpp>
+
 #include "tcp_server.hpp"
 #include "format.hpp"
 #include "logger.hpp"
 #include "janosh_thread.hpp"
 #include "exception.hpp"
 #include "cache.hpp"
-
+#include "exithandler.hpp"
 
 namespace janosh {
 
@@ -32,19 +34,19 @@ using std::ostream;
 
 TcpServer* TcpServer::instance_;
 
-TcpServer::TcpServer() : io_service(), acceptor(io_service), cache_() {
+TcpServer::TcpServer() : io_service_(), acceptor_(io_service_), cache_() {
+  ExitHandler::getInstance()->addExitFunc([&](){this->close();});
 }
 
-
 void TcpServer::open(int port) {
-  tcp::resolver resolver(io_service);
+  tcp::resolver resolver(io_service_);
   tcp::resolver::query query("0.0.0.0", std::to_string(port));
   boost::asio::ip::tcp::endpoint endpoint = *resolver.resolve(query);
 
-  acceptor.open(endpoint.protocol());
-  acceptor.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
-  acceptor.bind(endpoint);
-  acceptor.listen();
+  acceptor_.open(endpoint.protocol());
+  acceptor_.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
+  acceptor_.bind(endpoint);
+  acceptor_.listen();
 }
 
 TcpServer::~TcpServer() {
@@ -52,11 +54,12 @@ TcpServer::~TcpServer() {
 }
 
 bool TcpServer::isOpen() {
-  return acceptor.is_open();
+  return acceptor_.is_open();
 }
 
 void TcpServer::close() {
-  acceptor.close();
+  LOG_DEBUG("Shutting down TcpServer");
+  io_service_.stop();
 }
 
 string reconstructCommandLine(Request& req) {
@@ -109,8 +112,8 @@ bool TcpServer::run() {
 	boost::asio::ip::tcp::socket* socket = NULL;
 
 	try  {
-	  socket = new boost::asio::ip::tcp::socket(io_service);
-	  acceptor.accept(*socket);
+	  socket = new boost::asio::ip::tcp::socket(io_service_);
+	  acceptor_.accept(*socket);
 	} catch(std::exception& ex) {
     LOG_DEBUG_STR("Closing socket");
     if (socket != NULL) {

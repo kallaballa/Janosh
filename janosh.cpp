@@ -9,6 +9,7 @@
 #include "json.hpp"
 #include "bash.hpp"
 #include "raw.hpp"
+#include "exithandler.hpp"
 
 #include <stack>
 #include <boost/program_options.hpp>
@@ -16,6 +17,7 @@
 #include <boost/tokenizer.hpp>
 #include <boost/token_functions.hpp>
 #include <boost/format.hpp>
+#include <boost/bind.hpp>
 #include "json_spirit/json_spirit.h"
 
 using std::string;
@@ -46,7 +48,7 @@ namespace janosh {
 		settings_(),
         triggers_(settings_.triggerFile, settings_.triggerDirs),
         cm_(makeCommandMap(this)) {
-  }
+ }
 
   Janosh::~Janosh() {
   }
@@ -74,6 +76,7 @@ namespace janosh {
     if(!Record::db.open(settings_.databaseFile.string(),  mode)) {
 			LOG_FATAL_MSG("open error: " + settings_.databaseFile.string(), Record::db.error().message());
     }
+    ExitHandler::getInstance()->addExitFunc([&](){this->close();});
     open_ = true;
   }
 
@@ -82,6 +85,7 @@ namespace janosh {
   }
 
   void Janosh::close() {
+    LOG_DEBUG("Shutting down database");
     if(isOpen()) {
       open_ = false;
       Record::db.close();
@@ -979,34 +983,10 @@ using namespace boost;
 using namespace janosh;
 namespace po = boost::program_options;
 
-void handleSigInt(int s) {
-  if(TcpServer::getInstance()->isOpen()) {
-    LOG_DEBUG_MSG("Shutting down tcp server due to sigint", s);
-    TcpServer::getInstance()->close();
-  }
-
-  if(Janosh::getInstance()->isOpen()) {
-    LOG_DEBUG_MSG("Shutting down janosh server due to sigint", s);
-    Janosh::getInstance()->close();
-  }
-}
-
-void registerSigIntHandler() {
-  struct sigaction sigIntHandler;
-
-  sigIntHandler.sa_handler = handleSigInt;
-  sigemptyset(&sigIntHandler.sa_mask);
-  sigIntHandler.sa_flags = 0;
-
-  sigaction(SIGINT, &sigIntHandler, NULL);
-  sigaction(SIGTERM, &sigIntHandler, NULL);
-}
-
 _INITIALIZE_EASYLOGGINGPP
 
 int main(int argc, char** argv) {
   _START_EASYLOGGINGPP(0, (const char**)NULL);
-  registerSigIntHandler();
   try {
     string targetList;
     string command;

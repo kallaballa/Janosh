@@ -19,6 +19,7 @@ namespace fs = boost::filesystem;
 using std::string;
 using std::vector;
 using std::map;
+using std::vector;
 using std::istream;
 using std::ostream;
 
