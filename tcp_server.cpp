@@ -116,6 +116,7 @@ bool TcpServer::run() {
 	} catch(std::exception& ex) {
     if (socket != NULL) {
       LOG_DEBUG_MSG("Closing socket", socket);
+      socket->shutdown(boost::asio::socket_base::shutdown_both);
       socket->close();
       delete socket;
     }
@@ -162,6 +163,7 @@ bool TcpServer::run() {
 	  } catch (std::exception& ex) {
       try {
         LOG_DEBUG_MSG("Closing socket", socket);
+        socket->shutdown(boost::asio::socket_base::shutdown_both);
         socket->close();
         delete socket;
       } catch (std::exception& ex) {
@@ -189,6 +191,7 @@ bool TcpServer::run() {
       } catch (std::exception& ex) {
         try {
           LOG_DEBUG_MSG("Closing socket", socket);
+          socket->shutdown(boost::asio::socket_base::shutdown_both);
           socket->close();
           delete socket;
         } catch (std::exception& ex) {
@@ -220,6 +223,7 @@ bool TcpServer::run() {
         }
         try {
           LOG_DEBUG_MSG("Closing socket", socket);
+          socket->shutdown(boost::asio::socket_base::shutdown_both);
           socket->close();
           delete socket;
         } catch (std::exception& ex) {
@@ -253,6 +257,7 @@ bool TcpServer::run() {
         cache_.unlock();
         try {
           LOG_DEBUG_MSG("Closing socket", socket);
+          socket->shutdown(boost::asio::socket_base::shutdown_both);
           socket->close();
           delete socket;
         } catch (std::exception& ex) {
