@@ -24,6 +24,7 @@
 
 #include "exception.hpp"
 #include "exithandler.hpp"
+#include "shared_pointers.hpp"
 
 namespace janosh {
 
@@ -109,7 +110,7 @@ string reconstructCommandLine(Request& req) {
   return cmdline;
 }
 
-void shutdown(tcp::socket* s) {
+void shutdown(socket_ptr s) {
   if (s != NULL) {
     LOG_DEBUG_MSG("Closing socket", s);
     s->shutdown(boost::asio::socket_base::shutdown_both);
@@ -117,10 +118,10 @@ void shutdown(tcp::socket* s) {
   }
 }
 bool TcpServer::run() {
-  tcp::socket* socket = NULL;
+  socket_ptr socket = NULL;
 
 	try  {
-	  socket = new tcp::socket(io_service_);
+	  socket = socket_ptr(new tcp::socket(io_service_));
 	  acceptor_.accept(*socket);
 	} catch(std::exception& ex) {
 	  shutdown(socket);
@@ -173,8 +174,8 @@ bool TcpServer::run() {
     if(!cachehit) {
       //FIXME use shared pointers!
       std::thread worker([=]() {
-        boost::asio::streambuf* out_buf = new boost::asio::streambuf();
-        ostream* out_stream = new ostream(out_buf);
+        streambuf_ptr out_buf(new boost::asio::streambuf());
+        ostream_ptr out_stream(new ostream(out_buf.get()));
 
         try {
           DatabaseThread* dt = new DatabaseThread(req, socket, out_stream);

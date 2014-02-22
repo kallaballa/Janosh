@@ -13,7 +13,7 @@
 
 namespace janosh {
 
-DatabaseThread::DatabaseThread(const Request& req, tcp::socket* socket, ostream* out) :
+DatabaseThread::DatabaseThread(const Request& req, socket_ptr socket, ostream_ptr out) :
     JanoshThread("Database"),
     req_(req),
     socket_(socket),

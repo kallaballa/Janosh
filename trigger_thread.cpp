@@ -12,7 +12,7 @@
 
 namespace janosh {
 
-TriggerThread::TriggerThread(Request& req, ostream* out) :
+TriggerThread::TriggerThread(Request& req, ostream_ptr out) :
     JanoshThread("Trigger"),
     req_(req),
     out_(out) {

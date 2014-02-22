@@ -15,7 +15,7 @@
 
 namespace janosh {
 
-CacheThread::CacheThread(tcp::socket* s) :
+CacheThread::CacheThread(socket_ptr s) :
     JanoshThread("Cache"),
     socket_(s) {
 }

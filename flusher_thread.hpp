@@ -4,17 +4,18 @@
 #include <boost/asio.hpp>
 #include "request.hpp"
 #include "janosh_thread.hpp"
+#include "shared_pointers.hpp"
 
 namespace janosh {
 
 using boost::asio::ip::tcp;
 
 class FlusherThread : public JanoshThread {
-  tcp::socket* socket_;
-  boost::asio::streambuf* out_buf_;
+  socket_ptr socket_;
+  streambuf_ptr out_buf_;
   bool cacheable_;
 public:
-  FlusherThread(tcp::socket* s, boost::asio::streambuf* out_buf, bool cacheable);
+  FlusherThread(socket_ptr s, streambuf_ptr out_buf, bool cacheable);
   void run();
 };
 } /* namespace janosh */

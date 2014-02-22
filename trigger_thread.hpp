@@ -7,6 +7,7 @@
 #include "format.hpp"
 #include "request.hpp"
 #include "janosh_thread.hpp"
+#include "shared_pointers.hpp"
 
 namespace janosh {
 
@@ -16,9 +17,9 @@ using std::ostream;
 
 class TriggerThread : public JanoshThread {
   Request req_;
-  ostream* out_;
+  ostream_ptr out_;
 public:
-  TriggerThread(Request& req, ostream* out);
+  TriggerThread(Request& req, ostream_ptr out);
   void run();
 };
 

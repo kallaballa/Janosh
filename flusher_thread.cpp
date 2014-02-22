@@ -15,7 +15,7 @@
 
 namespace janosh {
 
-FlusherThread::FlusherThread(tcp::socket* s, boost::asio::streambuf* out_buf, bool cacheable) :
+FlusherThread::FlusherThread(socket_ptr s, streambuf_ptr out_buf, bool cacheable) :
     JanoshThread("Flusher"),
     socket_(s),
     out_buf_(out_buf),

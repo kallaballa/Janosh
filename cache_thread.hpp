@@ -5,6 +5,7 @@
 #include <boost/asio.hpp>
 #include "request.hpp"
 #include "janosh_thread.hpp"
+#include "shared_pointers.hpp"
 
 namespace janosh {
 
@@ -12,9 +13,9 @@ using std::ostream;
 using boost::asio::ip::tcp;
 
 class CacheThread : public JanoshThread {
-  tcp::socket* socket_;
+  socket_ptr socket_;
 public:
-  CacheThread(tcp::socket* s);
+  CacheThread(socket_ptr s);
   void run();
 };
 } /* namespace janosh */

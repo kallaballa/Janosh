@@ -5,6 +5,7 @@
 #include <boost/asio.hpp>
 #include "request.hpp"
 #include "janosh_thread.hpp"
+#include "shared_pointers.hpp"
 
 namespace janosh {
 
@@ -13,10 +14,10 @@ using boost::asio::ip::tcp;
 
 class DatabaseThread : public JanoshThread {
   Request req_;
-  tcp::socket* socket_;
-  ostream* out_;
+  socket_ptr socket_;
+  ostream_ptr out_;
 public:
-  DatabaseThread(const Request& req, tcp::socket* socket, ostream* out);
+  DatabaseThread(const Request& req, socket_ptr socket, ostream_ptr out);
   void run();
 };
 } /* namespace janosh */
