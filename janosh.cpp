@@ -1102,12 +1102,17 @@ int main(int argc, char** argv) {
         client.connect("localhost", s.port);
         return client.run(req);
       } else {
+        assert(false);
+        /*
         Janosh* instance = Janosh::getInstance();
         instance->open(false);
-        JanoshThread jt(req, std::cout);
+        DatabaseThread dt(req, std::cout);
         int rc = jt.run();
         jt.join();
         return rc;
+
+        */
+        return 1;
       }
     }
   } catch (janosh_exception& ex) {

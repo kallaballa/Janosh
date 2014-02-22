@@ -106,7 +106,7 @@ namespace janosh {
 
   void Logger::registerThread(const string& name) {
     el::base::ThreadNameLookup::set(std::this_thread::get_id(),name);
-    LOG_DEBUG("Register thread");
+    LOG_DEBUG_MSG("Register thread", el::base::ThreadNameLookup::size());
   }
 
   void Logger::removeThread() {

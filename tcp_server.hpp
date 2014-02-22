@@ -13,12 +13,11 @@
 #include "cache.hpp"
 
 namespace janosh {
-
+using boost::asio::ip::tcp;
 class TcpServer {
   boost::asio::io_service io_service_;
   boost::asio::ip::tcp::acceptor acceptor_;
   static TcpServer* instance_;
-  Cache cache_;
   TcpServer();
 
 public:

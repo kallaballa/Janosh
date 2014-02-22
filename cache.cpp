@@ -10,6 +10,15 @@
 
 namespace janosh {
 
+Cache* Cache::instance_ = NULL;
+
+Cache* Cache::getInstance() {
+  if(instance_ == NULL)
+    instance_ = new Cache();
+
+  return instance_;
+}
+
 Cache::Cache() : valid_(false), len_(2048), data_((char*)malloc(len_)) {
   if(data_ == NULL)
     LOG_FATAL_STR("Unable to allocate cache");

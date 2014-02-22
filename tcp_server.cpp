@@ -18,9 +18,11 @@
 #include "tcp_server.hpp"
 #include "format.hpp"
 #include "logger.hpp"
-#include "janosh_thread.hpp"
+#include "database_thread.hpp"
+#include "flusher_thread.hpp"
+#include "cache_thread.hpp"
+
 #include "exception.hpp"
-#include "cache.hpp"
 #include "exithandler.hpp"
 
 namespace janosh {
@@ -34,7 +36,7 @@ using std::ostream;
 
 TcpServer* TcpServer::instance_;
 
-TcpServer::TcpServer() : io_service_(), acceptor_(io_service_), cache_() {
+TcpServer::TcpServer() : io_service_(), acceptor_(io_service_){
   ExitHandler::getInstance()->addExitFunc([&](){this->close();});
 }
 
@@ -107,19 +109,21 @@ string reconstructCommandLine(Request& req) {
   return cmdline;
 }
 
+void shutdown(tcp::socket* s) {
+  if (s != NULL) {
+    LOG_DEBUG_MSG("Closing socket", s);
+    s->shutdown(boost::asio::socket_base::shutdown_both);
+    s->close();
+  }
+}
 bool TcpServer::run() {
-	boost::asio::ip::tcp::socket* socket = NULL;
+  tcp::socket* socket = NULL;
 
 	try  {
-	  socket = new boost::asio::ip::tcp::socket(io_service_);
+	  socket = new tcp::socket(io_service_);
 	  acceptor_.accept(*socket);
 	} catch(std::exception& ex) {
-    if (socket != NULL) {
-      LOG_DEBUG_MSG("Closing socket", socket);
-      socket->shutdown(boost::asio::socket_base::shutdown_both);
-      socket->close();
-      delete socket;
-    }
+	  shutdown(socket);
 	  janosh::printException(ex);
 	  return false;
 	}
@@ -151,126 +155,51 @@ bool TcpServer::run() {
           && req.vecArgs_.size() == 1
           && req.vecArgs_[0] == "/.";
 
+      Cache* cache = Cache::getInstance();
       if(!cacheable && (!req.command_.empty() && (req.command_ != "get" && req.command_ != "dump" && req.command_ != "hash" && req.command_ != "size"))) {
         LOG_DEBUG_STR("Invalidating cache");
-        cache_.invalidate();
+        cache->invalidate();
       }
 
-      cachehit = cacheable && cache_.isValid();
+      cachehit = cacheable && cache->isValid();
 
       LOG_DEBUG_MSG("cacheable", cacheable);
       LOG_DEBUG_MSG("cachehit", cachehit);
 	  } catch (std::exception& ex) {
-      try {
-        LOG_DEBUG_MSG("Closing socket", socket);
-        socket->shutdown(boost::asio::socket_base::shutdown_both);
-        socket->close();
-        delete socket;
-      } catch (std::exception& ex) {
-        janosh::printException(ex);
-      }
+	    shutdown(socket);
       return true;
 	  }
 
     if(!cachehit) {
-      boost::asio::streambuf* out_buf = NULL;
-      ostream* out_stream = NULL;
-      JanoshThread* jt = NULL;
+      //FIXME use shared pointers!
+      std::thread worker([=]() {
+        boost::asio::streambuf* out_buf = new boost::asio::streambuf();
+        ostream* out_stream = new ostream(out_buf);
 
-      try {
-        out_buf = new boost::asio::streambuf();
-        out_stream = new ostream(out_buf);
-        jt = new JanoshThread(req, *out_stream);
-
-        int rc = jt->run();
-        boost::asio::streambuf rc_buf;
-        ostream rc_stream(&rc_buf);
-        rc_stream << std::to_string(rc) << '\n';
-        LOG_DEBUG_MSG("sending", rc_buf.size());
-        boost::asio::write(*socket, rc_buf);
-      } catch (std::exception& ex) {
         try {
-          LOG_DEBUG_MSG("Closing socket", socket);
-          socket->shutdown(boost::asio::socket_base::shutdown_both);
-          socket->close();
-          delete socket;
-        } catch (std::exception& ex) {
-          janosh::printException(ex);
-        }
-
-        if(out_buf)
-          delete out_buf;
-        if(out_stream)
-          delete out_stream;
-        if(jt)
-          delete jt;
-
-        return true;
-      }
-
-      std::thread flusher([=]{
-        Logger::registerThread("Flusher");
-        try {
-          jt->join();
-          LOG_DEBUG_MSG("sending", out_buf->size());
-          if(cacheable) {
-            LOG_DEBUG_STR("updating cache");
-            cache_.setData(boost::asio::buffer_cast<const char*>(out_buf->data()), out_buf->size());
+          DatabaseThread* dt = new DatabaseThread(req, socket, out_stream);
+          dt->runSynchron();
+          if(!dt->result())
+            shutdown(socket);
+          else {
+            FlusherThread* flusher = new FlusherThread(socket, out_buf, cacheable);
+            flusher->runAsynchron();
           }
-          boost::asio::write(*socket, *out_buf);
-        } catch(std::exception& ex) {
-          janosh::printException(ex);
-        }
-        try {
-          LOG_DEBUG_MSG("Closing socket", socket);
-          socket->shutdown(boost::asio::socket_base::shutdown_both);
-          socket->close();
-          delete socket;
         } catch (std::exception& ex) {
-          janosh::printException(ex);
+          shutdown(socket);
         }
-        if(out_buf)
-          delete out_buf;
-        if(out_stream)
-          delete out_stream;
-        if(jt)
-          delete jt;
-        Logger::removeThread();
       });
 
-      flusher.detach();
+      worker.detach();
     } else {
-      std::thread cacheWriter([=]() {
-        Logger::registerThread("CacheWriter");
-        cache_.lock();
-        try {
-          boost::asio::streambuf rc_buf;
-          ostream rc_stream(&rc_buf);
-          rc_stream << std::to_string(0) << '\n';
-          LOG_DEBUG_MSG("sending", rc_buf.size());
-          boost::asio::write(*socket, rc_buf);
-          LOG_DEBUG_MSG("sending", cache_.getSize());
-          boost::asio::write(*socket, boost::asio::buffer(cache_.getData(), cache_.getSize()));
-        } catch(std::exception& ex) {
-          janosh::printException(ex);
-        }
-        cache_.unlock();
-        try {
-          LOG_DEBUG_MSG("Closing socket", socket);
-          socket->shutdown(boost::asio::socket_base::shutdown_both);
-          socket->close();
-          delete socket;
-        } catch (std::exception& ex) {
-          janosh::printException(ex);
-        }
-        Logger::removeThread();
-      });
-
-      cacheWriter.detach();
+      CacheThread* cacheWriter = new CacheThread(socket);
+      cacheWriter->runAsynchron();
     }
   } catch (janosh_exception& ex) {
+    shutdown(socket);
     printException(ex);
   } catch (std::exception& ex) {
+    shutdown(socket);
     printException(ex);
   }
   return true;

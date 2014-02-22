@@ -18,8 +18,11 @@ class Cache {
   size_t len_;
   char* data_;
   std::mutex mutex_;
-public:
   Cache();
+  static Cache* instance_;
+public:
+  static Cache* getInstance();
+
   ~Cache();
 
   void lock();
