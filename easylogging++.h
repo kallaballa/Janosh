@@ -3754,6 +3754,10 @@ public:
     getInstance()->idLookup_.erase(threadID);
     getInstance()->mutex_.unlock();
   }
+
+  static size_t size() {
+    return getInstance()->idLookup_.size();
+  }
 };
 
 class DefaultLogBuilder : public api::LogBuilder {
