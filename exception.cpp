@@ -1,4 +1,5 @@
 #include <iostream>
+#include <ucontext.h>
 #include "exception.hpp"
 
 #ifdef _JANOSH_DEBUG
