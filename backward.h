@@ -1931,6 +1931,8 @@ private:
 		error_addr = reinterpret_cast<void*>(uctx->uc_mcontext.gregs[REG_RIP]);
 #elif defined(REG_EIP) // x86_32
 		error_addr = reinterpret_cast<void*>(uctx->uc_mcontext.gregs[REG_EIP]);
+#elif defined(REG_R14)
+    error_addr = reinterpret_cast<void*>(uctx->uc_mcontext.gregs[REG_R14]);
 #else
 #	warning ":/ sorry, ain't know no nothing none not of your architecture!"
 #endif

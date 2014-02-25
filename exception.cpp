@@ -7,12 +7,26 @@
 
 namespace janosh {
 janosh_exception::janosh_exception() {
-#if 0
+#ifdef _JANOSH_DEBUG
   using namespace backward;
   StackTrace st;
-  st.load_here(32);
+  StackTrace st;
+  void* error_addr = 0;
+
+#if defined(REG_R14)
+  register long r14 asm ("r14");
+  error_addr = reinterpret_cast<void*>(r14);
+#else
+# warning ":/ sorry, ain't know no nothing none not of your architecture!"
+#endif
+  if (error_addr) {
+    st.load_from(error_addr, 32);
+  } else {
+    st.load_here(32);
+  }
 
   Printer printer;
+  printer.address = true;
   printer.print(st, stderr);
 #endif
 }
