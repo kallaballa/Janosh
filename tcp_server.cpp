@@ -172,7 +172,6 @@ bool TcpServer::run() {
 	  }
 
     if(!cachehit) {
-      //FIXME use shared pointers!
       std::thread worker([=]() {
         streambuf_ptr out_buf(new boost::asio::streambuf());
         ostream_ptr out_stream(new ostream(out_buf.get()));
