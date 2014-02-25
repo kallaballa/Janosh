@@ -11,12 +11,11 @@ janosh_exception::janosh_exception() {
 #ifdef _JANOSH_DEBUG
   using namespace backward;
   StackTrace st;
-  StackTrace st;
   void* error_addr = 0;
 
 #if defined(REG_R14)
-  register long r14 asm ("r14");
-  error_addr = reinterpret_cast<void*>(r14);
+  register void* r14 asm ("r14");
+  error_addr = r14;
 #else
 # warning ":/ sorry, ain't know no nothing none not of your architecture!"
 #endif
