@@ -49,8 +49,6 @@ void DatabaseThread::run() {
     LOG_DEBUG_MSG("sending", rc_buf.size());
     boost::asio::write(*socket_, rc_buf);
     setResult(true);
-    TriggerThread* triggerThread = new TriggerThread(req_, out_);
-    triggerThread->runSynchron();
   } catch (janosh_exception& ex) {
     printException(ex);
     return;

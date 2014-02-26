@@ -10,7 +10,6 @@
 
 #include <boost/asio.hpp>
 #include "format.hpp"
-#include "cache.hpp"
 
 namespace janosh {
 using boost::asio::ip::tcp;

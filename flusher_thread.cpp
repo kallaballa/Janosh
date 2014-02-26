@@ -34,12 +34,5 @@ void FlusherThread::run() {
   } catch(std::exception& ex) {
     janosh::printException(ex);
   }
-  try {
-    LOG_DEBUG_MSG("Closing socket", socket);
-    socket_->shutdown(boost::asio::socket_base::shutdown_both);
-    socket_->close();
-  } catch (std::exception& ex) {
-    janosh::printException(ex);
-  }
 }
 } /* namespace janosh */
