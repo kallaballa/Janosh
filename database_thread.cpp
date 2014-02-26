@@ -43,24 +43,14 @@ void DatabaseThread::run() {
       throw janosh_exception() << msg_info("missing command");
     }
     rc = 0;
-
-    TriggerThread* triggerThread = new TriggerThread(req_, out_);
-    triggerThread->runSynchron();
-  } catch (janosh_exception& ex) {
-    printException(ex);
-    return;
-  } catch (std::exception& ex) {
-    printException(ex);
-    return;
-  }
-
-  try {
     boost::asio::streambuf rc_buf;
     ostream rc_stream(&rc_buf);
     rc_stream << std::to_string(rc) << '\n';
     LOG_DEBUG_MSG("sending", rc_buf.size());
     boost::asio::write(*socket_, rc_buf);
     setResult(true);
+    TriggerThread* triggerThread = new TriggerThread(req_, out_);
+    triggerThread->runSynchron();
   } catch (janosh_exception& ex) {
     printException(ex);
     return;
