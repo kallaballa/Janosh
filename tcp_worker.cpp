@@ -11,6 +11,7 @@
 #include "flusher_thread.hpp"
 #include "cache_thread.hpp"
 #include "trigger_thread.hpp"
+#include "janosh.hpp"
 #include "cache.hpp"
 
 namespace janosh {
@@ -26,6 +27,14 @@ void shutdown(socket_ptr s) {
     s->shutdown(boost::asio::socket_base::shutdown_both);
     s->close();
   }
+}
+
+void writeReturnCode(socket_ptr socket, int rc) {
+  boost::asio::streambuf rc_buf;
+  ostream rc_stream(&rc_buf);
+  rc_stream << std::to_string(rc) << '\n';
+  LOG_DEBUG_MSG("sending", rc_buf.size());
+  boost::asio::write(*socket, rc_buf);
 }
 
 string reconstructCommandLine(Request& req) {
@@ -77,72 +86,80 @@ string reconstructCommandLine(Request& req) {
 void TcpWorker::run() {
   try {
     Request req;
-     bool cacheable=false;
-     bool cachehit=false;
-     std::string peerAddr = socket_->remote_endpoint().address().to_string();
-     LOG_DEBUG_MSG("accepted", peerAddr);
-     LOG_DEBUG_MSG("socket", socket_);
+    bool cacheable = false;
+    bool cachehit = false;
+    std::string peerAddr = socket_->remote_endpoint().address().to_string();
+    LOG_DEBUG_MSG("accepted", peerAddr);
+    LOG_DEBUG_MSG("socket", socket_);
 
-     boost::asio::streambuf response;
-     boost::asio::read_until(*socket_, response, "\n");
-     std::istream response_stream(&response);
+    boost::asio::streambuf response;
+    boost::asio::read_until(*socket_, response, "\n");
+    std::istream response_stream(&response);
 
-     read_request(req, response_stream);
+    read_request(req, response_stream);
 
-     LOG_DEBUG_MSG("ppid", req.pinfo_.pid_);
-     LOG_DEBUG_MSG("cmdline", req.pinfo_.cmdline_);
-     LOG_INFO_STR(reconstructCommandLine(req));
+    LOG_DEBUG_MSG("ppid", req.pinfo_.pid_);
+    LOG_DEBUG_MSG("cmdline", req.pinfo_.cmdline_);
+    LOG_INFO_STR(reconstructCommandLine(req));
 
-     // only "-j get /." is cached
-     cacheable = req.command_ == "get"
-         && req.format_ == janosh::Json
-         && !req.runTriggers_
-         && req.vecTargets_.empty()
-         && req.vecArgs_.size() == 1
-         && req.vecArgs_[0] == "/.";
+    // only "-j get /." is cached
+    cacheable = req.command_ == "get" && req.format_ == janosh::Json && !req.runTriggers_ && req.vecTargets_.empty() && req.vecArgs_.size() == 1
+        && req.vecArgs_[0] == "/.";
 
-     Cache* cache = Cache::getInstance();
-     if(!cacheable && (!req.command_.empty() && (req.command_ != "get" && req.command_ != "dump" && req.command_ != "hash" && req.command_ != "size"))) {
-       LOG_DEBUG_STR("Invalidating cache");
-       cache->invalidate();
-     }
+    Cache* cache = Cache::getInstance();
+    if (!cacheable && (!req.command_.empty() && (req.command_ != "get" && req.command_ != "dump" && req.command_ != "hash" && req.command_ != "size"))) {
+      LOG_DEBUG_STR("Invalidating cache");
+      cache->invalidate();
+    }
 
-     cachehit = cacheable && cache->isValid();
+    cachehit = cacheable && cache->isValid();
 
-     LOG_DEBUG_MSG("cacheable", cacheable);
-     LOG_DEBUG_MSG("cachehit", cachehit);
+    LOG_DEBUG_MSG("cacheable", cacheable);
+    LOG_DEBUG_MSG("cachehit", cachehit);
 
-     if(!cachehit) {
-       streambuf_ptr out_buf(new boost::asio::streambuf());
-       ostream_ptr out_stream(new ostream(out_buf.get()));
+    Janosh* instance = Janosh::getInstance();
+    instance->setFormat(req.format_);
 
-       DatabaseThread* dt = new DatabaseThread(req, socket_, out_stream);
-       dt->runSynchron();
-       if(!dt->result()) {
-         shutdown(socket_);
-         return;
-       }
+    if (!cachehit) {
+      streambuf_ptr out_buf(new boost::asio::streambuf());
+      ostream_ptr out_stream(new ostream(out_buf.get()));
 
-       if(req.runTriggers_ || !req.vecTargets_.empty()) {
-         TriggerThread* triggerThread = new TriggerThread(req, out_stream);
-         triggerThread->runSynchron();
-         if(!triggerThread->result()) {
-           shutdown(socket_);
-           return;
-         }
-       }
+      if (!req.command_.empty()) {
+        DatabaseThread* dt = new DatabaseThread(req, out_stream);
+        dt->runSynchron();
+        bool result = dt->result();
 
-       FlusherThread* flusher = new FlusherThread(socket_, out_buf, cacheable);
-       flusher->runSynchron();
-       shutdown(socket_);
-     } else {
-       CacheThread* cacheWriter = new CacheThread(socket_);
-       cacheWriter->runSynchron();
-       shutdown(socket_);
-     }
-   } catch (std::exception& ex) {
-     janosh::printException(ex);
-     shutdown(socket_);
-   }
+        // report return code
+        writeReturnCode(socket_, result ? 0 : 1);
+
+        if (!result) {
+          shutdown(socket_);
+          return;
+        }
+      } else {
+        writeReturnCode(socket_, 0);
+      }
+
+      if (req.runTriggers_ || !req.vecTargets_.empty()) {
+        TriggerThread* triggerThread = new TriggerThread(req, out_stream);
+        triggerThread->runSynchron();
+        if (!triggerThread->result()) {
+          shutdown(socket_);
+          return;
+        }
+      }
+
+      FlusherThread* flusher = new FlusherThread(socket_, out_buf, cacheable);
+      flusher->runSynchron();
+      shutdown(socket_);
+    } else {
+      CacheThread* cacheWriter = new CacheThread(socket_);
+      cacheWriter->runSynchron();
+      shutdown(socket_);
+    }
+  } catch (std::exception& ex) {
+    janosh::printException(ex);
+    shutdown(socket_);
+  }
 }
 } /* namespace janosh */

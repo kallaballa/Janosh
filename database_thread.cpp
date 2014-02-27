@@ -13,18 +13,16 @@
 
 namespace janosh {
 
-DatabaseThread::DatabaseThread(const Request& req, socket_ptr socket, ostream_ptr out) :
+DatabaseThread::DatabaseThread(const Request& req, ostream_ptr out) :
     JanoshThread("Database"),
     req_(req),
-    socket_(socket),
     out_(out) {
 }
 
 void DatabaseThread::run() {
-  int rc = 1;
   try {
+    setResult(false);
     Janosh* instance = Janosh::getInstance();
-    instance->setFormat(req_.format_);
 
     if (!req_.command_.empty()) {
       LOG_DEBUG_MSG("Execute command", req_.command_);
@@ -42,12 +40,7 @@ void DatabaseThread::run() {
     } else if (req_.vecTargets_.empty()) {
       throw janosh_exception() << msg_info("missing command");
     }
-    rc = 0;
-    boost::asio::streambuf rc_buf;
-    ostream rc_stream(&rc_buf);
-    rc_stream << std::to_string(rc) << '\n';
-    LOG_DEBUG_MSG("sending", rc_buf.size());
-    boost::asio::write(*socket_, rc_buf);
+
     setResult(true);
   } catch (janosh_exception& ex) {
     printException(ex);
