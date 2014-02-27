@@ -123,7 +123,7 @@ void TcpWorker::run() {
          return;
        }
 
-       if(req.runTriggers_) {
+       if(req.runTriggers_ || !req.vecTargets_.empty()) {
          TriggerThread* triggerThread = new TriggerThread(req, out_stream);
          triggerThread->runSynchron();
          if(!triggerThread->result()) {
