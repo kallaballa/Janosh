@@ -13,12 +13,13 @@
 #include "path.hpp"
 #include "exception.hpp"
 #include <iostream>
+#include <thread>
 
 namespace janosh {
 using std::string;
 using std::map;
 using std::ostream;
-
+using std::thread;
 class Tracker {
 public:
   enum PrintDirective {
@@ -31,7 +32,7 @@ private:
   map<string, size_t> writes_;
   map<string, size_t> deletes_;
   map<string, size_t> triggers_;
-  static Tracker* instance_;
+  static map<thread::id, Tracker*> instances_;
   PrintDirective printDirective_;
   void printMeta(ostream& out);
   void printFull(ostream& out);

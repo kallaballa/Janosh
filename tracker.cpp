@@ -12,7 +12,7 @@ namespace janosh {
 using std::cerr;
 using std::endl;
 
-Tracker* Tracker::instance_ = NULL;
+map<thread::id, Tracker*> Tracker::instances_;
 
 void Tracker::update(const string& s, const Operation& op) {
   map<string, size_t>& m = get(op);
@@ -60,10 +60,16 @@ void Tracker::reset() {
 }
 
 Tracker* Tracker::getInstance() {
-  if(instance_ == NULL)
-    instance_ = new Tracker();
-
-  return instance_;
+  thread::id tid = std::this_thread::get_id();
+  auto it = instances_.find(tid);
+  Tracker* instance = NULL;
+  if(it == instances_.end()) {
+    instance = new Tracker();
+    instances_[tid] = instance;
+  } else {
+    instance = (*it).second;
+  }
+  return instance;
 }
 
 void printHeader(ostream& out) {
