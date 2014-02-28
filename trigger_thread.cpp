@@ -20,7 +20,7 @@ TriggerThread::TriggerThread(Request& req, ostream_ptr out) :
 
 void TriggerThread::run() {
   try {
-    Tracker* tracker = Tracker::getInstance();
+    Tracker* tracker = Tracker::getInstancePerThread();
 
     if(req_.runTriggers_ || !req_.vecTargets_.empty()) {
         if (req_.runTriggers_) {

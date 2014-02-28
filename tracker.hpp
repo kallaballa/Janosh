@@ -53,7 +53,7 @@ public:
   void reset();
   void print(ostream& out);
 
-  static Tracker* getInstance();
+  static Tracker* getInstancePerThread();
   static void setPrintDirective(PrintDirective p);
   static PrintDirective getPrintDirective();
 };

@@ -59,7 +59,7 @@ void Tracker::reset() {
   triggers_.clear();
 }
 
-Tracker* Tracker::getInstance() {
+Tracker* Tracker::getInstancePerThread() {
   thread::id tid = std::this_thread::get_id();
   auto it = instances_.find(tid);
   Tracker* instance = NULL;
@@ -137,11 +137,11 @@ void Tracker::print(ostream& out) {
 }
 
 Tracker::PrintDirective Tracker::getPrintDirective() {
-  return Tracker::getInstance()->printDirective_;
+  return Tracker::getInstancePerThread()->printDirective_;
 }
 
 void Tracker::setPrintDirective(PrintDirective p) {
-  Tracker::getInstance()->printDirective_ = p;
+  Tracker::getInstancePerThread()->printDirective_ = p;
 }
 
 } /* namespace janosh */

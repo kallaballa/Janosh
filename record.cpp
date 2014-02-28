@@ -262,7 +262,7 @@ namespace janosh {
       throw record_exception() << path_info({"no value found", this->pathObj});
 
 
-    Tracker::getInstance()->update(path().pretty(), Tracker::READ);
+    Tracker::getInstancePerThread()->update(path().pretty(), Tracker::READ);
     string v;
     bool s = getCursorPtr()->get_value(&v);
 

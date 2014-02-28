@@ -54,7 +54,7 @@ namespace janosh {
   }
 
   void updateTracker(const string& str, const Tracker::Operation& op) {
-    Tracker::getInstance()->update(str, op);
+    Tracker::getInstancePerThread()->update(str, op);
   }
 
   void Janosh::setFormat(Format f) {
