@@ -64,7 +64,7 @@ public:
   size_t shift(Record& src, Record& dest);
 
   size_t dump(ostream& out);
-  size_t hash();
+  size_t hash(ostream& out);
   size_t truncate();
   static Janosh* getInstance();
 private:

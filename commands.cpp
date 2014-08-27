@@ -40,7 +40,7 @@ public:
       LOG_DEBUG_STR("hash doesn't take any parameters");
       return {-1, "Failed"};
     } else {
-      return {janosh->hash(), "Successful"};
+      return {janosh->hash(out), "Successful"};
     }
   }
 };

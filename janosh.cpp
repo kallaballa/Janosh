@@ -608,7 +608,7 @@ namespace janosh {
    * Calculates a hash value over all records
    * @return number of total records hashed.
    */
-  size_t Janosh::hash() {
+  size_t Janosh::hash(std::ostream& out) {
     kc::DB::Cursor* cur = Record::db.cursor();
     string key,value;
     cur->jump();
@@ -619,7 +619,7 @@ namespace janosh {
       h = hasher(lexical_cast<string>(h) + key + value);
       ++cnt;
     }
-    std::cout << h << std::endl;
+    out << h << std::endl;
     delete cur;
     return cnt;
   }
