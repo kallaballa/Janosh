@@ -207,6 +207,25 @@ namespace janosh {
     return Record(this->path().parent());
   }
 
+  vector<Record> Record::getParents() const {
+    vector<Record> parents;
+    if(this->path().isRoot())
+      return parents;
+
+    Record parent = this->parent();
+    while(true) {
+      parents.push_back(parent);
+      if(parent.path().isRoot())
+        break;
+
+      parent = parent.parent();
+    }
+
+    std::reverse(parents.begin(), parents.end());
+
+    return parents;
+  }
+
   const bool Record::isArray() const {
     return this->isDirectory() && this->getType() == Value::Array;
   }

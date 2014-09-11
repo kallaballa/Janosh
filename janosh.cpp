@@ -140,9 +140,9 @@ namespace janosh {
       }
 
       if (rec.isDirectory()) {
-        recurse(rec, vis, out);
+        recurseDirectory(rec, vis, out);
       } else {
-        vis->record(rec.path(), rec.value(), false, false);
+        recurseValue(rec, vis, out);
       }
     }
 
@@ -151,7 +151,85 @@ namespace janosh {
     return cnt;
   }
 
-  size_t Janosh::recurse(Record& travRoot, PrintVisitor* vis, ostream& out) {
+  size_t Janosh::recurseValue(Record& travRoot, PrintVisitor* vis, ostream& out) {
+    JANOSH_TRACE( { travRoot });
+
+    vector<Record> parents = travRoot.getParents();
+    parents.push_back(travRoot);
+
+    std::stack<std::pair<const Component, const Value::Type> > hierachy;
+    size_t cnt = 0;
+    Record root("/.");
+    Path last;
+    Record rec;
+    for (size_t i = 0; i < parents.size(); ++i) {
+      rec = parents[i];
+      rec.fetch();
+      const Path& path = rec.path();
+      const Value& value = rec.value();
+      const Value::Type& t = rec.getType();
+      const Path& parent = path.parent();
+
+      const Component& name = path.name();
+      const Component& parentName = parent.name();
+
+      if (!hierachy.empty()) {
+        if (!last.above(path) && ((!last.isDirectory() && parentName != last.parentName()) || (last.isDirectory() && parentName != last.name()))) {
+          while (!hierachy.empty() && hierachy.top().first != parentName) {
+            if (hierachy.top().second == Value::Array) {
+              vis->endArray(path);
+            } else if (hierachy.top().second == Value::Object) {
+              vis->endObject(path);
+            }
+            hierachy.pop();
+          }
+        }
+      }
+
+      if (t == Value::Array) {
+        Value::Type parentType;
+        if (hierachy.empty())
+          parentType = Value::Array;
+        else
+          parentType = hierachy.top().second;
+
+        hierachy.push( { name, Value::Array });
+        vis->beginArray(path, parentType == Value::Array, last.isEmpty() || last == parent);
+      } else if (t == Value::Object) {
+        Value::Type parentType;
+        if (hierachy.empty())
+          parentType = Value::Array;
+        else
+          parentType = hierachy.top().second;
+
+        hierachy.push( { name, Value::Object });
+        vis->beginObject(path, parentType == Value::Array, last.isEmpty() || last == parent);
+      } else {
+        bool first = last.isEmpty() || last == parent;
+        if (!hierachy.empty()) {
+          vis->record(path, value, hierachy.top().second == Value::Array, first);
+        } else {
+          vis->record(path, value, false, first);
+        }
+      }
+      last = path;
+      ++cnt;
+    }
+
+    while (!hierachy.empty()) {
+      if (hierachy.top().second == Value::Array) {
+        vis->endArray("");
+      } else if (hierachy.top().second == Value::Object) {
+        vis->endObject("");
+      }
+      hierachy.pop();
+    }
+
+    return 1;
+  }
+
+
+  size_t Janosh::recurseDirectory(Record& travRoot, PrintVisitor* vis, ostream& out) {
     JANOSH_TRACE( { travRoot });
 
     size_t cnt = 0;

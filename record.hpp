@@ -51,7 +51,7 @@ namespace janosh {
     const Path& path() const;
     const Value& value() const;
     Record parent() const;
-
+    vector<Record> getParents() const;
 
     const bool isAncestorOf(const Record& other) const;
     const bool isArray() const;
