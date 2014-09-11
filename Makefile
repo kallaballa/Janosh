@@ -1,4 +1,4 @@
-CXX     := g++-4.8
+CXX     := g++-4.7
 TARGET  := janosh
 SRCS    := janosh.cpp logger.cpp record.cpp path.cpp value.cpp exception.cpp cache.cpp json_spirit/json_spirit_reader.cpp  json_spirit/json_spirit_value.cpp  json_spirit/json_spirit_writer.cpp tcp_server.cpp tcp_client.cpp janosh_thread.cpp commands.cpp trigger_base.cpp settings.cpp request.cpp tracker.cpp backward.cpp component.cpp json.cpp bash.cpp raw.cpp util.cpp exithandler.cpp cache_thread.cpp database_thread.cpp flusher_thread.cpp trigger_thread.cpp tcp_worker.cpp
 #precompiled headers
@@ -33,7 +33,7 @@ static: ${TARGET}
 
 screeninvader: LDFLAGS += -s
 screeninvader: CXXFLAGS += -D_JANOSH_DEBUG -mfloat-abi=hard -mfpu=neon -g0 -O3 
-screeninvader: LIBS = -Wl,-Bstatic -lboost_serialization -lboost_program_options -lboost_system -lboost_filesystem -lkyotocabinet  -llzma -llzo2 -Wl,-Bdynamic -lz -lpthread -lrt -ldl
+screeninvader: LIBS = -Wl,-Bstatic -lboost_serialization -lboost_system -lboost_filesystem -lkyotocabinet  -llzma -llzo2 -Wl,-Bdynamic -lz -lpthread -lrt -ldl -lboost_program_options
 screeninvader: ${TARGET}
 
 screeninvader_debug: LDFLAGS += -Wl,--export-dynamic
