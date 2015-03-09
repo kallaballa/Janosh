@@ -4,8 +4,8 @@
 #include <string>
 #include <vector>
 #include <iostream>
-#include "../logger.hpp"
-#include "../request.hpp"
+#include "logger.hpp"
+#include "request.hpp"
 
 extern "C" {
 # include "luajit-2.0/lua.h"

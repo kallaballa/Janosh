@@ -1,6 +1,6 @@
 #include "lua_script.hpp"
 #include <vector>
-#include "../request.hpp"
+#include <sstream>
 
 namespace janosh {
 namespace lua {
@@ -47,7 +47,7 @@ static int l_set(lua_State* L) {
   }
 
   string command = "set";
-  janosh::Request req(janosh::Format::Json, command, args, trigger, false, false, get_parent_info());
+  janosh::Request req(janosh::Format::Json, command, args, trigger, true, false, get_parent_info());
   script->performRequest(req);
   return 0;
 }
