@@ -27,7 +27,7 @@ void TcpClient::connect(string host, int port) {
 	    boost::asio::connect(socket, iterator);
 }
 
-int TcpClient::run(Request& req) {
+int TcpClient::run(Request& req, std::ostream& out) {
   boost::asio::streambuf request;
   std::ostream request_stream(&request);
 
@@ -54,7 +54,7 @@ int TcpClient::run(Request& req) {
 	  while(response_stream) {
 	    boost::asio::read_until(socket, response,"\n");
 	    std::getline(response_stream, line);
-	    std::cout << line << std::endl;
+	    out << line << std::endl;
 	  }
 	} catch(std::exception& ex) {
 	}

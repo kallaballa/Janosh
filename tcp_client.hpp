@@ -19,7 +19,7 @@ public:
 	TcpClient();
 	virtual ~TcpClient();
 	void connect(std::string host, int port);
-	int run(Request& req);
+	int run(Request& req, std::ostream& out);
 	void close();
 };
 

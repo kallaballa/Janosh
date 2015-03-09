@@ -10,6 +10,7 @@
 #include "bash.hpp"
 #include "raw.hpp"
 #include "exithandler.hpp"
+#include "lua_script.hpp"
 
 #include <stack>
 #include <boost/program_options.hpp>
@@ -1066,6 +1067,7 @@ int main(int argc, char** argv) {
   try {
     string targetList;
     string command;
+    string luafile;
     vector<string> arguments;
     int trackingLevel = 0;
 
@@ -1073,7 +1075,7 @@ int main(int argc, char** argv) {
     genericDesc.add_options()
       ("help,h", "Produce help message")
       ("daemon,d", "Run in daemon mode")
-      ("single,s", "Run in stand alone mode")
+      ("luafile,f", po::value<string>(&luafile), "Run the lua script file")
       ("json,j", "Produce json output")
       ("raw,r", "Produce raw output")
       ("bash,b", "Produce bash output")
@@ -1108,7 +1110,6 @@ int main(int argc, char** argv) {
     bool execTargets = vm.count("targets");
     bool verbose = vm.count("verbose");
     bool daemon = vm.count("daemon");
-    bool single = vm.count("single");
     bool tracing = vm.count("tracing");
     bool dblog = vm.count("dblog");
     if (verbose)
@@ -1137,7 +1138,7 @@ int main(int argc, char** argv) {
     else if(vm.count("raw"))
       f = janosh::Raw;
 
-    if(vm.count("daemon") && (vm.count("bash") || vm.count("raw") || vm.count("json") || execTriggers || execTargets || single)) {
+    if(vm.count("daemon") && (vm.count("bash") || vm.count("raw") || vm.count("json") || execTriggers || execTargets)) {
       LOG_FATAL_STR("Incompatible option(s) conflicting with daemon mode detected");
     }
 
@@ -1148,7 +1149,6 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-
     Logger::setTracing(tracing);
     Logger::setDBLogging(dblog);
     Tracker::setPrintDirective(printDirective);
@@ -1156,12 +1156,16 @@ int main(int argc, char** argv) {
     if (daemon) {
       Janosh* instance = Janosh::getInstance();
       instance->open(false);
-      TcpServer* server = TcpServer::getInstance();
-      server->open(instance->settings_.port);
-      while (server->run()) {
+      if(luafile.empty()) {
+        TcpServer* server = TcpServer::getInstance();
+        server->open(instance->settings_.port);
+        while (server->run()) {
+        }
+      } else {
+
       }
     } else {
-      if (command.empty() && !execTargets) {
+      if (command.empty() && !execTargets && luafile.empty()) {
         throw janosh_exception() << msg_info("missing command");
       }
 
@@ -1173,24 +1177,25 @@ int main(int argc, char** argv) {
         }
       }
 
-      Request req(f, command, arguments, vecTargets, execTriggers, verbose, get_parent_info());
-      if(!single) {
+      if(luafile.empty()) {
         Settings s;
+        Request req(f, command, arguments, vecTargets, execTriggers, verbose, get_parent_info());
         TcpClient client;
         client.connect("localhost", s.port);
-        return client.run(req);
+        return client.run(req, std::cout);
       } else {
-        assert(false);
-        /*
-        Janosh* instance = Janosh::getInstance();
-        instance->open(false);
-        DatabaseThread dt(req, std::cout);
-        int rc = jt.run();
-        jt.join();
-        return rc;
+        lua::LuaScript::init([](Request& req){
+          Settings s;
+          TcpClient client;
+          client.connect("localhost", s.port);
+          std::stringstream ss;
+          client.run(req, ss);
+          return ss.str();
+        });
 
-        */
-        return 1;
+        lua::LuaScript* script = lua::LuaScript::getInstance();
+        script->load(luafile);
+        script->run();
       }
     }
   } catch (janosh_exception& ex) {

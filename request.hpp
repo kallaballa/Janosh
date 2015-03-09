@@ -38,7 +38,7 @@ public:
   Request() {
   }
 
-  Request(Format& format, string& command, vector<string>& vecArgs, vector<string>& vecTargets, bool& triggers, bool& verbose, ProcessInfo pinfo_) :
+  Request(const Format& format, const string& command, const vector<string>& vecArgs, const vector<string>& vecTargets, const bool& triggers, const bool& verbose, ProcessInfo pinfo_) :
    format_(format),
    command_(command),
    vecArgs_(vecArgs),
