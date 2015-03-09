@@ -10,9 +10,6 @@ using std::vector;
 LuaScript* LuaScript::instance = NULL;
 
 static int l_get(lua_State* L) {
-  LuaScript* script = LuaScript::getInstance();
-  assert(L == script->L);
-
   std::vector< string > args;
   vector<string> trigger;
 
@@ -26,15 +23,12 @@ static int l_get(lua_State* L) {
 
   string command = "get";
   janosh::Request req(janosh::Format::Json, command, args, trigger, false, false, get_parent_info());
-  string result = script->performRequest(req);
+  string result = LuaScript::getInstance()->performRequest(req);
   lua_pushstring(L, result.c_str());
   return 1;
 }
 
 static int l_set(lua_State* L) {
-  LuaScript* script = LuaScript::getInstance();
-  assert(L == script->L);
-
   std::vector< string > args;
   vector<string> trigger;
 
@@ -48,7 +42,7 @@ static int l_set(lua_State* L) {
 
   string command = "set";
   janosh::Request req(janosh::Format::Json, command, args, trigger, true, false, get_parent_info());
-  script->performRequest(req);
+  string result = LuaScript::getInstance()->performRequest(req);
   return 0;
 }
 
