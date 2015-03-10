@@ -78,7 +78,7 @@ namespace janosh {
     }
   };
 
-  #define LOG_GLOBA_STR(x) if(Logger::getLevel() >= L_GLOBAL) LOG(GLOBAL) << x;
+  #define LOG_GLOBAL_STR(x) if(Logger::getLevel() >= L_GLOBAL) LOG(GLOBAL) << x;
   #define LOG_DEBUG_STR(x) if(Logger::getLevel() >= L_DEBUG) LOG(DEBUG) << x;
   #define LOG_INFO_STR(x) if(Logger::getLevel() >= L_INFO) LOG(INFO) << x;
   #define LOG_WARN_STR(x) if(Logger::getLevel() >= L_WARNING) LOG(WARNING) << x;
