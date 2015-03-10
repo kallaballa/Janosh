@@ -43,7 +43,7 @@ int TcpClient::run(Request& req, std::ostream& out) {
 	int returnCode = std::stoi(strReturnCode);
 
 	if(returnCode == 0 ) {
-	  LOG_INFO_STR("Successful");
+	  LOG_DEBUG_STR("Successful");
 	}
 	else {
 	  LOG_INFO_STR("Failed");
