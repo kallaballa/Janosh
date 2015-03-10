@@ -106,7 +106,7 @@ public:
     }
     lua_State* L;
 private:
-    int level;
+    int level = 0;
     static LuaScript* instance;
     std::function<string(janosh::Request&)> requestCallback;
 };

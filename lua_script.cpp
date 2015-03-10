@@ -1,6 +1,7 @@
 #include "lua_script.hpp"
 #include <vector>
 #include <sstream>
+#include <boost/lexical_cast.hpp>
 
 namespace janosh {
 namespace lua {
@@ -9,7 +10,23 @@ using std::vector;
 
 LuaScript* LuaScript::instance = NULL;
 
-static int l_get(lua_State* L) {
+static inline std::string &ltrim(std::string &s) {
+        s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
+        return s;
+}
+
+// trim from end
+static inline std::string &rtrim(std::string &s) {
+        s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
+        return s;
+}
+
+// trim from both ends
+static inline std::string &trim(std::string &s) {
+        return ltrim(rtrim(s));
+}
+
+static janosh::Request make_request(string command, lua_State* L) {
   std::vector< string > args;
   vector<string> trigger;
 
@@ -21,14 +38,20 @@ static int l_get(lua_State* L) {
       lua_pop( L, 1 );
   }
 
-  string command = "get";
-  janosh::Request req(janosh::Format::Json, command, args, trigger, false, false, get_parent_info());
-  string result = LuaScript::getInstance()->performRequest(req);
-  lua_pushstring(L, result.c_str());
+  return Request(janosh::Format::Json, command, args, trigger, false, false, get_parent_info());
+}
+
+static int l_get(lua_State* L) {
+  lua_pushstring(L, (LuaScript::getInstance()->performRequest(make_request("get", L))).c_str());
   return 1;
 }
 
 static int l_set(lua_State* L) {
+  LuaScript::getInstance()->performRequest(make_request("set", L));
+  return 0;
+}
+
+static int l_trigger(lua_State* L) {
   std::vector< string > args;
   vector<string> trigger;
 
@@ -40,18 +63,119 @@ static int l_set(lua_State* L) {
       lua_pop( L, 1 );
   }
 
-  string command = "set";
-  janosh::Request req(janosh::Format::Json, command, args, trigger, true, false, get_parent_info());
-  string result = LuaScript::getInstance()->performRequest(req);
+  Request req(janosh::Format::Json, "set", args, trigger, true, false, get_parent_info());
+  LuaScript::getInstance()->performRequest(req);
   return 0;
+}
+
+static int l_load(lua_State* L) {
+  LuaScript::getInstance()->performRequest(make_request("load", L));
+  return 0;
+}
+
+static int l_remove(lua_State* L) {
+  LuaScript::getInstance()->performRequest(make_request("remove", L));
+  return 0;
+}
+
+static int l_append(lua_State* L) {
+  LuaScript::getInstance()->performRequest(make_request("append", L));
+  return 0;
+}
+
+static int l_add(lua_State* L) {
+  LuaScript::getInstance()->performRequest(make_request("add", L));
+  return 0;
+}
+
+static int l_replace(lua_State* L) {
+  LuaScript::getInstance()->performRequest(make_request("replace", L));
+  return 0;
+}
+
+static int l_dump(lua_State* L) {
+  LuaScript::getInstance()->performRequest(make_request("dump", L));
+  return 0;
+}
+
+static int l_shift(lua_State* L) {
+  LuaScript::getInstance()->performRequest(make_request("shift", L));
+  return 0;
+}
+
+static int l_mkarr(lua_State* L) {
+  LuaScript::getInstance()->performRequest(make_request("mkarr", L));
+  return 0;
+}
+
+static int l_mkobj(lua_State* L) {
+  LuaScript::getInstance()->performRequest(make_request("mkobj", L));
+  return 0;
+}
+
+static int l_size(lua_State* L) {
+  std::string strSize = LuaScript::getInstance()->performRequest(make_request("size", L));
+  size_t size = boost::lexical_cast<size_t>(trim(strSize));
+  lua_pushinteger(L, size);
+  return 1;
+}
+
+static int l_copy(lua_State* L) {
+  LuaScript::getInstance()->performRequest(make_request("copy", L));
+  return 0;
+}
+
+static int l_move(lua_State* L) {
+  LuaScript::getInstance()->performRequest(make_request("move", L));
+  return 0;
+}
+
+static int l_truncate(lua_State* L) {
+  LuaScript::getInstance()->performRequest(make_request("truncate", L));
+  return 0;
+}
+
+static int l_hash(lua_State* L) {
+  lua_pushstring(L, (LuaScript::getInstance()->performRequest(make_request("hash", L))).c_str());
+  return 1;
 }
 
 LuaScript::LuaScript(std::function<string(janosh::Request&)> requestCallback) : requestCallback(requestCallback) {
   L = luaL_newstate();
-  lua_pushcfunction(L, l_get);
-  lua_setglobal(L, "get");
+  lua_pushcfunction(L, l_load);
+  lua_setglobal(L, "load");
   lua_pushcfunction(L, l_set);
   lua_setglobal(L, "set");
+  lua_pushcfunction(L, l_add);
+  lua_setglobal(L, "add");
+  lua_pushcfunction(L, l_trigger);
+  lua_setglobal(L, "trigger");
+  lua_pushcfunction(L, l_replace);
+  lua_setglobal(L, "replace");
+  lua_pushcfunction(L, l_append);
+  lua_setglobal(L, "append");
+  lua_pushcfunction(L, l_dump);
+  lua_setglobal(L, "dump");
+  lua_pushcfunction(L, l_size);
+  lua_setglobal(L, "size");
+  lua_pushcfunction(L, l_get);
+  lua_setglobal(L, "get");
+  lua_pushcfunction(L, l_copy);
+  lua_setglobal(L, "copy");
+  lua_pushcfunction(L, l_remove);
+  lua_setglobal(L, "remove");
+  lua_pushcfunction(L, l_shift);
+  lua_setglobal(L, "shift");
+  lua_pushcfunction(L, l_move);
+  lua_setglobal(L, "move");
+  lua_pushcfunction(L, l_truncate);
+  lua_setglobal(L, "truncate");
+  lua_pushcfunction(L, l_mkarr);
+  lua_setglobal(L, "mkarr");
+  lua_pushcfunction(L, l_mkobj);
+  lua_setglobal(L, "mkobj");
+  lua_pushcfunction(L, l_hash);
+  lua_setglobal(L, "hash");
 }
 
 LuaScript::~LuaScript() {
@@ -94,7 +218,7 @@ std::vector<std::string> LuaScript::getTableKeys(const std::string& name) {
     std::string test = lua_tostring(L, -1);
     std::vector<std::string> strings;
     std::string temp = "";
-    std::cout<<"TEMP:"<<test<<std::endl;
+
     for(unsigned int i = 0; i < test.size(); i++) {     
         if(test.at(i) != ',') {
             temp += test.at(i);
