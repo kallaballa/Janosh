@@ -60,7 +60,6 @@ namespace janosh {
       LOG(DEBUG) << ss.str();
       break;
       case INFO:
-      LOG(INFO) << ss.str();
       break;
       case WARN:
       LOG(WARNING) << ss.str();
