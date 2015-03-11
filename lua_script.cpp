@@ -3,6 +3,12 @@
 #include <sstream>
 #include <boost/lexical_cast.hpp>
 
+extern char _binary_JSON_lua_start;
+extern char _binary_JSON_lua_end;
+
+extern char _binary_JanoshAPI_lua_start;
+extern char _binary_JanoshAPI_lua_end;
+
 namespace janosh {
 namespace lua {
 
@@ -142,40 +148,60 @@ static int l_hash(lua_State* L) {
 
 LuaScript::LuaScript(std::function<string(janosh::Request&)> requestCallback) : requestCallback(requestCallback) {
   L = luaL_newstate();
+  luaL_openlibs(L);
   lua_pushcfunction(L, l_load);
-  lua_setglobal(L, "load");
+  lua_setglobal(L, "janosh_load");
   lua_pushcfunction(L, l_set);
-  lua_setglobal(L, "set");
+  lua_setglobal(L, "janosh_set");
   lua_pushcfunction(L, l_add);
-  lua_setglobal(L, "add");
+  lua_setglobal(L, "janosh_add");
   lua_pushcfunction(L, l_trigger);
-  lua_setglobal(L, "trigger");
+  lua_setglobal(L, "janosh_trigger");
   lua_pushcfunction(L, l_replace);
-  lua_setglobal(L, "replace");
+  lua_setglobal(L, "janosh_replace");
   lua_pushcfunction(L, l_append);
-  lua_setglobal(L, "append");
+  lua_setglobal(L, "janosh_append");
   lua_pushcfunction(L, l_dump);
-  lua_setglobal(L, "dump");
+  lua_setglobal(L, "janosh_dump");
   lua_pushcfunction(L, l_size);
-  lua_setglobal(L, "size");
+  lua_setglobal(L, "janosh_size");
   lua_pushcfunction(L, l_get);
-  lua_setglobal(L, "get");
+  lua_setglobal(L, "janosh_get");
   lua_pushcfunction(L, l_copy);
-  lua_setglobal(L, "copy");
+  lua_setglobal(L, "janosh_copy");
   lua_pushcfunction(L, l_remove);
-  lua_setglobal(L, "remove");
+  lua_setglobal(L, "janosh_remove");
   lua_pushcfunction(L, l_shift);
-  lua_setglobal(L, "shift");
+  lua_setglobal(L, "janosh_shift");
   lua_pushcfunction(L, l_move);
-  lua_setglobal(L, "move");
+  lua_setglobal(L, "janosh_move");
   lua_pushcfunction(L, l_truncate);
-  lua_setglobal(L, "truncate");
+  lua_setglobal(L, "janosh_truncate");
   lua_pushcfunction(L, l_mkarr);
-  lua_setglobal(L, "mkarr");
+  lua_setglobal(L, "janosh_mkarr");
   lua_pushcfunction(L, l_mkobj);
-  lua_setglobal(L, "mkobj");
+  lua_setglobal(L, "janosh_mkobj");
   lua_pushcfunction(L, l_hash);
-  lua_setglobal(L, "hash");
+  lua_setglobal(L, "janosh_hash");
+
+  std::stringstream ss;
+  char*  p = &_binary_JSON_lua_start;
+  while ( p != &_binary_JSON_lua_end ) ss << *p++;
+  luaL_loadstring(L, ss.str().c_str());
+  if(lua_pcall(L, 0, 1, 0)) {
+    LOG_ERR_MSG("Preloading JSON library failed", lua_tostring(L, -1));
+  }
+  lua_setglobal(L, "JSON");
+
+  ss.str("");
+
+  p = &_binary_JanoshAPI_lua_start;
+  while ( p != &_binary_JanoshAPI_lua_end ) ss << *p++;
+  luaL_loadstring(L, ss.str().c_str());
+  if(lua_pcall(L, 0, 1, 0)) {
+    LOG_ERR_MSG("Preloading JanoshAPI library failed", lua_tostring(L, -1));
+  }
+  lua_setglobal(L, "Janosh");
 }
 
 LuaScript::~LuaScript() {
@@ -185,8 +211,6 @@ LuaScript::~LuaScript() {
 void LuaScript::load(const std::string& path) {
   if (luaL_loadfile(L, path.c_str())) {
     LOG_ERR_MSG("Failed to load script", lua_tostring(L, -1));
-  } else {
-    if(L) luaL_openlibs(L);
   }
 }
 

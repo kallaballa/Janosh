@@ -29,17 +29,17 @@ reduce: ${TARGET}
 
 static: LDFLAGS += -s
 static: CXXFLAGS += -g0 -O3
-static: LIBS = -Wl,-Bstatic -lboost_serialization -lboost_program_options -lboost_system -lboost_filesystem -lkyotocabinet  -llzma -llzo2 -Wl,-Bdynamic -lz -lpthread -lrt -ldl
+static: LIBS = -Wl,-Bstatic -lboost_serialization -lboost_program_options -lboost_system -lboost_filesystem -lkyotocabinet  -llzma -llzo2 -Wl,-Bdynamic -lz -lpthread -lrt -ldl -lluajit-5.1
 static: ${TARGET}
 
 screeninvader: LDFLAGS += -s
 screeninvader: CXXFLAGS += -D_JANOSH_DEBUG -mfloat-abi=hard -mfpu=neon -g0 -O3 
-screeninvader: LIBS = -Wl,-Bstatic -lboost_serialization -lboost_system -lboost_filesystem -lkyotocabinet  -llzma -llzo2 -Wl,-Bdynamic -lz -lpthread -lrt -ldl -lboost_program_options
+screeninvader: LIBS = -Wl,-Bstatic -lboost_serialization -lboost_system -lboost_filesystem -lkyotocabinet  -llzma -llzo2 -Wl,-Bdynamic -lz -lpthread -lrt -ldl -lboost_program_options -lluajit-5.1
 screeninvader: ${TARGET}
 
 screeninvader_debug: LDFLAGS += -Wl,--export-dynamic
 screeninvader_debug: CXXFLAGS += -D_JANOSH_DEBUG -mfloat-abi=hard -mfpu=neon -g3 -O0 -rdynamic -D_JANOSH_DEBUG
-screeninvader_debug: LIBS = -Wl,-Bstatic -lboost_serialization -lboost_program_options -lboost_system -lboost_filesystem -lkyotocabinet  -llzma -llzo2 -Wl,-Bdynamic -lz -lpthread -lrt -ldl -lbfd
+screeninvader_debug: LIBS = -Wl,-Bstatic -lboost_serialization -lboost_program_options -lboost_system -lboost_filesystem -lkyotocabinet  -llzma -llzo2 -Wl,-Bdynamic -lz -lpthread -lrt -ldl -lbfd -lluajit-5.1
 screeninvader_debug: ${TARGET}
 
 debug: CXXFLAGS += -g3 -O0 -rdynamic -D_JANOSH_DEBUG
@@ -47,8 +47,14 @@ debug: LDFLAGS += -Wl,--export-dynamic
 debug: LIBS+= -lbfd
 debug: ${TARGET}
 
-${TARGET}: ${OBJS} 
+${TARGET}: JSON.o JanoshAPI.o ${OBJS}
 	${CXX} ${LDFLAGS} -o $@ $^ ${LIBS} 
+
+JSON.o: ${OBJS}
+	objcopy --input binary --output elf64-x86-64 --binary-architecture i386 JSON.lua JSON.o
+
+JanoshAPI.o: ${OBJS}
+	objcopy --input binary --output elf64-x86-64 --binary-architecture i386 JanoshAPI.lua JanoshAPI.o
 
 ${OBJS}: %.o: %.cpp %.dep ${GCH}
 	${CXX} ${CXXFLAGS} -o $@ -c $< 
