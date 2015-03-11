@@ -54,7 +54,7 @@ function JanoshClass.append(self, key, value)
 end
 
 function JanoshClass.dump(self)
-	janosh_dump({})
+   return janosh_dump({})
 end
 
 function JanoshClass.size(self, keys)

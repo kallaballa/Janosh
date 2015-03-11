@@ -100,8 +100,8 @@ static int l_replace(lua_State* L) {
 }
 
 static int l_dump(lua_State* L) {
-  LuaScript::getInstance()->performRequest(make_request("dump", L));
-  return 0;
+ lua_pushstring(L, LuaScript::getInstance()->performRequest(make_request("dump", L)).c_str());
+ return 1;
 }
 
 static int l_shift(lua_State* L) {
