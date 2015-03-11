@@ -1162,7 +1162,8 @@ int main(int argc, char** argv) {
         while (server->run()) {
         }
       } else {
-
+        assert(false);
+        //FIXME
       }
     } else {
       if (command.empty() && !execTargets && luafile.empty()) {
@@ -1208,4 +1209,3 @@ int main(int argc, char** argv) {
 
   return 0;
 }
-
