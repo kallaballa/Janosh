@@ -16,7 +16,7 @@ function JanoshClass.set(self, key, value)
   janosh_set({key,value});
 end
 
-function JanoshClass.set(self, argv)
+function JanoshClass.set_all(self, argv)
   janosh_set(argv);
 end
 
@@ -24,7 +24,7 @@ function JanoshClass.add(self, key, value)
   janosh_add({key,value});
 end
 
-function JanoshClass.add(self, argv)
+function JanoshClass.add_all(self, argv)
   janosh_add(argv);
 end
 
@@ -32,7 +32,7 @@ function JanoshClass.trigger(self, key, value)
   janosh_trigger({key,value});
 end
 
-function JanoshClass.trigger(self, argv)
+function JanoshClass.trigger_all(self, argv)
   janosh_trigger(argv);
 end
 
@@ -40,7 +40,7 @@ function JanoshClass.replace(self, key, value)
   janosh_replace({key,value});
 end
 
-function JanoshClass.replace(self, argv)
+function JanoshClass.replace_all(self, argv)
   janosh_replace(argv);
 end
 
