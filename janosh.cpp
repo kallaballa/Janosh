@@ -130,6 +130,10 @@ namespace janosh {
 
     size_t cnt = 1;
 
+    if(this->getFormat() == Json)
+      vis->beginObject(Path("/."), true, true);
+
+    bool first = true;
     for (Record& rec : recs) {
       JANOSH_TRACE( { rec });
       rec.fetch();
@@ -140,12 +144,19 @@ namespace janosh {
         throw janosh_exception() << record_info( { "Path not found", rec });
       }
 
+      if(recs.size() > 1 && this->getFormat() == Json && !first)
+        out << "," << std::endl;
+
       if (rec.isDirectory()) {
         recurseDirectory(rec, vis, out);
       } else {
         recurseValue(rec, vis, out);
       }
+      first = false;
     }
+
+    if(this->getFormat() == Json)
+      vis->endObject(Path("/."));
 
     vis->close();
     delete vis;
@@ -270,7 +281,7 @@ namespace janosh {
       if (t == Value::Array) {
         Value::Type parentType;
         if (hierachy.empty())
-          parentType = Value::Array;
+          parentType = Value::Object;
         else
           parentType = hierachy.top().second;
 
