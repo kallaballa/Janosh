@@ -131,7 +131,7 @@ namespace janosh {
     size_t cnt = 1;
 
     if(this->getFormat() == Json)
-      cout << "{" << std::endl;
+      out << "{" << std::endl;
 
     bool first = true;
     for (Record& rec : recs) {
@@ -156,7 +156,7 @@ namespace janosh {
     }
 
     if(this->getFormat() == Json)
-      cout << "}" << std::endl;
+      out << "}" << std::endl;
 
     vis->close();
     delete vis;
@@ -201,7 +201,7 @@ namespace janosh {
       if (t == Value::Array) {
         Value::Type parentType;
         if (hierachy.empty())
-          parentType = Value::Array;
+          parentType = Value::Object;
         else
           parentType = hierachy.top().second;
 
@@ -210,7 +210,7 @@ namespace janosh {
       } else if (t == Value::Object) {
         Value::Type parentType;
         if (hierachy.empty())
-          parentType = Value::Array;
+          parentType = Value::Object;
         else
           parentType = hierachy.top().second;
 
@@ -290,7 +290,7 @@ namespace janosh {
       } else if (t == Value::Object) {
         Value::Type parentType;
         if (hierachy.empty())
-          parentType = Value::Array;
+          parentType = Value::Object;
         else
           parentType = hierachy.top().second;
 
