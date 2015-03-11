@@ -130,7 +130,7 @@ namespace janosh {
 
     size_t cnt = 1;
 
-    if(this->getFormat() == Json)
+    if(recs.size() > 1 && this->getFormat() == Json)
       out << "{" << std::endl;
 
     bool first = true;
@@ -148,14 +148,14 @@ namespace janosh {
         out << "," << std::endl;
 
       if (rec.isDirectory()) {
-        recurseDirectory(rec, vis, out);
+        recurseDirectory(rec, vis, (recs.size() > 1 ? Value::Object : Value::Array), out);
       } else {
-        recurseValue(rec, vis, out);
+        recurseValue(rec, vis, (recs.size() > 1 ? Value::Object : Value::Array), out);
       }
       first = false;
     }
 
-    if(this->getFormat() == Json)
+    if(recs.size() > 1 && this->getFormat() == Json)
       out << "}" << std::endl;
 
     vis->close();
@@ -163,7 +163,7 @@ namespace janosh {
     return cnt;
   }
 
-  size_t Janosh::recurseValue(Record& travRoot, PrintVisitor* vis, ostream& out) {
+  size_t Janosh::recurseValue(Record& travRoot, PrintVisitor* vis, Value::Type rootType, ostream& out) {
     JANOSH_TRACE( { travRoot });
 
     vector<Record> parents = travRoot.getParents();
@@ -171,7 +171,6 @@ namespace janosh {
 
     std::stack<std::pair<const Component, const Value::Type> > hierachy;
     size_t cnt = 0;
-    Record root("/.");
     Path last;
     Record rec;
     for (size_t i = 0; i < parents.size(); ++i) {
@@ -201,7 +200,7 @@ namespace janosh {
       if (t == Value::Array) {
         Value::Type parentType;
         if (hierachy.empty())
-          parentType = Value::Object;
+          parentType = rootType;
         else
           parentType = hierachy.top().second;
 
@@ -210,7 +209,7 @@ namespace janosh {
       } else if (t == Value::Object) {
         Value::Type parentType;
         if (hierachy.empty())
-          parentType = Value::Object;
+          parentType = rootType;
         else
           parentType = hierachy.top().second;
 
@@ -241,13 +240,11 @@ namespace janosh {
   }
 
 
-  size_t Janosh::recurseDirectory(Record& travRoot, PrintVisitor* vis, ostream& out) {
+  size_t Janosh::recurseDirectory(Record& travRoot, PrintVisitor* vis, Value::Type rootType, ostream& out) {
     JANOSH_TRACE( { travRoot });
 
     size_t cnt = 0;
     std::stack<std::pair<const Component, const Value::Type> > hierachy;
-    Record root("/.");
-
     Record rec(travRoot);
 
     Path last;
@@ -281,7 +278,7 @@ namespace janosh {
       if (t == Value::Array) {
         Value::Type parentType;
         if (hierachy.empty())
-          parentType = Value::Object;
+          parentType = rootType;
         else
           parentType = hierachy.top().second;
 
@@ -290,7 +287,7 @@ namespace janosh {
       } else if (t == Value::Object) {
         Value::Type parentType;
         if (hierachy.empty())
-          parentType = Value::Object;
+          parentType = rootType;
         else
           parentType = hierachy.top().second;
 
