@@ -131,7 +131,7 @@ namespace janosh {
     size_t cnt = 1;
 
     if(this->getFormat() == Json)
-      vis->beginObject(Path("/."), true, true);
+      cout << "{" << std::endl;
 
     bool first = true;
     for (Record& rec : recs) {
@@ -156,7 +156,7 @@ namespace janosh {
     }
 
     if(this->getFormat() == Json)
-      vis->endObject(Path("/."));
+      cout << "}" << std::endl;
 
     vis->close();
     delete vis;
