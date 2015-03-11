@@ -84,8 +84,8 @@ private:
   bool boundsCheck(Record p);
   Record makeTemp(const Value::Type& t);
 
-  size_t recurseDirectory(Record& travRoot, PrintVisitor* vis, ostream& out);
-  size_t recurseValue(Record& travRoot, PrintVisitor* vis, ostream& out);
+  size_t recurseDirectory(Record& travRoot, PrintVisitor* vis, Value::Type rootType, ostream& out);
+  size_t recurseValue(Record& travRoot, PrintVisitor* vis, Value::Type rootType, ostream& out);
 
 };
 
