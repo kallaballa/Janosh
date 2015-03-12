@@ -12,7 +12,7 @@
 
 namespace janosh {
 
-TriggerThread::TriggerThread(Request& req) : JanoshThread("Trigger"), req_(req) {
+TriggerThread::TriggerThread(Request& req) : JanoshThread("Trigger"), req_(req), keysModified_(Tracker::getInstancePerThread()->get(Tracker::WRITE)) {
 }
 
 void TriggerThread::run() {
@@ -22,11 +22,11 @@ void TriggerThread::run() {
     if(req_.runTriggers_ || !req_.vecTargets_.empty()) {
         if (req_.runTriggers_) {
           Command* t = Janosh::getInstance()->cm_["trigger"];
-          map<string, size_t> keysModified = tracker->get(Tracker::WRITE);
+
           LOG_DEBUG("Reset tracker");
           tracker->reset();
           vector<string> triggers;
-          for(auto iter : keysModified) {
+          for(auto iter : keysModified_) {
             triggers.push_back(iter.first);
           }
 

@@ -2,6 +2,7 @@
 #define TRIGGER_THREAD_HPP_
 
 #include <string>
+#include <map>
 #include <vector>
 #include <iostream>
 #include "format.hpp"
@@ -17,6 +18,7 @@ using std::ostream;
 
 class TriggerThread : public JanoshThread {
   Request req_;
+  std::map<string, size_t> keysModified_;
 public:
   TriggerThread(Request& req);
   void run();
