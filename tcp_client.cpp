@@ -26,6 +26,7 @@ void TcpClient::connect(string host, int port) {
   tcp::resolver::query query(host, std::to_string(port));
   tcp::resolver::iterator iterator = resolver.resolve(query);
   boost::asio::connect(socket, iterator);
+  socket.set_option(boost::asio::ip::tcp::no_delay(true));
 }
 
 int TcpClient::run(Request& req, std::ostream& out) {
@@ -37,10 +38,9 @@ int TcpClient::run(Request& req, std::ostream& out) {
   boost::asio::write(socket, request);
   boost::asio::streambuf response;
   std::istream response_stream(&response);
-  boost::asio::read_until(socket, response, "\n");
-
-  string strReturnCode;
-  std::getline(response_stream, strReturnCode);
+  boost::array<char, 2> buf;
+  socket.read_some(boost::asio::buffer(buf));
+  string strReturnCode = string() + buf[0];
   int returnCode = std::stoi(strReturnCode);
 
   if (returnCode == 0) {
@@ -54,6 +54,8 @@ int TcpClient::run(Request& req, std::ostream& out) {
     while (response_stream) {
       boost::asio::read_until(socket, response, "\n");
       std::getline(response_stream, line);
+      if(line == "__JANOSH_EOF")
+        break;
       out << line << std::endl;
     }
   } catch (std::exception& ex) {

@@ -68,6 +68,7 @@ bool TcpServer::run() {
 	try  {
 	  socket = socket_ptr(new tcp::socket(io_service_));
 	  acceptor_.accept(*socket);
+    socket->set_option(boost::asio::ip::tcp::no_delay(true));
 	} catch(std::exception& ex) {
 	  if (socket != NULL) {
 	    LOG_DEBUG_MSG("Closing socket", socket);
@@ -79,8 +80,14 @@ bool TcpServer::run() {
 	}
 
 	try {
-	  TcpWorker* w = new TcpWorker(socket);
-	  w->runSynchron();
+	  TcpWorker* w = NULL;
+	  do {
+	    if(w)
+	      delete w;
+	    w = new TcpWorker(socket);
+	    w->runSynchron();
+	  } while(w->result());
+
   } catch (janosh_exception& ex) {
     if (socket != NULL) {
       LOG_DEBUG_MSG("Closing socket", socket);

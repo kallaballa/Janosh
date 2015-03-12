@@ -134,6 +134,7 @@ void TcpWorker::run() {
 
         if (!result) {
           shutdown(socket_);
+          setResult(false);
           return;
         }
       } else {
@@ -149,16 +150,20 @@ void TcpWorker::run() {
         }*/
       }
 
+      (*out_stream) << "__JANOSH_EOF\n";
+      out_stream->flush();
       FlusherThread* flusher = new FlusherThread(socket_, out_buf, cacheable);
       flusher->runSynchron();
-      shutdown(socket_);
+//      shutdown(socket_);
     } else {
       CacheThread* cacheWriter = new CacheThread(socket_);
       cacheWriter->runSynchron();
-      shutdown(socket_);
+//      shutdown(socket_);
     }
+    setResult(true);
   } catch (std::exception& ex) {
     janosh::printException(ex);
+    setResult(false);
     shutdown(socket_);
   }
 }
