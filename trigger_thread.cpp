@@ -12,10 +12,7 @@
 
 namespace janosh {
 
-TriggerThread::TriggerThread(Request& req, ostream_ptr out) :
-    JanoshThread("Trigger"),
-    req_(req),
-    out_(out) {
+TriggerThread::TriggerThread(Request& req) : JanoshThread("Trigger"), req_(req) {
 }
 
 void TriggerThread::run() {
@@ -33,13 +30,14 @@ void TriggerThread::run() {
             triggers.push_back(iter.first);
           }
 
-          (*t)(triggers, *out_);
+
+          (*t)(triggers, std::cerr);
         }
 
         if (!req_.vecTargets_.empty()) {
           LOG_DEBUG("Targets");
           Command* t = Janosh::getInstance()->cm_["target"];
-          (*t)(req_.vecTargets_, *out_);
+          (*t)(req_.vecTargets_, std::cerr);
         }
 
         setResult(true);

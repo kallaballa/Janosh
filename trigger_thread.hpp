@@ -17,9 +17,8 @@ using std::ostream;
 
 class TriggerThread : public JanoshThread {
   Request req_;
-  ostream_ptr out_;
 public:
-  TriggerThread(Request& req, ostream_ptr out);
+  TriggerThread(Request& req);
   void run();
 };
 
