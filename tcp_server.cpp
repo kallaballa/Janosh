@@ -80,7 +80,7 @@ bool TcpServer::run() {
 
 	try {
 	  TcpWorker* w = new TcpWorker(socket);
-	  w->runAsynchron();
+	  w->runSynchron();
   } catch (janosh_exception& ex) {
     if (socket != NULL) {
       LOG_DEBUG_MSG("Closing socket", socket);

@@ -142,11 +142,11 @@ void TcpWorker::run() {
 
       if (req.runTriggers_ || !req.vecTargets_.empty()) {
         TriggerThread* triggerThread = new TriggerThread(req, out_stream);
-        triggerThread->runSynchron();
-        if (!triggerThread->result()) {
+        triggerThread->runAsynchron();
+/*        if (!triggerThread->result()) {
           shutdown(socket_);
           return;
-        }
+        }*/
       }
 
       FlusherThread* flusher = new FlusherThread(socket_, out_buf, cacheable);
