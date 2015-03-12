@@ -13,23 +13,20 @@
 namespace janosh {
 
 TriggerThread::TriggerThread(Request& req) : JanoshThread("Trigger"), req_(req), keysModified_(Tracker::getInstancePerThread()->get(Tracker::WRITE)) {
+  LOG_DEBUG("Reset tracker");
+  Tracker::getInstancePerThread()->reset();
 }
 
 void TriggerThread::run() {
   try {
-    Tracker* tracker = Tracker::getInstancePerThread();
-
     if(req_.runTriggers_ || !req_.vecTargets_.empty()) {
         if (req_.runTriggers_) {
+          LOG_DEBUG("Triggers");
           Command* t = Janosh::getInstance()->cm_["trigger"];
-
-          LOG_DEBUG("Reset tracker");
-          tracker->reset();
           vector<string> triggers;
           for(auto iter : keysModified_) {
             triggers.push_back(iter.first);
           }
-
 
           (*t)(triggers, std::cerr);
         }
