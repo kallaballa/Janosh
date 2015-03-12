@@ -25,11 +25,12 @@ FlusherThread::FlusherThread(socket_ptr s, streambuf_ptr out_buf, bool cacheable
 void FlusherThread::run() {
   Cache* cache = Cache::getInstance();
   try {
-    LOG_DEBUG_MSG("sending", out_buf_->size());
+    LOG_INFO_MSG("sending", out_buf_->size());
     if(cacheable_) {
       LOG_DEBUG_STR("updating cache");
       cache->setData(boost::asio::buffer_cast<const char*>(out_buf_->data()), out_buf_->size());
     }
+
     boost::asio::write(*socket_, *out_buf_);
   } catch(std::exception& ex) {
     janosh::printException(ex);

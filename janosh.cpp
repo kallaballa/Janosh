@@ -1191,12 +1191,14 @@ int main(int argc, char** argv) {
         Request req(f, command, arguments, vecTargets, execTriggers, verbose, get_parent_info());
         TcpClient client;
         client.connect("localhost", s.port);
+
         return client.run(req, std::cout);
       } else {
-        lua::LuaScript::init([](Request& req){
-          Settings s;
-          TcpClient client;
-          client.connect("localhost", s.port);
+        Settings s;
+        TcpClient client;
+        client.connect("localhost", s.port);
+
+        lua::LuaScript::init([&](Request& req){
           std::stringstream ss;
           client.run(req, ss);
           return ss.str();

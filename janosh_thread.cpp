@@ -29,7 +29,6 @@ void JanoshThread::setResult(bool r) {
 }
 
 void JanoshThread::runSynchron() {
-    JanoshThreadPtr holder(this);
     try {
       this->run();
     } catch(std::exception& ex) {
