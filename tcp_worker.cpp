@@ -143,7 +143,7 @@ void TcpWorker::run() {
 
       if (req.runTriggers_ || !req.vecTargets_.empty()) {
         TriggerThread* triggerThread = new TriggerThread(req, out_stream);
-        triggerThread->runAsynchron();
+        triggerThread->runSynchron();
 /*        if (!triggerThread->result()) {
           shutdown(socket_);
           return;
