@@ -1194,14 +1194,18 @@ int main(int argc, char** argv) {
 
         return client.run(req, std::cout);
       } else {
+
         Settings s;
         TcpClient client;
-        client.connect("localhost", s.port);
 
-        lua::LuaScript::init([&](Request& req){
+        lua::LuaScript::init([&](){
+          client.connect("localhost", s.port);
+        },[&](Request& req){
           std::stringstream ss;
           client.run(req, ss);
           return ss.str();
+        },[&](){
+          client.connect("localhost", s.port);
         });
 
         lua::LuaScript* script = lua::LuaScript::getInstance();

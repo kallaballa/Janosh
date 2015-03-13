@@ -7,11 +7,6 @@ function JanoshClass.new()
   return setmetatable({}, JanoshClass)
 end
 
-function JanoshClass.load(self, jsontable)
-  local jsonstring = JSON:encode(jsontable)
-	janosh_load({jsonstring});
-end
-
 function JanoshClass.set(self, key, value)
   janosh_set({key,value});
 end
@@ -115,6 +110,14 @@ end
 
 function JanoshClass.hash(self)
   janosh_hash({})
+end
+
+function JanoshClass.open(self)
+  janosh_open({})
+end
+
+function JanoshClass.close(self)
+  janosh_close({})
 end
 
 return JanoshClass:new()

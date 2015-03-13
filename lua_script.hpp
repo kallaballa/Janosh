@@ -17,11 +17,15 @@ namespace janosh {
 namespace lua {
 class LuaScript {
 public:
-    LuaScript(std::function<string(janosh::Request&)> requestCallback);
+    LuaScript(std::function<void()> openCallback,
+        std::function<string(janosh::Request&)> requestCallback,
+        std::function<void()> closeCallback);
     ~LuaScript();
 
     void load(const string& path);
     void run();
+    void performOpen();
+    void performClose();
     string performRequest(janosh::Request req);
 
     std::vector<std::string> getTableKeys(const std::string& name);
@@ -51,11 +55,11 @@ public:
     }
 
     bool lua_gettostack(const std::string& variableName) {
-      level = 0;
+      level_ = 0;
       std::string var = "";
         for(unsigned int i = 0; i < variableName.size(); i++) {
           if(variableName.at(i) == '.') {
-            if(level == 0) {
+            if(level_ == 0) {
               lua_getglobal(L, var.c_str());
             } else {
               lua_getfield(L, -1, var.c_str());
@@ -66,13 +70,13 @@ public:
               return false;
             } else {
               var = "";
-              level++;
+              level_++;
             }
           } else {
             var += variableName.at(i);
           }
         }
-        if(level == 0) {
+        if(level_ == 0) {
           lua_getglobal(L, var.c_str());
         } else {
           lua_getfield(L, -1, var.c_str());
@@ -96,23 +100,27 @@ public:
       return 0;
     }
    
-    static void init(std::function<string(janosh::Request&)> requestCallback) {
-      instance = new LuaScript(requestCallback);
+    static void init(std::function<void()> openCallback,
+        std::function<string(janosh::Request&)> requestCallback,
+        std::function<void()> closeCallback) {
+      instance_ = new LuaScript(openCallback,requestCallback,closeCallback);
     }
 
     static LuaScript* getInstance() {
-      assert(instance != NULL);
-      return instance;
+      assert(instance_ != NULL);
+      return instance_;
     }
     lua_State* L;
 private:
-    int level = 0;
-    static LuaScript* instance;
-    std::function<string(janosh::Request&)> requestCallback;
+    int level_ = 0;
+    static LuaScript* instance_;
+    std::function<void()> openCallback_;
+    std::function<string(janosh::Request&)> requestCallback_;
+    std::function<void()> closeCallback_;
+    bool isOpen = false;
 };
 
- // Specializations
-
+// Specializations
 template <> 
 inline bool LuaScript::lua_get<bool>(const std::string& variableName) {
     return (bool)lua_toboolean(L, -1);

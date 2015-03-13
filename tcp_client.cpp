@@ -26,7 +26,7 @@ void TcpClient::connect(string host, int port) {
   tcp::resolver::query query(host, std::to_string(port));
   tcp::resolver::iterator iterator = resolver.resolve(query);
   boost::asio::connect(socket, iterator);
-  socket.set_option(boost::asio::ip::tcp::no_delay(true));
+  //socket.set_option(boost::asio::ip::tcp::no_delay(true));
 }
 
 int TcpClient::run(Request& req, std::ostream& out) {

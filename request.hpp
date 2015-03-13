@@ -9,6 +9,7 @@
 #define REQUEST_HPP_
 
 #include <boost/serialization/vector.hpp>
+//FIXME due to an unknown bug with binary archives we are using text archives
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
 #include <string>

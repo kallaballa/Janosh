@@ -14,7 +14,7 @@ namespace lua {
 
 using std::vector;
 
-LuaScript* LuaScript::instance = NULL;
+LuaScript* LuaScript::instance_ = NULL;
 
 static inline std::string &ltrim(std::string &s) {
         s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
@@ -57,6 +57,16 @@ static int l_set(lua_State* L) {
   return 0;
 }
 
+static int l_open(lua_State* L) {
+  LuaScript::getInstance()->performOpen();
+  return 0;
+}
+
+static int l_close(lua_State* L) {
+  LuaScript::getInstance()->performClose();
+  return 0;
+}
+
 static int l_trigger(lua_State* L) {
   std::vector< string > args;
   vector<string> trigger;
@@ -71,11 +81,6 @@ static int l_trigger(lua_State* L) {
 
   Request req(janosh::Format::Json, "set", args, trigger, true, false, get_parent_info());
   LuaScript::getInstance()->performRequest(req);
-  return 0;
-}
-
-static int l_load(lua_State* L) {
-  LuaScript::getInstance()->performRequest(make_request("load", L));
   return 0;
 }
 
@@ -146,13 +151,17 @@ static int l_hash(lua_State* L) {
   return 1;
 }
 
-LuaScript::LuaScript(std::function<string(janosh::Request&)> requestCallback) : requestCallback(requestCallback) {
+LuaScript::LuaScript(std::function<void()> openCallback,
+    std::function<string(janosh::Request&)> requestCallback,
+    std::function<void()> closeCallback) : openCallback_(openCallback), requestCallback_(requestCallback), closeCallback_(closeCallback) {
   L = luaL_newstate();
   luaL_openlibs(L);
-  lua_pushcfunction(L, l_load);
-  lua_setglobal(L, "janosh_load");
   lua_pushcfunction(L, l_set);
   lua_setglobal(L, "janosh_set");
+  lua_pushcfunction(L, l_open);
+  lua_setglobal(L, "janosh_open");
+  lua_pushcfunction(L, l_close);
+  lua_setglobal(L, "janosh_close");
   lua_pushcfunction(L, l_add);
   lua_setglobal(L, "janosh_add");
   lua_pushcfunction(L, l_trigger);
@@ -220,8 +229,24 @@ void LuaScript::run() {
   }
 }
 
+void LuaScript::performOpen() {
+  openCallback_();
+  isOpen = true;
+}
+
+void LuaScript::performClose() {
+  closeCallback_();
+  isOpen = false;
+}
+
 string LuaScript::performRequest(janosh::Request req) {
-  return requestCallback(req);
+  if(!isOpen) {
+    performOpen();
+    string result = requestCallback_(req);
+    performClose();
+    return result;
+  } else
+    return requestCallback_(req);
 }
 
 std::vector<std::string> LuaScript::getTableKeys(const std::string& name) {
