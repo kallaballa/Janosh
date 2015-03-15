@@ -32,9 +32,27 @@ static inline std::string &trim(std::string &s) {
         return ltrim(rtrim(s));
 }
 
+static janosh::Request make_request(lua_State* L) {
+  std::vector< string > args;
+
+  lua_pushinteger( L, 1 );
+  lua_gettable( L, -2 );
+  string command = lua_tostring( L, -1 );
+  lua_pop( L, 1 );
+
+  const int len = lua_objlen( L, -1 );
+  for ( int i = 2; i <= len; ++i ) {
+      lua_pushinteger( L, i );
+      lua_gettable( L, -2 );
+      args.push_back( lua_tostring( L, -1 ) );
+      lua_pop( L, 1 );
+  }
+
+  return Request(janosh::Format::Json, command, args, {}, false, false, get_parent_info());
+}
+
 static janosh::Request make_request(string command, lua_State* L) {
   std::vector< string > args;
-  vector<string> trigger;
 
   const int len = lua_objlen( L, -1 );
   for ( int i = 1; i <= len; ++i ) {
@@ -44,7 +62,12 @@ static janosh::Request make_request(string command, lua_State* L) {
       lua_pop( L, 1 );
   }
 
-  return Request(janosh::Format::Json, command, args, trigger, false, false, get_parent_info());
+  return Request(janosh::Format::Json, command, args, {}, false, false, get_parent_info());
+}
+
+static int l_request(lua_State* L) {
+  lua_pushstring(L, (LuaScript::getInstance()->performRequest(make_request(L))).c_str());
+  return 1;
 }
 
 static int l_get(lua_State* L) {
@@ -156,6 +179,8 @@ LuaScript::LuaScript(std::function<void()> openCallback,
     std::function<void()> closeCallback) : openCallback_(openCallback), requestCallback_(requestCallback), closeCallback_(closeCallback) {
   L = luaL_newstate();
   luaL_openlibs(L);
+  lua_pushcfunction(L, l_request);
+  lua_setglobal(L, "janosh_request");
   lua_pushcfunction(L, l_set);
   lua_setglobal(L, "janosh_set");
   lua_pushcfunction(L, l_open);
@@ -247,37 +272,6 @@ string LuaScript::performRequest(janosh::Request req) {
     return result;
   } else
     return requestCallback_(req);
-}
-
-std::vector<std::string> LuaScript::getTableKeys(const std::string& name) {
-    std::string code = 
-        "function getKeys(name) "
-        "s = \"\""
-        "for k, v in pairs(_G[name]) do "
-        "    s = s..k..\",\" "
-        "    end "
-        "return s "
-        "end"; // function for getting table keys
-    luaL_loadstring(L, 
-        code.c_str()); // execute code
-    lua_pcall(L,0,0,0);
-    lua_getglobal(L, "getKeys"); // get function
-    lua_pushstring(L, name.c_str());
-    lua_pcall(L, 1 , 1, 0); // execute function
-    std::string test = lua_tostring(L, -1);
-    std::vector<std::string> strings;
-    std::string temp = "";
-
-    for(unsigned int i = 0; i < test.size(); i++) {     
-        if(test.at(i) != ',') {
-            temp += test.at(i);
-        } else {
-            strings.push_back(temp);
-            temp= "";
-        }
-    }
-    clean();
-    return strings;
 }
 }
 }

@@ -7,6 +7,10 @@ function JanoshClass.new()
   return setmetatable({}, JanoshClass)
 end
 
+function JanoshClass.request(self, req) 
+  return janosh_request(req);
+end
+
 function JanoshClass.set(self, key, value)
   janosh_set({key,value});
 end
