@@ -1,7 +1,7 @@
 Janosh
 ======
 
-A json document database with a shell interface.
+A json document database with a shell interface and lua scripting support.
 
 Janosh is written in C++11. It is used in the [ScreenInvader](https://github.com/Metalab/ScreenInvader) project.
 
