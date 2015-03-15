@@ -36,6 +36,7 @@ private:
   PrintDirective printDirective_;
   void printMeta(ostream& out);
   void printFull(ostream& out);
+  long long revision_;
 public:
   enum Operation {
     READ,
@@ -52,6 +53,7 @@ public:
   map<string, size_t>& get(const Operation& op);
   void reset();
   void print(ostream& out);
+  string revision();
 
   static Tracker* getInstancePerThread();
   static void setPrintDirective(PrintDirective p);

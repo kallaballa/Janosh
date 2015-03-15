@@ -38,10 +38,14 @@ int TcpClient::run(Request& req, std::ostream& out) {
   boost::asio::write(socket, request);
   boost::asio::streambuf response;
   std::istream response_stream(&response);
-  boost::array<char, 2> buf;
+  boost::array<char, 1> buf;
+  boost::array<char, 16> buf2;
+
   socket.read_some(boost::asio::buffer(buf));
-  string strReturnCode = string() + buf[0];
-  int returnCode = std::stoi(strReturnCode);
+  socket.read_some(boost::asio::buffer(buf2));
+
+  revision_ = buf2.elems;
+  int returnCode = std::stoi(string() + buf[0]);
 
   if (returnCode == 0) {
     LOG_DEBUG_STR("Successful");
@@ -64,7 +68,12 @@ int TcpClient::run(Request& req, std::ostream& out) {
 }
 
 void TcpClient::close() {
+  socket.shutdown(boost::asio::socket_base::shutdown_both);
   socket.close();
+}
+
+string TcpClient::revision() {
+  return revision_;
 }
 
 } /* namespace janosh */

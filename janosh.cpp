@@ -1203,9 +1203,9 @@ int main(int argc, char** argv) {
         },[&](Request& req){
           std::stringstream ss;
           client.run(req, ss);
-          return ss.str();
+          return std::make_pair(client.revision(), ss.str());
         },[&](){
-          client.connect("localhost", s.port);
+          client.close();
         });
 
         lua::LuaScript* script = lua::LuaScript::getInstance();

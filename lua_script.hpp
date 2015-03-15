@@ -17,8 +17,8 @@ namespace janosh {
 namespace lua {
 class LuaScript {
 public:
-    LuaScript(std::function<void()> openCallback,
-        std::function<string(janosh::Request&)> requestCallback,
+  LuaScript(std::function<void()> openCallback,
+        std::function<std::pair<string,string>(janosh::Request&)> requestCallback,
         std::function<void()> closeCallback);
     ~LuaScript();
 
@@ -27,9 +27,12 @@ public:
     void performOpen();
     void performClose();
     string performRequest(janosh::Request req);
+    void setLuaChangeCallback(string functionName) {
+      luaChangeCallbackName_ = functionName;
+    }
 
     static void init(std::function<void()> openCallback,
-        std::function<string(janosh::Request&)> requestCallback,
+        std::function<std::pair<string,string>(janosh::Request&)> requestCallback,
         std::function<void()> closeCallback) {
       instance_ = new LuaScript(openCallback,requestCallback,closeCallback);
     }
@@ -43,9 +46,11 @@ private:
     int level_ = 0;
     static LuaScript* instance_;
     std::function<void()> openCallback_;
-    std::function<string(janosh::Request&)> requestCallback_;
+    std::function<std::pair<string,string>(janosh::Request&)> requestCallback_;
     std::function<void()> closeCallback_;
     bool isOpen = false;
+    string lastRevision_;
+    string luaChangeCallbackName_;
 };
 }
 }

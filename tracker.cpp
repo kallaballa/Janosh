@@ -16,6 +16,9 @@ map<thread::id, Tracker*> Tracker::instances_;
 
 void Tracker::update(const string& s, const Operation& op) {
   map<string, size_t>& m = get(op);
+  if(op == WRITE || op == DELETE)
+    ++revision_;
+
   auto iter = m.find(s);
   if(iter != m.end()) {
     m[s]++;
@@ -134,6 +137,10 @@ void Tracker::print(ostream& out) {
       printFull(cerr);
     printFooter(out);
   }
+}
+
+string Tracker::revision() {
+  return std::to_string(revision_);
 }
 
 Tracker::PrintDirective Tracker::getPrintDirective() {

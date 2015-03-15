@@ -2,6 +2,8 @@
 #include <vector>
 #include <sstream>
 #include <boost/lexical_cast.hpp>
+#include <chrono>
+#include <thread>
 
 extern char _binary_JSON_lua_start;
 extern char _binary_JSON_lua_end;
@@ -63,6 +65,22 @@ static janosh::Request make_request(string command, lua_State* L) {
   }
 
   return Request(janosh::Format::Json, command, args, {}, false, false, get_parent_info());
+}
+
+static int l_sleep(lua_State* L) {
+  std::this_thread::sleep_for(std::chrono::milliseconds(lua_tointeger( L, -1 )));
+  return 0;
+}
+
+
+static int l_installChangeCallback(lua_State* L) {
+  LuaScript::getInstance()->setLuaChangeCallback(lua_tostring( L, -1 ));
+  return 0;
+}
+
+static int l_poll(lua_State* L) {
+  LuaScript::getInstance()->performRequest(make_request("", L));
+  return 1;
 }
 
 static int l_request(lua_State* L) {
@@ -175,10 +193,16 @@ static int l_hash(lua_State* L) {
 }
 
 LuaScript::LuaScript(std::function<void()> openCallback,
-    std::function<string(janosh::Request&)> requestCallback,
-    std::function<void()> closeCallback) : openCallback_(openCallback), requestCallback_(requestCallback), closeCallback_(closeCallback) {
+    std::function<std::pair<string,string>(janosh::Request&)> requestCallback,
+    std::function<void()> closeCallback) : openCallback_(openCallback), requestCallback_(requestCallback), closeCallback_(closeCallback), lastRevision_() {
   L = luaL_newstate();
   luaL_openlibs(L);
+  lua_pushcfunction(L, l_installChangeCallback);
+  lua_setglobal(L, "janosh_installChangeCallback");
+  lua_pushcfunction(L, l_sleep);
+  lua_setglobal(L, "janosh_sleep");
+  lua_pushcfunction(L, l_poll);
+  lua_setglobal(L, "janosh_poll");
   lua_pushcfunction(L, l_request);
   lua_setglobal(L, "janosh_request");
   lua_pushcfunction(L, l_set);
@@ -267,11 +291,23 @@ void LuaScript::performClose() {
 string LuaScript::performRequest(janosh::Request req) {
   if(!isOpen) {
     performOpen();
-    string result = requestCallback_(req);
+    auto result = requestCallback_(req);
     performClose();
-    return result;
-  } else
-    return requestCallback_(req);
+    if(result.first != lastRevision_ && !luaChangeCallbackName_.empty()) {
+      lastRevision_ = result.first;
+      lua_getglobal(L, luaChangeCallbackName_.c_str());
+      lua_call(L, 0, 0);
+    }
+    return result.second;
+  } else {
+    auto result = requestCallback_(req);
+    if(result.first != lastRevision_) {
+      lastRevision_ = result.first;
+      lua_getglobal(L, luaChangeCallbackName_.c_str());
+      lua_call(L, 0, 0);
+    }
+    return result.second;
+  }
 }
 }
 }

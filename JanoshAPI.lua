@@ -7,6 +7,17 @@ function JanoshClass.new()
   return setmetatable({}, JanoshClass)
 end
 
+function JanoshClass.onChange(self, functionName, interval)
+  janosh_installChangeCallback(functionName);
+  co = coroutine.create(function ()
+		while true do 
+			janosh_poll({})
+			janosh_sleep(interval);
+		end
+  end)
+  coroutine.resume(co);
+end
+
 function JanoshClass.request(self, req) 
   return janosh_request(req);
 end

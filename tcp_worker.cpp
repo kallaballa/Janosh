@@ -12,6 +12,7 @@
 #include "cache_thread.hpp"
 #include "trigger_thread.hpp"
 #include "janosh.hpp"
+#include "tracker.hpp"
 #include "cache.hpp"
 
 namespace janosh {
@@ -29,10 +30,14 @@ void shutdown(socket_ptr s) {
   }
 }
 
-void writeReturnCode(socket_ptr socket, int rc) {
+void writeResponseHeader(socket_ptr socket, int returnCode, string revision) {
+  assert(revision.size() < 16);
+  while(revision.size() < 16)
+    revision += " ";
+
   boost::asio::streambuf rc_buf;
   ostream rc_stream(&rc_buf);
-  rc_stream << std::to_string(rc) << '\n';
+  rc_stream << std::to_string(returnCode) << revision;
   LOG_DEBUG_MSG("sending", rc_buf.size());
   boost::asio::write(*socket, rc_buf);
 }
@@ -119,6 +124,7 @@ void TcpWorker::run() {
 
     Janosh* instance = Janosh::getInstance();
     instance->setFormat(req.format_);
+    Tracker* tracker = Tracker::getInstancePerThread();
 
     if (!cachehit) {
       streambuf_ptr out_buf(new boost::asio::streambuf());
@@ -130,7 +136,7 @@ void TcpWorker::run() {
         bool result = dt->result();
 
         // report return code
-        writeReturnCode(socket_, result ? 0 : 1);
+        writeResponseHeader(socket_, result ? 0 : 1, tracker->revision());
 
         if (!result) {
           shutdown(socket_);
@@ -138,7 +144,7 @@ void TcpWorker::run() {
           return;
         }
       } else {
-        writeReturnCode(socket_, 0);
+        writeResponseHeader(socket_, 0, tracker->revision());
       }
 
       if (req.runTriggers_ || !req.vecTargets_.empty()) {
