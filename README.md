@@ -24,7 +24,7 @@ Build:
 
 Copy janosh binary and default configuration:
 <pre>
-  cp janosh /usr/bin/
+  sudo make install
   cp -r .janosh ~/
 </pre>
 
