@@ -31,7 +31,7 @@ void shutdown(socket_ptr s) {
 }
 
 void writeResponseHeader(socket_ptr socket, int returnCode, string revision) {
-  assert(revision.size() < 16);
+  assert(revision.size() <= 16);
   while(revision.size() < 16)
     revision += " ";
 
