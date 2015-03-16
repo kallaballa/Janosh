@@ -21,7 +21,6 @@ void Tracker::update(const string& s, const Operation& op) {
     ++revision_;
     zmq::message_t message(s.length());
     memcpy(message.data(), s.data(),s.length());
-    std::cerr << "### send ###:" << string((char*)message.data()) << std::endl;
     publisher_.send(message);
   }
   auto iter = m.find(s);
