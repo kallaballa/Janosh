@@ -14,6 +14,7 @@
 #include "exception.hpp"
 #include <iostream>
 #include <thread>
+#include "cppzmq/zmq.hpp"
 
 namespace janosh {
 using std::string;
@@ -37,6 +38,8 @@ private:
   void printMeta(ostream& out);
   void printFull(ostream& out);
   long long revision_;
+  zmq::context_t context_;
+  zmq::socket_t publisher_;
 public:
   enum Operation {
     READ,
@@ -45,7 +48,12 @@ public:
     TRIGGER
   };
 
-  Tracker() : printDirective_(DONTPRINT) {};
+  Tracker() : printDirective_(DONTPRINT), revision_(0), context_(1), publisher_(context_, ZMQ_PUB) {
+    std::cerr << "#### bind" << std::endl;
+    publisher_.bind("ipc://janosh.ipc");
+    std::cerr << "#### bind dpme" << std::endl;
+  };
+
   virtual ~Tracker() {};
 
   void update(const string& s, const Operation& op);
