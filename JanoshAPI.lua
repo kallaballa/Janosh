@@ -1,5 +1,7 @@
 #!/usr/local/bin/janosh -f
 
+require"zmq"
+
 local JanoshClass = {} -- the table representing the class, which will double as the metatable for the instances
 JanoshClass.__index = JanoshClass -- failed table lookups on the instances should fallback to the class table, to get methods
 
@@ -133,6 +135,20 @@ end
 
 function JanoshClass.close(self)
   janosh_close({})
+end
+
+function JanoshClass.subscribe(self, keyprefix, callback)
+	local context = zmq.init(1)
+	local subscriber = context:socket(zmq.SUB)
+	subscriber:connect("ipc://janosh.ipc")
+	subscriber:setopt(zmq.SUBSCRIBE, keyprefix)
+  co = coroutine.create(function ()
+		while true do
+  		local message = subscriber:recv()
+			callback();
+		end
+	end)
+  coroutine.resume(co);
 end
 
 return JanoshClass:new()

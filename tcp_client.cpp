@@ -44,7 +44,7 @@ int TcpClient::run(Request& req, std::ostream& out) {
   socket.read_some(boost::asio::buffer(buf));
   socket.read_some(boost::asio::buffer(buf2));
 
-  revision_ = buf2.elems;
+  revision_ = string(buf2.elems);
   int returnCode = std::stoi(string() + buf[0]);
 
   if (returnCode == 0) {
@@ -68,7 +68,6 @@ int TcpClient::run(Request& req, std::ostream& out) {
 }
 
 void TcpClient::close() {
-  socket.shutdown(boost::asio::socket_base::shutdown_both);
   socket.close();
 }
 

@@ -118,7 +118,8 @@ void TcpWorker::run() {
     }
 
     cachehit = cacheable && cache->isValid();
-
+    //FIXME
+    cachehit = false;
     LOG_DEBUG_MSG("cacheable", cacheable);
     LOG_DEBUG_MSG("cachehit", cachehit);
 

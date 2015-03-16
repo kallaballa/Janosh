@@ -8,6 +8,7 @@
 #include "tracker.hpp"
 #include "logger.hpp"
 
+
 namespace janosh {
 using std::cerr;
 using std::endl;
@@ -16,9 +17,13 @@ map<thread::id, Tracker*> Tracker::instances_;
 
 void Tracker::update(const string& s, const Operation& op) {
   map<string, size_t>& m = get(op);
-  if(op == WRITE || op == DELETE)
+  if(op == WRITE || op == DELETE) {
     ++revision_;
-
+    zmq::message_t message(s.length());
+    memcpy(message.data(), s.data(),s.length());
+    std::cerr << "### send ###:" << string((char*)message.data()) << std::endl;
+    publisher_.send(message);
+  }
   auto iter = m.find(s);
   if(iter != m.end()) {
     m[s]++;

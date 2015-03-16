@@ -1157,11 +1157,10 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-    Logger::setTracing(tracing);
-    Logger::setDBLogging(dblog);
-    Tracker::setPrintDirective(printDirective);
-
     if (daemon) {
+      Logger::setTracing(tracing);
+      Logger::setDBLogging(dblog);
+      Tracker::setPrintDirective(printDirective);
       Janosh* instance = Janosh::getInstance();
       instance->open(false);
       if(luafile.empty()) {
