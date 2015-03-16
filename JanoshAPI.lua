@@ -140,7 +140,7 @@ end
 function JanoshClass.subscribe(self, keyprefix, callback)
 	local context = zmq.init(1)
 	local subscriber = context:socket(zmq.SUB)
-	subscriber:connect("ipc://janosh.ipc")
+	subscriber:connect("ipc://janosh-" .. os.getenv("USER") .. ".ipc")
 	subscriber:setopt(zmq.SUBSCRIBE, keyprefix)
   co = coroutine.create(function ()
 		while true do

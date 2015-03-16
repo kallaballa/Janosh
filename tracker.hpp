@@ -49,9 +49,13 @@ public:
   };
 
   Tracker() : printDirective_(DONTPRINT), revision_(0), context_(1), publisher_(context_, ZMQ_PUB) {
-    std::cerr << "#### bind" << std::endl;
-    publisher_.bind("ipc://janosh.ipc");
-    std::cerr << "#### bind dpme" << std::endl;
+    const char * val = std::getenv( "USER" );
+
+    if(val == NULL) {
+      LOG_ERR_STR("Environment variable USER not found");
+    } else {
+      publisher_.bind((string("ipc://janosh-") + string(val) + string(".ipc")).c_str());
+    }
   };
 
   virtual ~Tracker() {};
