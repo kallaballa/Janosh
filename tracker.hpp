@@ -48,16 +48,7 @@ public:
     TRIGGER
   };
 
-  Tracker() : printDirective_(DONTPRINT), revision_(0), context_(1), publisher_(context_, ZMQ_PUB) {
-    const char * val = std::getenv( "USER" );
-
-    if(val == NULL) {
-      LOG_ERR_STR("Environment variable USER not found");
-    } else {
-      publisher_.bind((string("ipc://janosh-") + string(val) + string(".ipc")).c_str());
-    }
-  };
-
+  Tracker();
   virtual ~Tracker() {};
 
   void update(const string& s, const Operation& op);

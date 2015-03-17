@@ -14,6 +14,18 @@ using std::cerr;
 using std::endl;
 
 map<thread::id, Tracker*> Tracker::instances_;
+Tracker::Tracker() :
+    printDirective_(DONTPRINT), revision_(0), context_(1), publisher_(context_, ZMQ_PUB) {
+  const char * val = std::getenv("USER");
+
+  if (val == NULL) {
+    LOG_ERR_STR("Environment variable USER not found");
+  } else {
+    string url = (string("ipc://janosh-") + string(val) + string(".ipc"));
+    LOG_INFO_MSG("Binding ZMQ", url);
+    publisher_.bind(url.c_str());
+  }
+}
 
 void Tracker::update(const string& s, const Operation& op) {
   map<string, size_t>& m = get(op);
@@ -21,6 +33,7 @@ void Tracker::update(const string& s, const Operation& op) {
     ++revision_;
     zmq::message_t message(s.length());
     memcpy(message.data(), s.data(),s.length());
+    std::cerr << "### send: " << string((char*)message.data()) << std::endl;
     publisher_.send(message);
   }
   auto iter = m.find(s);
