@@ -12,7 +12,7 @@ Janosh is written in C++11. It is used in the [ScreenInvader](https://github.com
 Install required packages:
 <pre>
   apt-get install build-essential g++4.8 libboost-dev libboost-filesystem-dev libboost-system-dev \
-  libboost-thread-dev libkyotocabinet-dev libluajit-5.1-dev cmake
+  libboost-thread-dev libkyotocabinet-dev libluajit-5.1-dev cmake libzmq3-dev
 </pre>
 
 Download source:
