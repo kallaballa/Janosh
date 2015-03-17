@@ -26,6 +26,7 @@ public:
     void load(const string& path);
     void loadString(const string& luaCode);
     void run();
+    void clean();
     void performOpen();
     void performClose();
     string performRequest(janosh::Request req);
@@ -46,8 +47,8 @@ public:
     std::function<void()> openCallback_;
     std::function<std::pair<string,string>(janosh::Request&)> requestCallback_;
     std::function<void()> closeCallback_;
-private:
     lua_State* L;
+private:
     int level_ = 0;
     static LuaScript* instance_;
     bool isOpen = false;

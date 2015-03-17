@@ -25,13 +25,19 @@ void make_subscription(string prefix, string luaCode) {
         subscriber.connect((string("ipc://janosh-") + user + ".ipc").c_str());
         subscriber.setsockopt(ZMQ_SUBSCRIBE, prefix.data(), prefix.length());
         LuaScript* parent = LuaScript::getInstance();
+        LuaScript script(parent->openCallback_, parent->requestCallback_, parent->closeCallback_);
+        string wrapped = "load(\"" + luaCode + "\")()";
+
+        script.loadString(wrapped.c_str());
+        lua_pushvalue(script.L, -1);
+        int ref = luaL_ref(script.L, LUA_REGISTRYINDEX);
 
         while(true) {
           zmq::message_t update;
-          LuaScript script(parent->openCallback_, parent->requestCallback_, parent->closeCallback_);
-          script.loadString(("load(\"" + luaCode + "\")()").c_str());
           subscriber.recv(&update);
           script.run();
+          script.clean();
+          lua_rawgeti(script.L, LUA_REGISTRYINDEX, ref);
         }
       });
       t.detach();
@@ -312,6 +318,10 @@ void LuaScript::run() {
   if(lua_pcall(L, 0, 0, 0)) {
     LOG_ERR_MSG("Lua script failed", lua_tostring(L, -1));
   }
+}
+
+void LuaScript::clean() {
+  lua_settop(L, 0);
 }
 
 void LuaScript::performOpen() {
