@@ -4,6 +4,9 @@
 #include <boost/lexical_cast.hpp>
 #include <chrono>
 #include <thread>
+#include <mutex>
+#include <thread>
+#include "cppzmq/zmq.hpp"
 
 extern char _binary_JSON_lua_start;
 extern char _binary_JSON_lua_end;
@@ -13,6 +16,26 @@ extern char _binary_JanoshAPI_lua_end;
 
 namespace janosh {
 namespace lua {
+
+void make_subscription(string prefix, string luaCode) {
+  std::thread t([=]() {
+        zmq::context_t context (1);
+        zmq::socket_t subscriber (context, ZMQ_SUB);
+        string user = std::getenv("USER");
+        subscriber.connect((string("ipc://janosh-") + user + ".ipc").c_str());
+        subscriber.setsockopt(ZMQ_SUBSCRIBE, prefix.data(), prefix.length());
+        LuaScript* parent = LuaScript::getInstance();
+
+        while(true) {
+          zmq::message_t update;
+          LuaScript script(parent->openCallback_, parent->requestCallback_, parent->closeCallback_);
+          script.loadString(("load(\"" + luaCode + "\")()").c_str());
+          subscriber.recv(&update);
+          script.run();
+        }
+      });
+      t.detach();
+}
 
 using std::vector;
 
@@ -72,6 +95,13 @@ static int l_sleep(lua_State* L) {
   return 0;
 }
 
+static int l_subscribe(lua_State* L) {
+//  lua_gettop(L);
+  string callback = lua_tostring( L, -1 );
+  string prefix = lua_tostring( L, -2);
+  make_subscription(prefix, callback);
+  return 0;
+}
 
 static int l_installChangeCallback(lua_State* L) {
   LuaScript::getInstance()->setLuaChangeCallback(lua_tostring( L, -1 ));
@@ -197,8 +227,8 @@ LuaScript::LuaScript(std::function<void()> openCallback,
     std::function<void()> closeCallback) : openCallback_(openCallback), requestCallback_(requestCallback), closeCallback_(closeCallback), lastRevision_() {
   L = luaL_newstate();
   luaL_openlibs(L);
-  lua_pushcfunction(L, l_installChangeCallback);
-  lua_setglobal(L, "janosh_installChangeCallback");
+  lua_pushcfunction(L, l_subscribe);
+  lua_setglobal(L, "janosh_subscribe");
   lua_pushcfunction(L, l_sleep);
   lua_setglobal(L, "janosh_sleep");
   lua_pushcfunction(L, l_poll);
@@ -272,6 +302,12 @@ void LuaScript::load(const std::string& path) {
   }
 }
 
+void LuaScript::loadString(const std::string& luacode) {
+  if (luaL_loadstring(L, luacode.c_str())) {
+    LOG_ERR_MSG("Failed to load string", lua_tostring(L, -1));
+  }
+}
+
 void LuaScript::run() {
   if(lua_pcall(L, 0, 0, 0)) {
     LOG_ERR_MSG("Lua script failed", lua_tostring(L, -1));
@@ -289,6 +325,8 @@ void LuaScript::performClose() {
 }
 
 string LuaScript::performRequest(janosh::Request req) {
+  requestMutex_.lock();
+
   if(!isOpen) {
     performOpen();
     auto result = requestCallback_(req);
@@ -298,6 +336,7 @@ string LuaScript::performRequest(janosh::Request req) {
       lua_getglobal(L, luaChangeCallbackName_.c_str());
       lua_call(L, 0, 0);
     }
+    requestMutex_.unlock();
     return result.second;
   } else {
     auto result = requestCallback_(req);
@@ -306,6 +345,7 @@ string LuaScript::performRequest(janosh::Request req) {
       lua_getglobal(L, luaChangeCallbackName_.c_str());
       lua_call(L, 0, 0);
     }
+    requestMutex_.unlock();
     return result.second;
   }
 }

@@ -6,6 +6,7 @@
 #include <iostream>
 #include "logger.hpp"
 #include "request.hpp"
+#include <mutex>
 
 extern "C" {
 # include "luajit-2.0/lua.h"
@@ -23,6 +24,7 @@ public:
     ~LuaScript();
 
     void load(const string& path);
+    void loadString(const string& luaCode);
     void run();
     void performOpen();
     void performClose();
@@ -41,16 +43,17 @@ public:
       assert(instance_ != NULL);
       return instance_;
     }
-    lua_State* L;
-private:
-    int level_ = 0;
-    static LuaScript* instance_;
     std::function<void()> openCallback_;
     std::function<std::pair<string,string>(janosh::Request&)> requestCallback_;
     std::function<void()> closeCallback_;
+private:
+    lua_State* L;
+    int level_ = 0;
+    static LuaScript* instance_;
     bool isOpen = false;
     string lastRevision_;
     string luaChangeCallbackName_;
+    std::mutex requestMutex_;
 };
 }
 }

@@ -27,13 +27,18 @@ Tracker::Tracker() :
   }
 }
 
+Tracker::~Tracker() {
+  publisher_.close();
+  context_.close();
+}
+
 void Tracker::update(const string& s, const Operation& op) {
   map<string, size_t>& m = get(op);
   if(op == WRITE || op == DELETE) {
     ++revision_;
-    zmq::message_t message(s.length());
-    memcpy(message.data(), s.data(),s.length());
-    std::cerr << "### send: " << string((char*)message.data()) << std::endl;
+    string str = s + " " + s;
+    zmq::message_t message(str.length());
+    memcpy(message.data(), str.data(),str.length());
     publisher_.send(message);
   }
   auto iter = m.find(s);
