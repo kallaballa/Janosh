@@ -37,6 +37,9 @@ void DatabaseThread::run() {
         Record::db.begin_transaction();
         r = (*cmd)(req_.vecArgs_, *out_);
         Record::db.end_transaction(true);
+      } catch(janosh_exception& ex) {
+        Record::db.end_transaction(false);
+        throw ex;
       } catch(std::exception& ex) {
         Record::db.end_transaction(false);
         throw ex;
