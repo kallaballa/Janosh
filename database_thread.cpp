@@ -32,7 +32,16 @@ void DatabaseThread::run() {
         throw janosh_exception() << string_info( { "Unknown command", req_.command_ });
       }
 
-      Command::Result r = (*cmd)(req_.vecArgs_, *out_);
+      Command::Result r;
+      try {
+        Record::db.begin_transaction();
+        r = (*cmd)(req_.vecArgs_, *out_);
+        Record::db.end_transaction(true);
+      } catch(std::exception& ex) {
+        Record::db.end_transaction(false);
+        throw ex;
+      }
+
       if (r.first == -1)
         throw janosh_exception() << msg_info(r.second);
 
