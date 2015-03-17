@@ -1,6 +1,6 @@
 
 echo "Building luajit and luarocks..."
-git clone https://github.com/torch/luajit-rocks.git
+git clone https://github.com/kallaballa/luajit-rocks.git
 cd luajit-rocks
 mkdir build
 cd build
@@ -10,4 +10,5 @@ make install
 echo "Building zeromq lua bindings..."
 LIBDIR=/usr/lib
 test -d /usr/lib64 && LIBDIR=/usr/lib64
+export PATH="$PATH:/usr/local/bin/"
 luarocks install https://raw.github.com/Neopallium/lua-zmq/master/rockspecs/lua-zmq-scm-1.rockspec ZEROMQ_DIR=/usr/ ZEROMQ_LIBDIR="$LIBDIR"
