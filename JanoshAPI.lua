@@ -15,7 +15,7 @@ function JanoshClass.request(self, req)
 end
 
 function JanoshClass.set(self, key, value)
-  janosh_set({key,value});
+janosh_set({key,value});
 end
 
 function JanoshClass.set_all(self, argv)
@@ -158,5 +158,9 @@ end
 
 function JanoshClass.wsSend(self, handle, msg) 
  janosh_wssend(handle,msg)
+end
+
+function JanoshClass.sleep(self, millis)
+ janosh_sleep(millis)
 end
 return JanoshClass:new()

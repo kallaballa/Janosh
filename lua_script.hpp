@@ -7,6 +7,7 @@
 #include "logger.hpp"
 #include "request.hpp"
 #include <mutex>
+#include <condition_variable>
 
 extern "C" {
 # include "luajit-2.0/lua.h"
@@ -27,8 +28,8 @@ public:
     void loadString(const string& luaCode);
     void run();
     void clean();
-    void performOpen();
-    void performClose();
+    void performOpen(bool lockRequest = true);
+    void performClose(bool lockRequest = true);
     string performRequest(janosh::Request req);
     void setLuaChangeCallback(string functionName) {
       luaChangeCallbackName_ = functionName;
@@ -51,7 +52,11 @@ public:
 private:
     int level_ = 0;
     static LuaScript* instance_;
-    bool isOpen = false;
+    std::mutex open_lock_;
+    std::condition_variable open_lock_cond_;
+    std::queue<std::thread::id> open_queue_;
+    volatile bool isOpen = false;
+
     string lastRevision_;
     string luaChangeCallbackName_;
     std::mutex requestMutex_;

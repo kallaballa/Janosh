@@ -191,8 +191,8 @@ static int l_get(lua_State* L) {
 }
 
 static int l_set(lua_State* L) {
-  LuaScript::getInstance()->performRequest(make_request("set", L));
-  return 0;
+  lua_pushstring(L, (LuaScript::getInstance()->performRequest(make_request("set", L))).c_str());
+  return 1;
 }
 
 static int l_open(lua_State* L) {
@@ -394,38 +394,73 @@ void LuaScript::clean() {
   lua_settop(L, 0);
 }
 
-void LuaScript::performOpen() {
-  openCallback_();
-  isOpen = true;
+void LuaScript::performOpen(bool lockRequest) {
+  std::cerr << "### open: " << std::this_thread::get_id() << std::endl;
+  if(lockRequest) {
+    std::unique_lock<std::mutex> lock(open_lock_);
+    std::cerr << "### lock: " << std::this_thread::get_id() << std::endl;
+    bool wait = false;
+    bool fromQueue = false;
+    while(!open_queue_.empty() || isOpen) {
+      std::cerr << "### push: " << std::this_thread::get_id() << std::endl;
+      if(!wait)
+        open_queue_.push(std::this_thread::get_id());
+      std::cerr << "### queued: " << std::this_thread::get_id() << std::endl;
+      if(isOpen || wait)
+        open_lock_cond_.wait(lock);
+      if(std::this_thread::get_id() == open_queue_.front()) {
+        fromQueue = true;
+        break;
+      } else {
+        wait = true;
+        std::cerr << "### wait: " << std::this_thread::get_id() << std::endl;
+      }
+    }
+    if(fromQueue)
+      open_queue_.pop();
+
+    std::cerr << "### released: " << std::this_thread::get_id() << std::endl;
+    openCallback_();
+    isOpen = true;
+  } else {
+    openCallback_();
+    isOpen = true;
+  }
 }
 
-void LuaScript::performClose() {
-  closeCallback_();
-  isOpen = false;
+void LuaScript::performClose(bool lockRequest) {
+  std::cerr << "### close: " << std::this_thread::get_id() << std::endl;
+
+  if(lockRequest) {
+    std::unique_lock<std::mutex> lock(open_lock_);
+    if(!isOpen) {
+      lock.unlock();
+      open_lock_cond_.notify_all();
+      return;
+    }
+    closeCallback_();
+    isOpen = false;
+    lock.unlock();
+    open_lock_cond_.notify_all();
+  } else {
+    if(!isOpen)
+      return;
+    closeCallback_();
+    isOpen = false;
+  }
 }
 
 string LuaScript::performRequest(janosh::Request req) {
-  requestMutex_.lock();
+  std::unique_lock<std::mutex> lock(open_lock_);
+  std::cerr << "### request: " << std::this_thread::get_id() << std::endl;
 
   if(!isOpen) {
-    performOpen();
+    performOpen(false);
     auto result = requestCallback_(req);
-    performClose();
-    if(result.first != lastRevision_ && !luaChangeCallbackName_.empty()) {
-      lastRevision_ = result.first;
-      lua_getglobal(L, luaChangeCallbackName_.c_str());
-      lua_call(L, 0, 0);
-    }
-    requestMutex_.unlock();
+    performClose(false);
     return result.second;
   } else {
     auto result = requestCallback_(req);
-    if(result.first != lastRevision_) {
-      lastRevision_ = result.first;
-      lua_getglobal(L, luaChangeCallbackName_.c_str());
-      lua_call(L, 0, 0);
-    }
-    requestMutex_.unlock();
     return result.second;
   }
 }
