@@ -171,17 +171,25 @@ function JanoshClass.sleep(self, millis)
  janosh_sleep(millis)
 end
 
-    function setfield (f, v)
-      local t = _G    -- start with the table of globals
-      for w, d in string.gfind(f, "([%w_]+)(.?)") do
-        if d == "." then      -- not last field?
-          t[w] = t[w] or {}   -- create table if absent
-          t = t[w]            -- get the table
-        else                  -- last field
-          t[w] = v            -- do the assignment
-        end
-      end
-    end
+function JanoshClass.lock(self, name) 
+	janosh_lock(name)
+end
+
+function JanoshClass.unlock(self, name)
+  janosh_unlock(name)
+end
+
+function setfield (f, v)
+	local t = _G    -- start with the table of globals
+	for w, d in string.gfind(f, "([%w_]+)(.?)") do
+		if d == "." then      -- not last field?
+			t[w] = t[w] or {}   -- create table if absent
+			t = t[w]            -- get the table
+		else                  -- last field
+			t[w] = v            -- do the assignment
+		end
+	end
+end
 
 function JanoshClass.shorthand(self) 
 for key,value in pairs(getmetatable(self)) do
