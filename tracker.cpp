@@ -21,19 +21,24 @@ Tracker::Tracker() :
   if (val == NULL) {
     LOG_ERR_STR("Environment variable USER not found");
   } else {
-    string url = (string("ipc://janosh-") + string(val) + string(".ipc"));
+    string url = (string("ipc:///tmp/janosh-") + string(val) + string(".ipc"));
     LOG_INFO_MSG("Binding ZMQ", url);
     publisher_.bind(url.c_str());
   }
+}
+
+Tracker::~Tracker() {
+  publisher_.close();
+  context_.close();
 }
 
 void Tracker::update(const string& s, const Operation& op) {
   map<string, size_t>& m = get(op);
   if(op == WRITE || op == DELETE) {
     ++revision_;
-    zmq::message_t message(s.length());
-    memcpy(message.data(), s.data(),s.length());
-    std::cerr << "### send: " << string((char*)message.data()) << std::endl;
+    string str = s + " " + s;
+    zmq::message_t message(str.length());
+    memcpy(message.data(), str.data(),str.length());
     publisher_.send(message);
   }
   auto iter = m.find(s);

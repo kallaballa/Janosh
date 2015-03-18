@@ -49,7 +49,7 @@ public:
   };
 
   Tracker();
-  virtual ~Tracker() {};
+  virtual ~Tracker();
 
   void update(const string& s, const Operation& op);
   size_t get(const string& s, const Operation& op);

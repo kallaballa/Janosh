@@ -4,6 +4,10 @@
 #include <boost/lexical_cast.hpp>
 #include <chrono>
 #include <thread>
+#include <mutex>
+#include <thread>
+#include "cppzmq/zmq.hpp"
+#include "websocket.hpp"
 
 extern char _binary_JSON_lua_start;
 extern char _binary_JSON_lua_end;
@@ -13,6 +17,69 @@ extern char _binary_JanoshAPI_lua_end;
 
 namespace janosh {
 namespace lua {
+
+void make_subscription(string prefix, string luaCode) {
+  std::thread t([=]() {
+    zmq::context_t context (1);
+    zmq::socket_t subscriber (context, ZMQ_SUB);
+    string user = std::getenv("USER");
+    subscriber.connect((string("ipc:///tmp/janosh-") + user + ".ipc").c_str());
+    subscriber.setsockopt(ZMQ_SUBSCRIBE, prefix.data(), prefix.length());
+    LuaScript* parent = LuaScript::getInstance();
+    LuaScript script(parent->openCallback_, parent->requestCallback_, parent->closeCallback_);
+    string wrapped = "load(\"" + luaCode + "\")(...)";
+    script.loadString(wrapped.c_str());
+    lua_pushvalue(script.L, -1);
+    int ref = luaL_ref(script.L, LUA_REGISTRYINDEX);
+    LOG_DEBUG_MSG("Installed subscription", prefix);
+    while(true) {
+      zmq::message_t update;
+      subscriber.recv(&update);
+      char* data = new char[update.size() + 1];
+      memcpy(data, update.data(), update.size());
+      data[update.size()] = 0;
+      string s(data);
+      size_t sep = s.find(' ');
+      string key = s.substr(0, sep);
+      string value = s.substr(sep + 1, s.size());
+      LOG_DEBUG_MSG("Running subscription", key);
+
+      lua_pushstring(script.L, key.data());
+      lua_pushstring(script.L, value.data());
+      if(lua_pcall(script.L, 2, 0, 0)) {
+        LOG_ERR_MSG("Lua subscribe failed", lua_tostring(script.L, -1));
+      }
+      script.clean();
+      lua_rawgeti(script.L, LUA_REGISTRYINDEX, ref);
+    }
+  });
+  t.detach();
+}
+
+void make_receiver(string luaCode) {
+  std::thread t([=]() {
+    LuaScript* parent = LuaScript::getInstance();
+    LuaScript script(parent->openCallback_, parent->requestCallback_, parent->closeCallback_);
+    string wrapped = "load(\"" + luaCode + "\")(...)";
+    script.loadString(wrapped.c_str());
+    lua_pushvalue(script.L, -1);
+    int ref = luaL_ref(script.L, LUA_REGISTRYINDEX);
+    LOG_INFO_STR("Installed receiver");
+    while(true) {
+      auto message = broadcast_server::getInstance()->receive();
+      LOG_INFO_MSG("Running receiver", message.second);
+      lua_pushinteger(script.L, message.first);
+      lua_pushstring(script.L, message.second.c_str());
+
+      if(lua_pcall(script.L, 2, 0, 0)) {
+        LOG_ERR_MSG("Lua subscribe failed", lua_tostring(script.L, -1));
+      }
+      script.clean();
+      lua_rawgeti(script.L, LUA_REGISTRYINDEX, ref);
+    }
+  });
+  t.detach();
+}
 
 using std::vector;
 
@@ -72,6 +139,36 @@ static int l_sleep(lua_State* L) {
   return 0;
 }
 
+static int l_subscribe(lua_State* L) {
+//  lua_gettop(L);
+  string callback = lua_tostring( L, -1 );
+  string prefix = lua_tostring( L, -2);
+  make_subscription(prefix, callback);
+  return 0;
+}
+
+static int l_wsopen(lua_State* L) {
+  //FIXME race condition
+  broadcast_server::init(lua_tointeger(L, -1));
+  return 0;
+}
+
+static int l_wsbroadcast(lua_State* L) {
+  broadcast_server::getInstance()->broadcast(string(lua_tostring(L, -1)));
+  return 0;
+}
+
+static int l_wsonreceive(lua_State* L) {
+  make_receiver(lua_tostring( L, -1 ));
+  return 0;
+}
+
+static int l_wssend(lua_State* L) {
+  string message = lua_tostring( L, -1 );
+  size_t handle = lua_tointeger( L, -2);
+  broadcast_server::getInstance()->send(handle,message);
+  return 0;
+}
 
 static int l_installChangeCallback(lua_State* L) {
   LuaScript::getInstance()->setLuaChangeCallback(lua_tostring( L, -1 ));
@@ -94,8 +191,8 @@ static int l_get(lua_State* L) {
 }
 
 static int l_set(lua_State* L) {
-  LuaScript::getInstance()->performRequest(make_request("set", L));
-  return 0;
+  lua_pushstring(L, (LuaScript::getInstance()->performRequest(make_request("set", L))).c_str());
+  return 1;
 }
 
 static int l_open(lua_State* L) {
@@ -197,8 +294,17 @@ LuaScript::LuaScript(std::function<void()> openCallback,
     std::function<void()> closeCallback) : openCallback_(openCallback), requestCallback_(requestCallback), closeCallback_(closeCallback), lastRevision_() {
   L = luaL_newstate();
   luaL_openlibs(L);
-  lua_pushcfunction(L, l_installChangeCallback);
-  lua_setglobal(L, "janosh_installChangeCallback");
+  lua_pushcfunction(L, l_wsopen);
+  lua_setglobal(L, "janosh_wsopen");
+  lua_pushcfunction(L, l_wsbroadcast);
+  lua_setglobal(L, "janosh_wsbroadcast");
+  lua_pushcfunction(L, l_wsonreceive);
+  lua_setglobal(L, "janosh_wsonreceive");
+  lua_pushcfunction(L, l_wssend);
+  lua_setglobal(L, "janosh_wssend");
+
+  lua_pushcfunction(L, l_subscribe);
+  lua_setglobal(L, "janosh_subscribe");
   lua_pushcfunction(L, l_sleep);
   lua_setglobal(L, "janosh_sleep");
   lua_pushcfunction(L, l_poll);
@@ -272,40 +378,89 @@ void LuaScript::load(const std::string& path) {
   }
 }
 
+void LuaScript::loadString(const std::string& luacode) {
+  if (luaL_loadstring(L, luacode.c_str())) {
+    LOG_ERR_MSG("Failed to load string", lua_tostring(L, -1));
+  }
+}
+
 void LuaScript::run() {
   if(lua_pcall(L, 0, 0, 0)) {
     LOG_ERR_MSG("Lua script failed", lua_tostring(L, -1));
   }
 }
 
-void LuaScript::performOpen() {
-  openCallback_();
-  isOpen = true;
+void LuaScript::clean() {
+  lua_settop(L, 0);
 }
 
-void LuaScript::performClose() {
-  closeCallback_();
-  isOpen = false;
+void LuaScript::performOpen(bool lockRequest) {
+  std::cerr << "### open: " << std::this_thread::get_id() << std::endl;
+  if(lockRequest) {
+    std::unique_lock<std::mutex> lock(open_lock_);
+    std::cerr << "### lock: " << std::this_thread::get_id() << std::endl;
+    bool wait = false;
+    bool fromQueue = false;
+    while(!open_queue_.empty() || isOpen) {
+      std::cerr << "### push: " << std::this_thread::get_id() << std::endl;
+      if(!wait)
+        open_queue_.push(std::this_thread::get_id());
+      std::cerr << "### queued: " << std::this_thread::get_id() << std::endl;
+      if(isOpen || wait)
+        open_lock_cond_.wait(lock);
+      if(std::this_thread::get_id() == open_queue_.front()) {
+        fromQueue = true;
+        break;
+      } else {
+        wait = true;
+        std::cerr << "### wait: " << std::this_thread::get_id() << std::endl;
+      }
+    }
+    if(fromQueue)
+      open_queue_.pop();
+
+    std::cerr << "### released: " << std::this_thread::get_id() << std::endl;
+    openCallback_();
+    isOpen = true;
+  } else {
+    openCallback_();
+    isOpen = true;
+  }
+}
+
+void LuaScript::performClose(bool lockRequest) {
+  std::cerr << "### close: " << std::this_thread::get_id() << std::endl;
+
+  if(lockRequest) {
+    std::unique_lock<std::mutex> lock(open_lock_);
+    if(!isOpen) {
+      lock.unlock();
+      open_lock_cond_.notify_all();
+      return;
+    }
+    closeCallback_();
+    isOpen = false;
+    lock.unlock();
+    open_lock_cond_.notify_all();
+  } else {
+    if(!isOpen)
+      return;
+    closeCallback_();
+    isOpen = false;
+  }
 }
 
 string LuaScript::performRequest(janosh::Request req) {
+  std::unique_lock<std::mutex> lock(open_lock_);
+  std::cerr << "### request: " << std::this_thread::get_id() << std::endl;
+
   if(!isOpen) {
-    performOpen();
+    performOpen(false);
     auto result = requestCallback_(req);
-    performClose();
-    if(result.first != lastRevision_ && !luaChangeCallbackName_.empty()) {
-      lastRevision_ = result.first;
-      lua_getglobal(L, luaChangeCallbackName_.c_str());
-      lua_call(L, 0, 0);
-    }
+    performClose(false);
     return result.second;
   } else {
     auto result = requestCallback_(req);
-    if(result.first != lastRevision_) {
-      lastRevision_ = result.first;
-      lua_getglobal(L, luaChangeCallbackName_.c_str());
-      lua_call(L, 0, 0);
-    }
     return result.second;
   }
 }

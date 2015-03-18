@@ -1,6 +1,7 @@
 #!/usr/local/bin/janosh -f
 
 require"zmq"
+require"zmq.threads"
 
 local JanoshClass = {} -- the table representing the class, which will double as the metatable for the instances
 JanoshClass.__index = JanoshClass -- failed table lookups on the instances should fallback to the class table, to get methods
@@ -9,23 +10,12 @@ function JanoshClass.new()
   return setmetatable({}, JanoshClass)
 end
 
-function JanoshClass.onChange(self, functionName, interval)
-  janosh_installChangeCallback(functionName);
-  co = coroutine.create(function ()
-		while true do 
-			janosh_poll({})
-			janosh_sleep(interval);
-		end
-  end)
-  coroutine.resume(co);
-end
-
 function JanoshClass.request(self, req) 
   return janosh_request(req);
 end
 
 function JanoshClass.set(self, key, value)
-  janosh_set({key,value});
+janosh_set({key,value});
 end
 
 function JanoshClass.set_all(self, argv)
@@ -138,17 +128,39 @@ function JanoshClass.close(self)
 end
 
 function JanoshClass.subscribe(self, keyprefix, callback)
-	local context = zmq.init(1)
-	local subscriber = context:socket(zmq.SUB)
-	subscriber:connect("ipc://janosh-" .. os.getenv("USER") .. ".ipc")
-	subscriber:setopt(zmq.SUBSCRIBE, keyprefix)
-  co = coroutine.create(function ()
-		while true do
-  		local message = subscriber:recv()
-			callback();
-		end
-	end)
-  coroutine.resume(co);
+  binary = string.dump(callback);
+	formatted_binary = ""
+	for i = 1, string.len(binary) do
+		dec, _ = ("\\%3d"):format(binary:sub(i, i):byte()):gsub(' ', '0')
+		formatted_binary = formatted_binary .. dec
+	end
+  janosh_subscribe(keyprefix, formatted_binary);
 end
 
+function JanoshClass.wsBroadcast(self, msg) 
+  janosh_wsbroadcast(msg)
+end
+
+function JanoshClass.wsOpen(self, port)
+ janosh_wsopen(port)
+end
+
+function JanoshClass.wsOnReceive(self, callback) 
+  binary = string.dump(callback)
+  formatted_binary = ""
+  for i = 1, string.len(binary) do
+    dec, _ = ("\\%3d"):format(binary:sub(i, i):byte()):gsub(' ', '0')
+    formatted_binary = formatted_binary .. dec
+  end
+
+ janosh_wsonreceive(formatted_binary)
+end
+
+function JanoshClass.wsSend(self, handle, msg) 
+ janosh_wssend(handle,msg)
+end
+
+function JanoshClass.sleep(self, millis)
+ janosh_sleep(millis)
+end
 return JanoshClass:new()
