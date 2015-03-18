@@ -3,6 +3,7 @@
 require"zmq"
 require"zmq.threads"
 
+
 local JanoshClass = {} -- the table representing the class, which will double as the metatable for the instances
 JanoshClass.__index = JanoshClass -- failed table lookups on the instances should fallback to the class table, to get methods
 
@@ -127,6 +128,12 @@ function JanoshClass.close(self)
   janosh_close({})
 end
 
+function JanoshClass.transaction(self, fn) 
+  self:open({})
+  fn()
+  self:close({})
+end
+
 function JanoshClass.subscribe(self, keyprefix, callback)
   binary = string.dump(callback);
 	formatted_binary = ""
@@ -163,4 +170,23 @@ end
 function JanoshClass.sleep(self, millis)
  janosh_sleep(millis)
 end
+
+    function setfield (f, v)
+      local t = _G    -- start with the table of globals
+      for w, d in string.gfind(f, "([%w_]+)(.?)") do
+        if d == "." then      -- not last field?
+          t[w] = t[w] or {}   -- create table if absent
+          t = t[w]            -- get the table
+        else                  -- last field
+          t[w] = v            -- do the assignment
+        end
+      end
+    end
+
+function JanoshClass.shorthand(self) 
+for key,value in pairs(getmetatable(self)) do
+  setfield("j" .. key, function(...) value(...) end)
+end
+end
+
 return JanoshClass:new()

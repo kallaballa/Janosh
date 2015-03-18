@@ -294,6 +294,7 @@ LuaScript::LuaScript(std::function<void()> openCallback,
     std::function<void()> closeCallback) : openCallback_(openCallback), requestCallback_(requestCallback), closeCallback_(closeCallback), lastRevision_() {
   L = luaL_newstate();
   luaL_openlibs(L);
+
   lua_pushcfunction(L, l_wsopen);
   lua_setglobal(L, "janosh_wsopen");
   lua_pushcfunction(L, l_wsbroadcast);
