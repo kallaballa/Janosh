@@ -21,7 +21,7 @@ class LuaScript {
 public:
   LuaScript(std::function<void()> openCallback,
         std::function<std::pair<string,string>(janosh::Request&)> requestCallback,
-        std::function<void()> closeCallback);
+        std::function<void()> closeCallback, lua_State* l = NULL);
     ~LuaScript();
 
     void load(const string& path);

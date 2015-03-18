@@ -26,7 +26,9 @@ void make_subscription(string prefix, string luaCode) {
     subscriber.connect((string("ipc:///tmp/janosh-") + user + ".ipc").c_str());
     subscriber.setsockopt(ZMQ_SUBSCRIBE, prefix.data(), prefix.length());
     LuaScript* parent = LuaScript::getInstance();
-    LuaScript script(parent->openCallback_, parent->requestCallback_, parent->closeCallback_);
+    lua_State* Lchild = lua_newthread(parent->L);
+    LuaScript script(parent->openCallback_, parent->requestCallback_, parent->closeCallback_, Lchild);
+
     string wrapped = "load(\"" + luaCode + "\")(...)";
     script.loadString(wrapped.c_str());
     lua_pushvalue(script.L, -1);
@@ -64,10 +66,10 @@ void make_receiver(string luaCode) {
     script.loadString(wrapped.c_str());
     lua_pushvalue(script.L, -1);
     int ref = luaL_ref(script.L, LUA_REGISTRYINDEX);
-    LOG_INFO_STR("Installed receiver");
+    LOG_DEBUG_STR("Installed receiver");
     while(true) {
       auto message = broadcast_server::getInstance()->receive();
-      LOG_INFO_MSG("Running receiver", message.second);
+      LOG_DEBUG_MSG("Running receiver", message.second);
       lua_pushinteger(script.L, message.first);
       lua_pushstring(script.L, message.second.c_str());
 
@@ -291,8 +293,11 @@ static int l_hash(lua_State* L) {
 
 LuaScript::LuaScript(std::function<void()> openCallback,
     std::function<std::pair<string,string>(janosh::Request&)> requestCallback,
-    std::function<void()> closeCallback) : openCallback_(openCallback), requestCallback_(requestCallback), closeCallback_(closeCallback), lastRevision_() {
-  L = luaL_newstate();
+    std::function<void()> closeCallback, lua_State* l) : openCallback_(openCallback), requestCallback_(requestCallback), closeCallback_(closeCallback), lastRevision_() {
+  if(l == NULL)
+    L = luaL_newstate();
+  else
+    L = l;
   luaL_openlibs(L);
 
   lua_pushcfunction(L, l_wsopen);
