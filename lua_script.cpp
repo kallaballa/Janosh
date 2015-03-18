@@ -395,17 +395,13 @@ void LuaScript::clean() {
 }
 
 void LuaScript::performOpen(bool lockRequest) {
-  std::cerr << "### open: " << std::this_thread::get_id() << std::endl;
   if(lockRequest) {
     std::unique_lock<std::mutex> lock(open_lock_);
-    std::cerr << "### lock: " << std::this_thread::get_id() << std::endl;
     bool wait = false;
     bool fromQueue = false;
     while(!open_queue_.empty() || isOpen) {
-      std::cerr << "### push: " << std::this_thread::get_id() << std::endl;
       if(!wait)
         open_queue_.push(std::this_thread::get_id());
-      std::cerr << "### queued: " << std::this_thread::get_id() << std::endl;
       if(isOpen || wait)
         open_lock_cond_.wait(lock);
       if(std::this_thread::get_id() == open_queue_.front()) {
@@ -413,13 +409,11 @@ void LuaScript::performOpen(bool lockRequest) {
         break;
       } else {
         wait = true;
-        std::cerr << "### wait: " << std::this_thread::get_id() << std::endl;
       }
     }
     if(fromQueue)
       open_queue_.pop();
 
-    std::cerr << "### released: " << std::this_thread::get_id() << std::endl;
     openCallback_();
     isOpen = true;
   } else {
@@ -429,8 +423,6 @@ void LuaScript::performOpen(bool lockRequest) {
 }
 
 void LuaScript::performClose(bool lockRequest) {
-  std::cerr << "### close: " << std::this_thread::get_id() << std::endl;
-
   if(lockRequest) {
     std::unique_lock<std::mutex> lock(open_lock_);
     if(!isOpen) {
@@ -452,7 +444,6 @@ void LuaScript::performClose(bool lockRequest) {
 
 string LuaScript::performRequest(janosh::Request req) {
   std::unique_lock<std::mutex> lock(open_lock_);
-  std::cerr << "### request: " << std::this_thread::get_id() << std::endl;
 
   if(!isOpen) {
     performOpen(false);
