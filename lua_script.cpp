@@ -67,10 +67,10 @@ void make_receiver(string luaCode) {
     script.loadString(wrapped.c_str());
     lua_pushvalue(script.L, -1);
     int ref = luaL_ref(script.L, LUA_REGISTRYINDEX);
-    LOG_DEBUG_STR("Installed receiver");
+    LOG_INFO_STR("Installed receiver");
     while(true) {
       auto message = broadcast_server::getInstance()->receive();
-      LOG_DEBUG_MSG("Running receiver", message.second);
+      LOG_INFO_MSG("Running receiver", message.second);
       lua_pushinteger(script.L, message.first);
       lua_pushstring(script.L, message.second.c_str());
 
@@ -295,84 +295,85 @@ static int l_hash(lua_State* L) {
 LuaScript::LuaScript(std::function<void()> openCallback,
     std::function<std::pair<string,string>(janosh::Request&)> requestCallback,
     std::function<void()> closeCallback, lua_State* l) : openCallback_(openCallback), requestCallback_(requestCallback), closeCallback_(closeCallback), lastRevision_() {
-  if(l == NULL)
+  if(l == NULL) {
     L = luaL_newstate();
+    luaL_openlibs(L);
+    lua_pushcfunction(L, l_wsopen);
+    lua_setglobal(L, "janosh_wsopen");
+    lua_pushcfunction(L, l_wsbroadcast);
+    lua_setglobal(L, "janosh_wsbroadcast");
+    lua_pushcfunction(L, l_wsonreceive);
+    lua_setglobal(L, "janosh_wsonreceive");
+    lua_pushcfunction(L, l_wssend);
+    lua_setglobal(L, "janosh_wssend");
+
+    lua_pushcfunction(L, l_subscribe);
+    lua_setglobal(L, "janosh_subscribe");
+    lua_pushcfunction(L, l_sleep);
+    lua_setglobal(L, "janosh_sleep");
+    lua_pushcfunction(L, l_poll);
+    lua_setglobal(L, "janosh_poll");
+    lua_pushcfunction(L, l_request);
+    lua_setglobal(L, "janosh_request");
+    lua_pushcfunction(L, l_set);
+    lua_setglobal(L, "janosh_set");
+    lua_pushcfunction(L, l_open);
+    lua_setglobal(L, "janosh_open");
+    lua_pushcfunction(L, l_close);
+    lua_setglobal(L, "janosh_close");
+    lua_pushcfunction(L, l_add);
+    lua_setglobal(L, "janosh_add");
+    lua_pushcfunction(L, l_trigger);
+    lua_setglobal(L, "janosh_trigger");
+    lua_pushcfunction(L, l_replace);
+    lua_setglobal(L, "janosh_replace");
+    lua_pushcfunction(L, l_append);
+    lua_setglobal(L, "janosh_append");
+    lua_pushcfunction(L, l_dump);
+    lua_setglobal(L, "janosh_dump");
+    lua_pushcfunction(L, l_size);
+    lua_setglobal(L, "janosh_size");
+    lua_pushcfunction(L, l_get);
+    lua_setglobal(L, "janosh_get");
+    lua_pushcfunction(L, l_copy);
+    lua_setglobal(L, "janosh_copy");
+    lua_pushcfunction(L, l_remove);
+    lua_setglobal(L, "janosh_remove");
+    lua_pushcfunction(L, l_shift);
+    lua_setglobal(L, "janosh_shift");
+    lua_pushcfunction(L, l_move);
+    lua_setglobal(L, "janosh_move");
+    lua_pushcfunction(L, l_truncate);
+    lua_setglobal(L, "janosh_truncate");
+    lua_pushcfunction(L, l_mkarr);
+    lua_setglobal(L, "janosh_mkarr");
+    lua_pushcfunction(L, l_mkobj);
+    lua_setglobal(L, "janosh_mkobj");
+    lua_pushcfunction(L, l_hash);
+    lua_setglobal(L, "janosh_hash");
+
+    std::stringstream ss;
+    char*  p = &_binary_JSON_lua_start;
+    while ( p != &_binary_JSON_lua_end ) ss << *p++;
+    luaL_loadstring(L, ss.str().c_str());
+    if(lua_pcall(L, 0, 1, 0)) {
+      LOG_ERR_MSG("Preloading JSON library failed", lua_tostring(L, -1));
+    }
+    lua_setglobal(L, "JSON");
+
+    ss.str("");
+
+    p = &_binary_JanoshAPI_lua_start;
+    while ( p != &_binary_JanoshAPI_lua_end ) ss << *p++;
+    luaL_loadstring(L, ss.str().c_str());
+    if(lua_pcall(L, 0, 1, 0)) {
+      LOG_ERR_MSG("Preloading JanoshAPI library failed", lua_tostring(L, -1));
+    }
+    lua_setglobal(L, "Janosh");
+  }
   else
     L = l;
-  luaL_openlibs(L);
-
-  lua_pushcfunction(L, l_wsopen);
-  lua_setglobal(L, "janosh_wsopen");
-  lua_pushcfunction(L, l_wsbroadcast);
-  lua_setglobal(L, "janosh_wsbroadcast");
-  lua_pushcfunction(L, l_wsonreceive);
-  lua_setglobal(L, "janosh_wsonreceive");
-  lua_pushcfunction(L, l_wssend);
-  lua_setglobal(L, "janosh_wssend");
-
-  lua_pushcfunction(L, l_subscribe);
-  lua_setglobal(L, "janosh_subscribe");
-  lua_pushcfunction(L, l_sleep);
-  lua_setglobal(L, "janosh_sleep");
-  lua_pushcfunction(L, l_poll);
-  lua_setglobal(L, "janosh_poll");
-  lua_pushcfunction(L, l_request);
-  lua_setglobal(L, "janosh_request");
-  lua_pushcfunction(L, l_set);
-  lua_setglobal(L, "janosh_set");
-  lua_pushcfunction(L, l_open);
-  lua_setglobal(L, "janosh_open");
-  lua_pushcfunction(L, l_close);
-  lua_setglobal(L, "janosh_close");
-  lua_pushcfunction(L, l_add);
-  lua_setglobal(L, "janosh_add");
-  lua_pushcfunction(L, l_trigger);
-  lua_setglobal(L, "janosh_trigger");
-  lua_pushcfunction(L, l_replace);
-  lua_setglobal(L, "janosh_replace");
-  lua_pushcfunction(L, l_append);
-  lua_setglobal(L, "janosh_append");
-  lua_pushcfunction(L, l_dump);
-  lua_setglobal(L, "janosh_dump");
-  lua_pushcfunction(L, l_size);
-  lua_setglobal(L, "janosh_size");
-  lua_pushcfunction(L, l_get);
-  lua_setglobal(L, "janosh_get");
-  lua_pushcfunction(L, l_copy);
-  lua_setglobal(L, "janosh_copy");
-  lua_pushcfunction(L, l_remove);
-  lua_setglobal(L, "janosh_remove");
-  lua_pushcfunction(L, l_shift);
-  lua_setglobal(L, "janosh_shift");
-  lua_pushcfunction(L, l_move);
-  lua_setglobal(L, "janosh_move");
-  lua_pushcfunction(L, l_truncate);
-  lua_setglobal(L, "janosh_truncate");
-  lua_pushcfunction(L, l_mkarr);
-  lua_setglobal(L, "janosh_mkarr");
-  lua_pushcfunction(L, l_mkobj);
-  lua_setglobal(L, "janosh_mkobj");
-  lua_pushcfunction(L, l_hash);
-  lua_setglobal(L, "janosh_hash");
-
-  std::stringstream ss;
-  char*  p = &_binary_JSON_lua_start;
-  while ( p != &_binary_JSON_lua_end ) ss << *p++;
-  luaL_loadstring(L, ss.str().c_str());
-  if(lua_pcall(L, 0, 1, 0)) {
-    LOG_ERR_MSG("Preloading JSON library failed", lua_tostring(L, -1));
-  }
-  lua_setglobal(L, "JSON");
-
-  ss.str("");
-
-  p = &_binary_JanoshAPI_lua_start;
-  while ( p != &_binary_JanoshAPI_lua_end ) ss << *p++;
-  luaL_loadstring(L, ss.str().c_str());
-  if(lua_pcall(L, 0, 1, 0)) {
-    LOG_ERR_MSG("Preloading JanoshAPI library failed", lua_tostring(L, -1));
-  }
-  lua_setglobal(L, "Janosh");
+  clean();
 }
 
 LuaScript::~LuaScript() {
