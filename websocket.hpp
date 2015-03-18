@@ -47,6 +47,7 @@ typedef std::pair<size_t, std::string> lua_message;
 class broadcast_server {
 private:
     broadcast_server();
+    ~broadcast_server();
     void run(uint16_t port);
     void on_open(connection_hdl hdl);
     void on_close(connection_hdl hdl);

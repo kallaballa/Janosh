@@ -27,6 +27,9 @@ broadcast_server::broadcast_server() {
   m_server.set_message_handler(bind(&broadcast_server::on_message, this, ::_1, ::_2));
 }
 
+broadcast_server::~broadcast_server() {
+  m_server.stop();
+}
 void broadcast_server::run(uint16_t port) {
   // listen on specified port
   m_server.listen(port);
