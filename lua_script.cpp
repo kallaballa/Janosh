@@ -61,7 +61,8 @@ void make_subscription(string prefix, string luaCode) {
 void make_receiver(string luaCode) {
   std::thread t([=]() {
     LuaScript* parent = LuaScript::getInstance();
-    LuaScript script(parent->openCallback_, parent->requestCallback_, parent->closeCallback_);
+    lua_State* Lchild = lua_newthread(parent->L);
+    LuaScript script(parent->openCallback_, parent->requestCallback_, parent->closeCallback_, Lchild);
     string wrapped = "load(\"" + luaCode + "\")(...)";
     script.loadString(wrapped.c_str());
     lua_pushvalue(script.L, -1);
