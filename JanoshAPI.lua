@@ -137,4 +137,26 @@ function JanoshClass.subscribe(self, keyprefix, callback)
   janosh_subscribe(keyprefix, formatted_binary);
 end
 
+function JanoshClass.wsBroadcast(self, msg) 
+  janosh_wsbroadcast(msg)
+end
+
+function JanoshClass.wsOpen(self, port)
+ janosh_wsopen(port)
+end
+
+function JanoshClass.wsOnReceive(self, callback) 
+  binary = string.dump(callback)
+  formatted_binary = ""
+  for i = 1, string.len(binary) do
+    dec, _ = ("\\%3d"):format(binary:sub(i, i):byte()):gsub(' ', '0')
+    formatted_binary = formatted_binary .. dec
+  end
+
+ janosh_wsonreceive(formatted_binary)
+end
+
+function JanoshClass.wsSend(self, handle, msg) 
+ janosh_wssend(handle,msg)
+end
 return JanoshClass:new()

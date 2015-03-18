@@ -7,6 +7,7 @@
 #include <mutex>
 #include <thread>
 #include "cppzmq/zmq.hpp"
+#include "websocket.hpp"
 
 extern char _binary_JSON_lua_start;
 extern char _binary_JSON_lua_end;
@@ -19,28 +20,65 @@ namespace lua {
 
 void make_subscription(string prefix, string luaCode) {
   std::thread t([=]() {
-        zmq::context_t context (1);
-        zmq::socket_t subscriber (context, ZMQ_SUB);
-        string user = std::getenv("USER");
-        subscriber.connect((string("ipc://janosh-") + user + ".ipc").c_str());
-        subscriber.setsockopt(ZMQ_SUBSCRIBE, prefix.data(), prefix.length());
-        LuaScript* parent = LuaScript::getInstance();
-        LuaScript script(parent->openCallback_, parent->requestCallback_, parent->closeCallback_);
-        string wrapped = "load(\"" + luaCode + "\")()";
+    zmq::context_t context (1);
+    zmq::socket_t subscriber (context, ZMQ_SUB);
+    string user = std::getenv("USER");
+    subscriber.connect((string("ipc:///tmp/janosh-") + user + ".ipc").c_str());
+    subscriber.setsockopt(ZMQ_SUBSCRIBE, prefix.data(), prefix.length());
+    LuaScript* parent = LuaScript::getInstance();
+    LuaScript script(parent->openCallback_, parent->requestCallback_, parent->closeCallback_);
+    string wrapped = "load(\"" + luaCode + "\")(...)";
+    script.loadString(wrapped.c_str());
+    lua_pushvalue(script.L, -1);
+    int ref = luaL_ref(script.L, LUA_REGISTRYINDEX);
+    LOG_DEBUG_MSG("Installed subscription", prefix);
+    while(true) {
+      zmq::message_t update;
+      subscriber.recv(&update);
+      char* data = new char[update.size() + 1];
+      memcpy(data, update.data(), update.size());
+      data[update.size()] = 0;
+      string s(data);
+      size_t sep = s.find(' ');
+      string key = s.substr(0, sep);
+      string value = s.substr(sep + 1, s.size());
+      LOG_DEBUG_MSG("Running subscription", key);
 
-        script.loadString(wrapped.c_str());
-        lua_pushvalue(script.L, -1);
-        int ref = luaL_ref(script.L, LUA_REGISTRYINDEX);
+      lua_pushstring(script.L, key.data());
+      lua_pushstring(script.L, value.data());
+      if(lua_pcall(script.L, 2, 0, 0)) {
+        LOG_ERR_MSG("Lua subscribe failed", lua_tostring(script.L, -1));
+      }
+      script.clean();
+      lua_rawgeti(script.L, LUA_REGISTRYINDEX, ref);
+    }
+  });
+  t.detach();
+}
 
-        while(true) {
-          zmq::message_t update;
-          subscriber.recv(&update);
-          script.run();
-          script.clean();
-          lua_rawgeti(script.L, LUA_REGISTRYINDEX, ref);
-        }
-      });
-      t.detach();
+void make_receiver(string luaCode) {
+  std::thread t([=]() {
+    LuaScript* parent = LuaScript::getInstance();
+    LuaScript script(parent->openCallback_, parent->requestCallback_, parent->closeCallback_);
+    string wrapped = "load(\"" + luaCode + "\")(...)";
+    script.loadString(wrapped.c_str());
+    lua_pushvalue(script.L, -1);
+    int ref = luaL_ref(script.L, LUA_REGISTRYINDEX);
+    LOG_INFO_STR("Installed receiver");
+    while(true) {
+      auto message = broadcast_server::getInstance()->receive();
+      LOG_INFO_MSG("Running receiver", message.second);
+      lua_pushinteger(script.L, message.first);
+      lua_pushstring(script.L, message.second.c_str());
+
+      if(lua_pcall(script.L, 2, 0, 0)) {
+        LOG_ERR_MSG("Lua subscribe failed", lua_tostring(script.L, -1));
+      }
+      script.clean();
+      lua_rawgeti(script.L, LUA_REGISTRYINDEX, ref);
+    }
+  });
+  t.detach();
 }
 
 using std::vector;
@@ -106,6 +144,29 @@ static int l_subscribe(lua_State* L) {
   string callback = lua_tostring( L, -1 );
   string prefix = lua_tostring( L, -2);
   make_subscription(prefix, callback);
+  return 0;
+}
+
+static int l_wsopen(lua_State* L) {
+  //FIXME race condition
+  broadcast_server::init(lua_tointeger(L, -1));
+  return 0;
+}
+
+static int l_wsbroadcast(lua_State* L) {
+  broadcast_server::getInstance()->broadcast(string(lua_tostring(L, -1)));
+  return 0;
+}
+
+static int l_wsonreceive(lua_State* L) {
+  make_receiver(lua_tostring( L, -1 ));
+  return 0;
+}
+
+static int l_wssend(lua_State* L) {
+  string message = lua_tostring( L, -1 );
+  size_t handle = lua_tointeger( L, -2);
+  broadcast_server::getInstance()->send(handle,message);
   return 0;
 }
 
@@ -233,6 +294,15 @@ LuaScript::LuaScript(std::function<void()> openCallback,
     std::function<void()> closeCallback) : openCallback_(openCallback), requestCallback_(requestCallback), closeCallback_(closeCallback), lastRevision_() {
   L = luaL_newstate();
   luaL_openlibs(L);
+  lua_pushcfunction(L, l_wsopen);
+  lua_setglobal(L, "janosh_wsopen");
+  lua_pushcfunction(L, l_wsbroadcast);
+  lua_setglobal(L, "janosh_wsbroadcast");
+  lua_pushcfunction(L, l_wsonreceive);
+  lua_setglobal(L, "janosh_wsonreceive");
+  lua_pushcfunction(L, l_wssend);
+  lua_setglobal(L, "janosh_wssend");
+
   lua_pushcfunction(L, l_subscribe);
   lua_setglobal(L, "janosh_subscribe");
   lua_pushcfunction(L, l_sleep);

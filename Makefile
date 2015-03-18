@@ -1,6 +1,6 @@
 CXX     := g++-4.8
 TARGET  := janosh
-SRCS    := janosh.cpp logger.cpp record.cpp path.cpp value.cpp exception.cpp cache.cpp json_spirit/json_spirit_reader.cpp  json_spirit/json_spirit_value.cpp  json_spirit/json_spirit_writer.cpp tcp_server.cpp tcp_client.cpp janosh_thread.cpp commands.cpp trigger_base.cpp settings.cpp request.cpp tracker.cpp backward.cpp component.cpp json.cpp bash.cpp raw.cpp util.cpp exithandler.cpp cache_thread.cpp database_thread.cpp flusher_thread.cpp trigger_thread.cpp tcp_worker.cpp lua_script.cpp
+SRCS    := janosh.cpp logger.cpp record.cpp path.cpp value.cpp exception.cpp cache.cpp json_spirit/json_spirit_reader.cpp  json_spirit/json_spirit_value.cpp  json_spirit/json_spirit_writer.cpp tcp_server.cpp tcp_client.cpp janosh_thread.cpp commands.cpp trigger_base.cpp settings.cpp request.cpp tracker.cpp backward.cpp component.cpp json.cpp bash.cpp raw.cpp util.cpp exithandler.cpp cache_thread.cpp database_thread.cpp flusher_thread.cpp trigger_thread.cpp tcp_worker.cpp lua_script.cpp websocket.cpp
 #precompiled headers
 HEADERS := backward.h easylogging++.h json_spirit/json_spirit.h
 LUAFILES:= JSON.lua JanoshAPI.lua
@@ -11,7 +11,7 @@ LUAOBJS := ${LUAFILES:.lua=.o}
 DESTDIR := /
 PREFIX  := /usr/local/
 
-CXXFLAGS += -DETLOG -std=c++0x -pedantic -Wall -I./backtrace/ -I/opt/local/include -D_ELPP_THREAD_SAFE  -D_ELPP_DISABLE_LOGGING_FLAGS_FROM_ARG -D_ELPP_DISABLE_DEFAULT_CRASH_HANDLING -D_ELPP_NO_DEFAULT_LOG_FILE
+CXXFLAGS += -DETLOG -std=c++0x -pedantic -Wall -I./websocketpp/ -I./backtrace/ -I/opt/local/include -D_ELPP_THREAD_SAFE  -D_ELPP_DISABLE_LOGGING_FLAGS_FROM_ARG -D_ELPP_DISABLE_DEFAULT_CRASH_HANDLING -D_ELPP_NO_DEFAULT_LOG_FILE
 LDFLAGS += -L/opt/local/lib 
 LIBS    += -lboost_program_options-mt -lboost_serialization-mt -lboost_system-mt -lboost_filesystem-mt -lpthread -lboost_thread-mt -lkyotocabinet -lluajit-5.1 -ldl -lzmq
 

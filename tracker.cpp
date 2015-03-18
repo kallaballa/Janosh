@@ -21,7 +21,7 @@ Tracker::Tracker() :
   if (val == NULL) {
     LOG_ERR_STR("Environment variable USER not found");
   } else {
-    string url = (string("ipc://janosh-") + string(val) + string(".ipc"));
+    string url = (string("ipc:///tmp/janosh-") + string(val) + string(".ipc"));
     LOG_INFO_MSG("Binding ZMQ", url);
     publisher_.bind(url.c_str());
   }
