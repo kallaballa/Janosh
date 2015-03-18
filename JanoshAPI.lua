@@ -185,7 +185,7 @@ end
 
 function JanoshClass.shorthand(self) 
 for key,value in pairs(getmetatable(self)) do
-  setfield("j" .. key, function(...) value(...) end)
+  setfield("J" .. key, function(...) value(self,...) end)
 end
 end
 
