@@ -76,7 +76,7 @@ namespace janosh {
     if(!Record::db.open(settings_.databaseFile.string(),  mode)) {
 			LOG_FATAL_MSG("open error: " + settings_.databaseFile.string(), Record::db.error().message());
     }
-    ExitHandler::getInstance()->addExitFunc([&](){this->close();});
+    ExitHandler::getInstance()->addExitFunc([&](){this->close(); });
     open_ = true;
   }
 

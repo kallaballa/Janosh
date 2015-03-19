@@ -1,5 +1,6 @@
 #include "websocket.hpp"
 #include "websocketpp/endpoint.hpp"
+#include "exithandler.hpp"
 
 namespace janosh {
 namespace lua {
@@ -25,10 +26,14 @@ broadcast_server::broadcast_server() {
   m_server.set_open_handler(bind(&broadcast_server::on_open, this, ::_1));
   m_server.set_close_handler(bind(&broadcast_server::on_close, this, ::_1));
   m_server.set_message_handler(bind(&broadcast_server::on_message, this, ::_1, ::_2));
+  ExitHandler::getInstance()->addExitFunc([&](){
+    std::cerr << "### server stop " << std::endl;
+    m_server.stop();
+    std::cerr << "### server stopped" << std::endl;
+  });
 }
 
 broadcast_server::~broadcast_server() {
-  m_server.stop();
 }
 void broadcast_server::run(uint16_t port) {
   // listen on specified port

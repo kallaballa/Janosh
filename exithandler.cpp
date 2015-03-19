@@ -2,12 +2,23 @@
 
 #include "logger.hpp"
 #include "exithandler.hpp"
+#include <signal.h>
 
 namespace janosh {
+ExitHandler* ExitHandler::instance_ = NULL;
+static vector<ExitHandler::ExitFunc> exitFuncs_;
 
-ExitHandler::ExitHandler(): ioservice_(), signals_(ioservice_, SIGINT, SIGTERM) {
-  LOG_DEBUG("Registering exit handler");
-  signals_.async_wait([&](const boost::system::error_code& error, int signal_number){this->runExitFuncs(error, signal_number);});
+static void runExitFuncs(int signal_number) {
+  for(auto& e : exitFuncs_)
+    e();
+
+  exit(1);
+}
+
+ExitHandler::ExitHandler() {
+  LOG_DEBUG_STR("Registering exit handler");
+  std::signal(SIGINT, [](int signal){ runExitFuncs(signal);});
+  std::signal(SIGTERM, [](int signal){ runExitFuncs(signal);});
 }
 
 ExitHandler* ExitHandler::getInstance() {
@@ -22,10 +33,4 @@ void ExitHandler::addExitFunc(ExitFunc e) {
   exitFuncs_.push_back(e);
 }
 
-void ExitHandler::runExitFuncs(const boost::system::error_code& error, int signal_number) {
-  for(auto& e : exitFuncs_)
-    e();
-}
-
-ExitHandler* ExitHandler::instance_ = NULL;
 } /* namespace janosh */
