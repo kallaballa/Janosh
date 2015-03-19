@@ -17,10 +17,10 @@ using std::string;
 using std::shared_ptr;
 
 class JanoshThread {
-  typedef shared_ptr<JanoshThread> JanoshThreadPtr;
   string name_;
   bool result_;
 public:
+  typedef shared_ptr<JanoshThread> JanoshThreadPtr;
   JanoshThread(const string& name);
   virtual ~JanoshThread();
 

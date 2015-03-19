@@ -132,7 +132,7 @@ void TcpWorker::run() {
       ostream_ptr out_stream(new ostream(out_buf.get()));
 
       if (!req.command_.empty()) {
-        DatabaseThread* dt = new DatabaseThread(req, out_stream);
+        JanoshThreadPtr dt(new DatabaseThread(req, out_stream));
         dt->runSynchron();
         bool result = dt->result();
 
@@ -159,11 +159,11 @@ void TcpWorker::run() {
 
       (*out_stream) << "__JANOSH_EOF\n";
       out_stream->flush();
-      FlusherThread* flusher = new FlusherThread(socket_, out_buf, cacheable);
+      JanoshThreadPtr flusher(new FlusherThread(socket_, out_buf, cacheable));
       flusher->runSynchron();
 //      shutdown(socket_);
     } else {
-      CacheThread* cacheWriter = new CacheThread(socket_);
+      JanoshThreadPtr cacheWriter(new CacheThread(socket_));
       cacheWriter->runSynchron();
 //      shutdown(socket_);
     }

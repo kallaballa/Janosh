@@ -87,6 +87,8 @@ bool TcpServer::run() {
 	    w = new TcpWorker(socket);
 	    w->runSynchron();
 	  } while(w->result());
+    if(w)
+      delete w;
 
   } catch (janosh_exception& ex) {
     if (socket != NULL) {
