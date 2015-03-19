@@ -28,7 +28,7 @@ void make_subscription(string prefix, string luaCode) {
   script->loadString(wrapped.c_str());
   lua_pushvalue(script->L, -1);
   int ref = luaL_ref(script->L, LUA_REGISTRYINDEX);
-  LOG_INFO_MSG("Installed subscription", prefix);
+  LOG_DEBUG_MSG("Installed subscription", prefix);
 
   std::thread t([=]() {
     zmq::context_t context (1);
@@ -47,7 +47,7 @@ void make_subscription(string prefix, string luaCode) {
       size_t sep = s.find(' ');
       string key = s.substr(0, sep);
       string value = s.substr(sep + 1, s.size());
-      LOG_INFO_MSG("Running subscription", key);
+      LOG_DEBUG_MSG("Running subscription", key);
 
       lua_pushstring(script->L, key.data());
       lua_pushstring(script->L, value.data());
@@ -71,10 +71,10 @@ void make_receiver(string luaCode) {
   int ref = luaL_ref(script->L, LUA_REGISTRYINDEX);
 
   std::thread t([=]() {
-    LOG_INFO_STR("Installed receiver");
+    LOG_DEBUG_STR("Installed receiver");
     while(true) {
       auto message = broadcast_server::getInstance()->receive();
-      LOG_INFO_MSG("Running receiver", message.second);
+      LOG_DEBUG_MSG("Running receiver", message.second);
       lua_pushinteger(script->L, message.first);
       lua_pushstring(script->L, message.second.c_str());
 
