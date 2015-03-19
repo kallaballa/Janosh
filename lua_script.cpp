@@ -22,8 +22,8 @@ static std::map<string, std::mutex> lua_lock_map;
 
 void make_subscription(string prefix, string luaCode) {
   LuaScript* parent = LuaScript::getInstance();
-  lua_State* Lchild = lua_newthread(parent->L);
-  LuaScript* script = new LuaScript(parent->openCallback_, parent->requestCallback_, parent->closeCallback_, Lchild);
+//  lua_State* Lchild = lua_newthread(parent->L);
+  LuaScript* script = new LuaScript(parent->openCallback_, parent->requestCallback_, parent->closeCallback_);
   string wrapped = "load(\"" + luaCode + "\")(...)";
   script->loadString(wrapped.c_str());
   lua_pushvalue(script->L, -1);
@@ -63,8 +63,8 @@ void make_subscription(string prefix, string luaCode) {
 
 void make_receiver(string luaCode) {
   LuaScript* parent = LuaScript::getInstance();
-  lua_State* Lchild = lua_newthread(parent->L);
-  LuaScript* script = new LuaScript(parent->openCallback_, parent->requestCallback_, parent->closeCallback_, Lchild);
+//  lua_State* Lchild = lua_newthread(parent->L);
+  LuaScript* script = new LuaScript(parent->openCallback_, parent->requestCallback_, parent->closeCallback_);
   string wrapped = "load(\"" + luaCode + "\")(...)";
   script->loadString(wrapped.c_str());
   lua_pushvalue(script->L, -1);
