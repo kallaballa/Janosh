@@ -22,12 +22,19 @@ broadcast_server::broadcast_server() {
 
   // Initialize Asio Transport
   m_server.init_asio();
+
   // Register handler callbacks
   m_server.set_open_handler(bind(&broadcast_server::on_open, this, ::_1));
   m_server.set_close_handler(bind(&broadcast_server::on_close, this, ::_1));
   m_server.set_message_handler(bind(&broadcast_server::on_message, this, ::_1, ::_2));
   ExitHandler::getInstance()->addExitFunc([&](){
     m_server.stop();
+    if (m_server.is_listening())
+      m_server.stop_listening();
+
+    for (auto& conn : m_connections) {
+      m_server.close(conn, websocketpp::close::status::normal, "closed");
+    }
   });
 }
 
