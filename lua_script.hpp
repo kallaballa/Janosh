@@ -52,6 +52,7 @@ private:
     std::mutex open_lock_;
     std::condition_variable open_lock_cond_;
     std::queue<std::thread::id> open_queue_;
+    std::thread::id open_current_id;
     bool isOpen = false;
 };
 }

@@ -143,9 +143,7 @@ static janosh::Request make_request(string command, lua_State* L) {
 
 static int l_lock(lua_State* L) {
   string name = lua_tostring(L, -1);
-  std::cerr << "### lock: " << name << std::endl;
   lua_lock_map[name].lock();
-  std::cerr << "### locked: " << name << std::endl;
   return 0;
 }
 
@@ -424,64 +422,108 @@ void LuaScript::clean() {
   lua_settop(L, 0);
 }
 
+//#define __JANOSH_DEBUG_QUEUE__
 void LuaScript::performOpen(bool lockRequest) {
   if(lockRequest) {
     std::unique_lock<std::mutex> lock(open_lock_);
     bool wait = false;
-    bool fromQueue = false;
+#ifdef __JANOSH_DEBUG_QUEUE__
+    std::cerr << "### openlock: " << std::this_thread::get_id() << std::endl;
+    std::cerr << " ### queue: " << open_queue_.size() << std::endl;
+#endif
     while(!open_queue_.empty() || isOpen) {
-      if(!wait)
+      if(!wait) {
+#ifdef __JANOSH_DEBUG_QUEUE__
+        std::cerr << " ### queued: " << std::this_thread::get_id() << std::endl;
+#endif
         open_queue_.push(std::this_thread::get_id());
+      }
       if(isOpen || wait)
         open_lock_cond_.wait(lock);
-      if(std::this_thread::get_id() == open_queue_.front()) {
-        fromQueue = true;
+
+      if(std::this_thread::get_id() == open_queue_.front() && !isOpen) {
+#ifdef __JANOSH_DEBUG_QUEUE__
+        std::cerr << " ### released: " << std::this_thread::get_id() << std::endl;
+#endif
         break;
       } else {
+#ifdef __JANOSH_DEBUG_QUEUE__
+        std::cerr << " ### wait: " << std::this_thread::get_id() << std::endl;
+#endif
         wait = true;
       }
     }
-    if(fromQueue)
-      open_queue_.pop();
-
+    if(open_queue_.empty())
+      open_queue_.push(std::this_thread::get_id());
     openCallback_();
     isOpen = true;
+    open_current_id = std::this_thread::get_id();
+#ifdef __JANOSH_DEBUG_QUEUE__
+    std::cerr << "### openlockend: " << std::this_thread::get_id() << std::endl;
+#endif
   } else {
+#ifdef __JANOSH_DEBUG_QUEUE__
+    std::cerr << "### open: " << std::this_thread::get_id() << std::endl;
+#endif
     openCallback_();
     isOpen = true;
+    open_current_id = std::this_thread::get_id();
+#ifdef __JANOSH_DEBUG_QUEUE__
+    std::cerr << "### openend: " << std::this_thread::get_id() << std::endl;
+#endif
   }
 }
 
 void LuaScript::performClose(bool lockRequest) {
   if(lockRequest) {
     std::unique_lock<std::mutex> lock(open_lock_);
-    if(!isOpen) {
-      lock.unlock();
-      open_lock_cond_.notify_all();
-      return;
-    }
+#ifdef __JANOSH_DEBUG_QUEUE__
+    std::cerr << "### closelock: " << std::this_thread::get_id() << std::endl;
+#endif
+    assert(isOpen);
     closeCallback_();
     isOpen = false;
+    if(!open_queue_.empty())
+      open_queue_.pop();
+
+#ifdef __JANOSH_DEBUG_QUEUE__
+    std::cerr << "### closelockend: " << std::this_thread::get_id() << std::endl;
+#endif
     lock.unlock();
     open_lock_cond_.notify_all();
+    std::this_thread::yield();
   } else {
-    if(!isOpen)
-      return;
+#ifdef __JANOSH_DEBUG_QUEUE__
+    std::cerr << "### close: " << std::this_thread::get_id() << std::endl;
+#endif
+    assert(isOpen);
     closeCallback_();
     isOpen = false;
+#ifdef __JANOSH_DEBUG_QUEUE__
+    std::cerr << "### closeend: " << std::this_thread::get_id() << std::endl;
+#endif
   }
+
 }
 
 string LuaScript::performRequest(janosh::Request req) {
   std::unique_lock<std::mutex> lock(open_lock_);
-
-  if(!isOpen) {
+#ifdef __JANOSH_DEBUG_QUEUE__
+  std::cerr << " ### req: " << std::this_thread::get_id() << std::endl;
+#endif
+   if(!isOpen) {
     performOpen(false);
     auto result = requestCallback_(req);
     performClose(false);
+#ifdef __JANOSH_DEBUG_QUEUE__
+    std::cerr << " ### reqend: " << std::this_thread::get_id() << std::endl;
+#endif
     return result.second;
   } else {
     auto result = requestCallback_(req);
+#ifdef __JANOSH_DEBUG_QUEUE__
+    std::cerr << " ### reqend: " << std::this_thread::get_id() << std::endl;
+#endif
     return result.second;
   }
 }
