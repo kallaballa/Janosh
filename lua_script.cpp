@@ -44,6 +44,7 @@ void make_subscription(string prefix, string luaCode) {
       memcpy(data, update.data(), update.size());
       data[update.size()] = 0;
       string s(data);
+      delete[] data;
       size_t sep = s.find(' ');
       string key = s.substr(0, sep);
       string value = s.substr(sep + 1, s.size());
