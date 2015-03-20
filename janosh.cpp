@@ -95,6 +95,18 @@ namespace janosh {
     }
   }
 
+  bool Janosh::beginTransaction() {
+    return Record::db.begin_transaction();
+  }
+
+  bool Janosh::beginTransactionTry() {
+    return Record::db.begin_transaction_try();
+  }
+
+  void Janosh::endTransaction(bool commit) {
+    Record::db.end_transaction(commit);
+  }
+
   size_t Janosh::loadJson(const string& jsonfile) {
     std::ifstream is(jsonfile.c_str());
     size_t cnt = this->loadJson(is);

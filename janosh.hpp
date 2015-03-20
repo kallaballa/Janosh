@@ -39,6 +39,9 @@ public:
   void open(bool readOnly);
   bool isOpen();
   void close();
+  bool beginTransaction();
+  bool beginTransactionTry();
+  void endTransaction(bool commit);
   size_t process(int argc, char** argv);
 
   size_t loadJson(const string& jsonfile);

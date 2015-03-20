@@ -23,6 +23,7 @@
 #include "exception.hpp"
 #include "exithandler.hpp"
 #include "shared_pointers.hpp"
+#include "janosh.hpp"
 
 namespace janosh {
 
@@ -79,18 +80,24 @@ bool TcpServer::run() {
 	  return false;
 	}
 
+	Janosh* janosh = Janosh::getInstance();
 	try {
 	  TcpWorker* w = NULL;
 	  do {
+	    assert(janosh->beginTransaction());
 	    if(w)
 	      delete w;
 	    w = new TcpWorker(socket);
+
 	    w->runSynchron();
+      janosh->endTransaction(true);
 	  } while(w->result());
-    if(w)
+
+	  if(w)
       delete w;
 
   } catch (janosh_exception& ex) {
+    janosh->endTransaction(false);
     if (socket != NULL) {
       LOG_DEBUG_MSG("Closing socket", socket);
       socket->shutdown(boost::asio::socket_base::shutdown_both);
@@ -98,6 +105,7 @@ bool TcpServer::run() {
     }
     printException(ex);
   } catch (std::exception& ex) {
+    janosh->endTransaction(false);
     if (socket != NULL) {
       LOG_DEBUG_MSG("Closing socket", socket);
       socket->shutdown(boost::asio::socket_base::shutdown_both);

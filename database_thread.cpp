@@ -34,9 +34,8 @@ void DatabaseThread::run() {
 
       Command::Result r;
       try {
-        Record::db.begin_transaction();
         r = (*cmd)(req_.vecArgs_, *out_);
-        Record::db.end_transaction(true);
+        setResult(true);
       } catch(janosh_exception& ex) {
         Record::db.end_transaction(false);
         throw ex;
@@ -52,8 +51,6 @@ void DatabaseThread::run() {
     } else if (req_.vecTargets_.empty()) {
       throw janosh_exception() << msg_info("missing command");
     }
-
-    setResult(true);
   } catch (janosh_exception& ex) {
     printException(ex);
     return;

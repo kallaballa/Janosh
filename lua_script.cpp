@@ -45,6 +45,7 @@ void make_subscription(string prefix, string luaCode) {
   LOG_DEBUG_MSG("Installed subscription", prefix);
 
   std::thread t([=]() {
+    janosh::Logger::registerThread("Subscriber: " + prefix);
     zmq::context_t context (1);
     zmq::socket_t subscriber (context, ZMQ_SUB);
     string user = std::getenv("USER");
@@ -93,6 +94,7 @@ void make_receiver(string luaCode) {
   int ref = luaL_ref(script->L, LUA_REGISTRYINDEX);
 
   std::thread t([=]() {
+    janosh::Logger::registerThread("Receiver");
     LOG_DEBUG_STR("Installed receiver");
     while(true) {
       auto message = broadcast_server::getInstance()->receive();
