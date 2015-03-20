@@ -281,10 +281,10 @@ namespace janosh {
       throw record_exception() << path_info({"no value found", this->pathObj});
 
 
-    Tracker::getInstancePerThread()->update(path().pretty(), Tracker::READ);
+
     string v;
     bool s = getCursorPtr()->get_value(&v);
-
+    Tracker::getInstancePerThread()->update(path().pretty(), v, Tracker::READ);
     if(path().isDirectory()) {
       valueObj = Value(v, true);
     } else if(path().isWildcard()) {

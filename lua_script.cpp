@@ -18,6 +18,20 @@ extern char _binary_JanoshAPI_lua_end;
 namespace janosh {
 namespace lua {
 
+static int wrap_exceptions(lua_State *L, lua_CFunction f)
+{
+  try {
+    return f(L);  // Call wrapped function and return result.
+  } catch (const char *s) {  // Catch and convert exceptions.
+    lua_pushstring(L, s);
+  } catch (std::exception& e) {
+    lua_pushstring(L, e.what());
+  } catch (...) {
+    lua_pushliteral(L, "caught (...)");
+  }
+  return lua_error(L);  // Rethrow as a Lua error.
+}
+
 static std::map<string, std::mutex> lua_lock_map;
 
 void make_subscription(string prefix, string luaCode) {
@@ -46,13 +60,20 @@ void make_subscription(string prefix, string luaCode) {
       string s(data);
       delete[] data;
       size_t sep = s.find(' ');
+      assert(sep != std::string::npos);
       string key = s.substr(0, sep);
-      string value = s.substr(sep + 1, s.size());
-      LOG_DEBUG_MSG("Running subscription", key);
+      assert(s.size() >= sep + 2);
+      char op = s[sep + 1];
+      assert(op == 'W' || op == 'D');
+
+      string value = s.substr(sep + 2, s.size());
+      LOG_DEBUG_MSG("Running subscription", key + ':' + op);
 
       lua_pushstring(script->L, key.data());
       lua_pushstring(script->L, value.data());
-      if(lua_pcall(script->L, 2, 0, 0)) {
+      lua_pushinteger(script->L, op == 'W' ? 1 : 0);
+
+      if(lua_pcall(script->L, 3, 0, 0)) {
         LOG_ERR_MSG("Lua subscribe failed", lua_tostring(script->L, -1));
       }
       script->clean();
@@ -311,8 +332,11 @@ LuaScript::LuaScript(std::function<void()> openCallback,
     std::function<void()> closeCallback, lua_State* l) : openCallback_(openCallback), requestCallback_(requestCallback), closeCallback_(closeCallback) {
   if(l == NULL) {
     L = luaL_newstate();
-    luaL_openlibs(L);
+    lua_pushlightuserdata(L, (void *)wrap_exceptions);
+    luaJIT_setmode(L, -1, LUAJIT_MODE_WRAPCFUNC|LUAJIT_MODE_ON);
+    lua_pop(L, 1);
 
+    luaL_openlibs(L);
     lua_pushcfunction(L, l_lock);
     lua_setglobal(L, "janosh_lock");
     lua_pushcfunction(L, l_unlock);

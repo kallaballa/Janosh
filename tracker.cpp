@@ -7,7 +7,7 @@
 
 #include "tracker.hpp"
 #include "logger.hpp"
-
+#include <sstream>
 
 namespace janosh {
 using std::cerr;
@@ -32,11 +32,18 @@ Tracker::~Tracker() {
   context_.close();
 }
 
-void Tracker::update(const string& s, const Operation& op) {
+void Tracker::update(const string& s, const string& value, const Operation& op) {
+  update(s, value.c_str(), op);
+}
+
+void Tracker::update(const string& s, const char* value, const Operation& op) {
   map<string, size_t>& m = get(op);
+  std::stringstream ss;
   if(op == WRITE || op == DELETE) {
     ++revision_;
-    string str = s + " " + s;
+    ss << s << ' ' << (op == WRITE ? 'W' : 'D') << value;
+
+    const string& str = ss.str();
     zmq::message_t message(str.length());
     memcpy(message.data(), str.data(),str.length());
     publisher_.send(message);

@@ -51,7 +51,8 @@ public:
   Tracker();
   virtual ~Tracker();
 
-  void update(const string& s, const Operation& op);
+  void update(const string& key, const string& value, const Operation& op);
+  void update(const string& key, const char* value, const Operation& op);
   size_t get(const string& s, const Operation& op);
   map<string, size_t>& get(const Operation& op);
   void reset();

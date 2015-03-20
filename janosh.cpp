@@ -54,8 +54,12 @@ namespace janosh {
   Janosh::~Janosh() {
   }
 
-  void updateTracker(const string& str, const Tracker::Operation& op) {
-    Tracker::getInstancePerThread()->update(str, op);
+  void announceOperation(const string& str, const string& value, const Tracker::Operation& op) {
+    Tracker::getInstancePerThread()->update(str, value, op);
+  }
+
+  void announceOperation(const string& str, const char* value, const Tracker::Operation& op) {
+    Tracker::getInstancePerThread()->update(str, value, op);
   }
 
   void Janosh::setFormat(Format f) {
@@ -360,7 +364,7 @@ namespace janosh {
       throw janosh_exception() << record_info({"Out of array bounds",target});
     }
     changeContainerSize(target.parent(), 1);
-    updateTracker(target.path().pretty(), Tracker::WRITE);
+    announceOperation(target.path().pretty(), lexical_cast<string>(size), Tracker::WRITE);
     return Record::db.add(target.path(), "A" + lexical_cast<string>(size)) ? 1 : 0;
   }
 
@@ -386,7 +390,7 @@ namespace janosh {
     if(!target.path().isRoot())
       changeContainerSize(target.parent(), 1);
 
-    updateTracker(target.path().pretty(), Tracker::WRITE);
+    announceOperation(target.path().pretty(), lexical_cast<string>(size), Tracker::WRITE);
     return Record::db.add(target.path(), "O" + lexical_cast<string>(size)) ? 1 : 0;
   }
 
@@ -427,7 +431,7 @@ namespace janosh {
       throw janosh_exception() << record_info({"Out of array bounds",dest});
     }
 
-    updateTracker(dest.path().pretty(), Tracker::WRITE);
+    announceOperation(dest.path().pretty(), value, Tracker::WRITE);
     if(Record::db.add(dest.path(), value)) {
 //      if(!dest.path().isRoot())
         changeContainerSize(dest.parent(), 1);
@@ -455,7 +459,7 @@ namespace janosh {
       throw janosh_exception() << record_info({"Out of array bounds", dest});
     }
 
-    updateTracker(dest.path().pretty(), Tracker::WRITE);
+    announceOperation(dest.path().pretty(),value, Tracker::WRITE);
     return Record::db.replace(dest.path(), value);
   }
 
@@ -504,7 +508,7 @@ namespace janosh {
         dest = target;
 
       } else {
-        updateTracker(dest.path().pretty(), Tracker::WRITE);
+        announceOperation(dest.path().pretty(), src.value(), Tracker::WRITE);
         r = Record::db.replace(dest.path(), src.value());
       }
     }
@@ -562,7 +566,7 @@ namespace janosh {
         r = this->copy(src, target);
         dest = target;
       } else {
-        updateTracker(dest.path().pretty(), Tracker::WRITE);
+        announceOperation(dest.path().pretty(), src.value(), Tracker::WRITE);
         r = Record::db.replace(dest.path(), src.value());
       }
     }
@@ -621,7 +625,7 @@ namespace janosh {
 
     for(size_t i = 0; i < n; ++i) {
        if(!rec.isDirectory()) {
-         updateTracker(rec.path().pretty(), Tracker::DELETE);
+         announceOperation(rec.path().pretty(), "", Tracker::DELETE);
          rec.remove();
          ++cnt;
        } else {
@@ -630,7 +634,7 @@ namespace janosh {
      }
 
     if(target.isDirectory()) {
-      updateTracker(target.path().pretty(), Tracker::DELETE);
+      announceOperation(target.path().pretty(), "", Tracker::DELETE);
       target.remove();
       changeContainerSize(parent, -1);
     } else {
@@ -658,7 +662,7 @@ namespace janosh {
           } else {
             indexPos = parent.path().withChild(i);
             copy(child, indexPos);
-            updateTracker(child.path().pretty(), Tracker::DELETE);
+            announceOperation(child.path().pretty(),"", Tracker::DELETE);
             child.remove();
           }
         } else {
@@ -754,7 +758,7 @@ namespace janosh {
     size_t cnt = 0;
 
     for(; begin != end; ++begin) {
-      updateTracker(dest.path().withChild(s + cnt).pretty(), Tracker::WRITE);
+      announceOperation(dest.path().withChild(s + cnt).pretty(), *begin, Tracker::WRITE);
       if(!Record::db.add(dest.path().withChild(s + cnt), *begin)) {
         throw janosh_exception() << record_info({"Failed to add target", dest});
       }
@@ -817,7 +821,7 @@ namespace janosh {
       } else {
         if(dest.isArray()) {
           Path target = dest.path().withChild(s + cnt);
-          updateTracker(target.pretty(), Tracker::WRITE);
+          announceOperation(target.pretty(), src.value(), Tracker::WRITE);
 
           if(!Record::db.add(
               target,
@@ -827,7 +831,7 @@ namespace janosh {
           }
         } else if(dest.isObject()) {
           Path target = dest.path().withChild(src.path().name());
-          updateTracker(target.pretty(), Tracker::WRITE);
+          announceOperation(target.pretty(), src.value(), Tracker::WRITE);
           if(!Record::db.add(
               target,
               src.value()
@@ -953,7 +957,7 @@ namespace janosh {
        (boost::format("%c%d") % t % (s)).str();
 
     container.setValue(new_value);
-    updateTracker(container.path().pretty(), Tracker::WRITE);
+    announceOperation(container.path().pretty(), lexical_cast<string>(new_value), Tracker::WRITE);
   }
 
   void Janosh::changeContainerSize(Record container, const size_t by) {
@@ -962,7 +966,7 @@ namespace janosh {
   }
 
   size_t Janosh::load(const Path& path, const string& value) {
-    updateTracker(path.pretty(), Tracker::WRITE);
+    announceOperation(path.pretty(), value, Tracker::WRITE);
     return Record::db.set(path, value) ? 1 : 0;
   }
 
@@ -1121,7 +1125,7 @@ int main(int argc, char** argv) {
     bool tracing = vm.count("tracing");
     bool dblog = vm.count("dblog");
     if (verbose)
-      Logger::init(LogLevel::L_DEBUG);
+      Logger::init(LogLevel::L_GLOBAL);
     else
       Logger::init(LogLevel::L_INFO);
 
@@ -1193,7 +1197,6 @@ int main(int argc, char** argv) {
 
         return client.run(req, std::cout);
       } else {
-
         Settings s;
         TcpClient client;
 
