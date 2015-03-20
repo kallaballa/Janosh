@@ -1127,7 +1127,7 @@ int main(int argc, char** argv) {
     if (verbose)
       Logger::init(LogLevel::L_GLOBAL);
     else
-      Logger::init(LogLevel::L_INFO);
+      Logger::init(LogLevel::L_ERROR);
 
     Logger::registerThread("Main");
     Tracker::PrintDirective printDirective = Tracker::DONTPRINT;

@@ -98,7 +98,14 @@ void TcpWorker::run() {
     LOG_DEBUG_MSG("socket", socket_);
 
     boost::asio::streambuf response;
-    boost::asio::read_until(*socket_, response, "\n");
+    try {
+      boost::asio::read_until(*socket_, response, "\n");
+    } catch(std::exception& ex) {
+      LOG_DEBUG_STR("End of request chain");
+      setResult(false);
+      shutdown(socket_);
+      return;
+    }
     std::istream response_stream(&response);
 
     read_request(req, response_stream);
