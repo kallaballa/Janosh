@@ -93,6 +93,7 @@ void WebsocketServer::process_messages() {
     lock.unlock();
 
     if (a.type == SUBSCRIBE) {
+      unique_lock<mutex> lock(m_receive_lock);
       unique_lock<mutex> con_lock(m_connection_lock);
       m_connections.insert(a.hdl);
       m_luahandles[++luaHandleMax] = a.hdl;
