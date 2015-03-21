@@ -1217,7 +1217,7 @@ int main(int argc, char** argv) {
         },[&](Request& req){
           std::stringstream ss;
           client.run(req, ss);
-          return std::make_pair(client.revision(), ss.str());
+          return std::make_pair("0", ss.str());
         },[&](){
           client.close();
         });

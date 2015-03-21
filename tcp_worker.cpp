@@ -30,14 +30,10 @@ void shutdown(socket_ptr s) {
   }
 }
 
-void writeResponseHeader(socket_ptr socket, int returnCode, string revision) {
-  assert(revision.size() <= 16);
-  while(revision.size() < 16)
-    revision += " ";
-
+void writeResponseHeader(socket_ptr socket, int returnCode) {
   boost::asio::streambuf rc_buf;
   ostream rc_stream(&rc_buf);
-  rc_stream << std::to_string(returnCode) << revision;
+  rc_stream << std::to_string(returnCode);
   LOG_DEBUG_MSG("sending", rc_buf.size());
   boost::asio::write(*socket, rc_buf);
 }
@@ -145,7 +141,7 @@ void TcpWorker::run() {
         bool result = dt->result();
 
         // report return code
-        writeResponseHeader(socket_, result ? 0 : 1, tracker->revision());
+        writeResponseHeader(socket_, result ? 0 : 1);
 
         if (!result) {
           shutdown(socket_);
@@ -153,7 +149,7 @@ void TcpWorker::run() {
           return;
         }
       } else {
-        writeResponseHeader(socket_, 0, tracker->revision());
+        writeResponseHeader(socket_, 0);
       }
 
       if (req.runTriggers_ || !req.vecTargets_.empty()) {

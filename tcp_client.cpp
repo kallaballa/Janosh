@@ -39,12 +39,9 @@ int TcpClient::run(Request& req, std::ostream& out) {
   boost::asio::streambuf response;
   std::istream response_stream(&response);
   boost::array<char, 1> buf;
-  boost::array<char, 16> buf2;
 
   socket.read_some(boost::asio::buffer(buf));
-  socket.read_some(boost::asio::buffer(buf2));
 
-  revision_ = string(buf2.elems);
   int returnCode = std::stoi(string() + buf[0]);
 
   if (returnCode == 0) {
@@ -70,9 +67,4 @@ int TcpClient::run(Request& req, std::ostream& out) {
 void TcpClient::close() {
   socket.close();
 }
-
-string TcpClient::revision() {
-  return revision_;
-}
-
 } /* namespace janosh */

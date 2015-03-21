@@ -56,8 +56,8 @@ debug: LIBS+= -lbfd
 debug: ${TARGET}
 
 asan: CXXFLAGS += -g3 -O0 -rdynamic -D_JANOSH_DEBUG -fno-omit-frame-pointer -fsanitize=address
-#asan: LDFLAGS += -Wl,--export-dynamic
-asan: LIBS+= -lasan
+asan: LDFLAGS += -Wl,--export-dynamic -fsanitize=address
+asan: LIBS+= -lbfd
 asan: ${TARGET}
 
 ${TARGET}: ${LUAOBJS} ${OBJS}

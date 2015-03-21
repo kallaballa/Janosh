@@ -15,14 +15,12 @@ using std::vector;
 class TcpClient {
     boost::asio::io_service io_service;
     boost::asio::ip::tcp::socket socket;
-    string revision_;
 public:
 	TcpClient();
 	virtual ~TcpClient();
 	void connect(std::string host, int port);
 	int run(Request& req, std::ostream& out);
 	void close();
-	string revision();
 };
 
 } /* namespace janosh */

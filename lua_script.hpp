@@ -8,13 +8,7 @@
 #include "request.hpp"
 #include <mutex>
 #include <condition_variable>
-
-extern "C" {
-# include "luajit-2.0/lua.h"
-# include "luajit-2.0/luajit.h"
-# include "luajit-2.0/lauxlib.h"
-# include "luajit-2.0/lualib.h"
-}
+#include "luajit-2.0/lua.hpp"
 
 namespace janosh {
 namespace lua {
