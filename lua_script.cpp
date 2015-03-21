@@ -215,11 +215,6 @@ static int l_wssend(lua_State* L) {
   return 0;
 }
 
-static int l_poll(lua_State* L) {
-  LuaScript::getInstance()->performRequest(make_request("", L));
-  return 1;
-}
-
 static int l_request(lua_State* L) {
   lua_pushstring(L, (LuaScript::getInstance()->performRequest(make_request(L))).c_str());
   return 1;
