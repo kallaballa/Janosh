@@ -135,6 +135,8 @@ std::pair<size_t, std::string> WebsocketServer::receive() {
 
 void WebsocketServer::send(size_t handle, const std::string& message) {
   unique_lock<mutex> con_lock(m_connection_lock);
+  unique_lock<mutex> lock(m_receive_lock);
+
   auto it = m_luahandles.find(handle);
   if(it != m_luahandles.end())
     m_server.send((*it).second, message, websocketpp::frame::opcode::TEXT);
