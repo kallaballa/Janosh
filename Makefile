@@ -1,4 +1,4 @@
-CXX     := g++-4.8
+CXX     := g++
 TARGET  := janosh
 SRCS    := janosh.cpp logger.cpp record.cpp path.cpp value.cpp exception.cpp cache.cpp json_spirit/json_spirit_reader.cpp  json_spirit/json_spirit_value.cpp  json_spirit/json_spirit_writer.cpp tcp_server.cpp tcp_client.cpp janosh_thread.cpp commands.cpp trigger_base.cpp settings.cpp request.cpp tracker.cpp backward.cpp component.cpp json.cpp bash.cpp raw.cpp util.cpp exithandler.cpp cache_thread.cpp database_thread.cpp flusher_thread.cpp trigger_thread.cpp tcp_worker.cpp lua_script.cpp websocket.cpp
 #precompiled headers
@@ -54,6 +54,11 @@ debug: CXXFLAGS += -g3 -O0 -rdynamic -D_JANOSH_DEBUG
 debug: LDFLAGS += -Wl,--export-dynamic
 debug: LIBS+= -lbfd
 debug: ${TARGET}
+
+asan: CXXFLAGS += -g3 -O0 -rdynamic -D_JANOSH_DEBUG -fno-omit-frame-pointer -fsanitize=address
+#asan: LDFLAGS += -Wl,--export-dynamic
+asan: LIBS+= -lasan
+asan: ${TARGET}
 
 ${TARGET}: ${LUAOBJS} ${OBJS}
 	${CXX} ${LDFLAGS} -o $@ $^ ${LIBS} 
