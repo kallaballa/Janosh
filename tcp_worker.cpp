@@ -136,6 +136,11 @@ void TcpWorker::run() {
       ostream_ptr out_stream(new ostream(out_buf.get()));
 
       if (!req.command_.empty()) {
+        if(req.command_ == "trigger") {
+          req.command_ = "set";
+          req.runTriggers_ = true;
+        }
+
         JanoshThreadPtr dt(new DatabaseThread(req, out_stream));
         dt->runSynchron();
         bool result = dt->result();
