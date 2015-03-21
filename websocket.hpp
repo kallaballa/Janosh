@@ -44,10 +44,10 @@ struct action {
 
 typedef std::pair<size_t, std::string> lua_message;
 
-class broadcast_server {
+class WebsocketServer {
 private:
-    broadcast_server();
-    ~broadcast_server();
+    WebsocketServer();
+    ~WebsocketServer();
     void run(uint16_t port);
     void on_open(connection_hdl hdl);
     void on_close(connection_hdl hdl);
@@ -59,7 +59,7 @@ public:
     void send(size_t handle, const std::string& message);
 
     static void init(int port);
-    static broadcast_server* getInstance();
+    static WebsocketServer* getInstance();
 private:
     typedef std::set<connection_hdl,std::owner_less<connection_hdl> > con_list;
     typedef std::map<size_t, connection_hdl > con_lua_handles;
@@ -75,7 +75,7 @@ private:
     mutex m_action_lock;
     mutex m_connection_lock;
     condition_variable m_action_cond;
-    static broadcast_server* server_instance;
+    static WebsocketServer* server_instance;
 
     mutex m_receive_lock;
     condition_variable m_receive_cond;

@@ -97,7 +97,7 @@ void make_receiver(string luaCode) {
     janosh::Logger::registerThread("Receiver");
     LOG_DEBUG_STR("Installed receiver");
     while(true) {
-      auto message = broadcast_server::getInstance()->receive();
+      auto message = WebsocketServer::getInstance()->receive();
       LOG_DEBUG_MSG("Running receiver", message.second);
       lua_pushinteger(script->L, message.first);
       lua_pushstring(script->L, message.second.c_str());
@@ -194,12 +194,12 @@ static int l_subscribe(lua_State* L) {
 
 static int l_wsopen(lua_State* L) {
   //FIXME race condition
-  broadcast_server::init(lua_tointeger(L, -1));
+  WebsocketServer::init(lua_tointeger(L, -1));
   return 0;
 }
 
 static int l_wsbroadcast(lua_State* L) {
-  broadcast_server::getInstance()->broadcast(string(lua_tostring(L, -1)));
+  WebsocketServer::getInstance()->broadcast(string(lua_tostring(L, -1)));
   return 0;
 }
 
@@ -211,7 +211,7 @@ static int l_wsonreceive(lua_State* L) {
 static int l_wssend(lua_State* L) {
   string message = lua_tostring( L, -1 );
   size_t handle = lua_tointeger( L, -2);
-  broadcast_server::getInstance()->send(handle,message);
+  WebsocketServer::getInstance()->send(handle,message);
   return 0;
 }
 
