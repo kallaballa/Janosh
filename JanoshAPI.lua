@@ -1,8 +1,7 @@
-#!/usr/local/bin/janosh -f
+#!/usr/local/bin/lua
 
-require"zmq"
-require"zmq.threads"
-
+require "zmq"
+io = require "io"
 
 local JanoshClass = {} -- the table representing the class, which will double as the metatable for the instances
 JanoshClass.__index = JanoshClass -- failed table lookups on the instances should fallback to the class table, to get methods
@@ -179,6 +178,23 @@ function JanoshClass.unlock(self, name)
   janosh_unlock(name)
 end
 
+function JanoshClass.exec(self, commands) 
+print(commands)
+  for i, cmd in ipairs(commands) do
+print(cmd)
+	  os.execute(cmd);
+	end
+end
+
+function JanoshClass.popenr(self,cmd)
+  return io.popen(cmd, "r")
+end
+
+function JanoshClass.popenw(self,cmd)
+  return io.popen(cmd, "w")
+end
+
+
 function setfield (f, v)
 	local t = _G    -- start with the table of globals
 	for w, d in string.gfind(f, "([%w_]+)(.?)") do
@@ -193,7 +209,7 @@ end
 
 function JanoshClass.shorthand(self) 
 for key,value in pairs(getmetatable(self)) do
-  setfield("J" .. key, function(...) value(self,...) end)
+  setfield("J" .. key, function(...) return value(self,...) end)
 end
 end
 
