@@ -1,5 +1,9 @@
 #!/usr/local/bin/lua
 
+if __JanoshFirstStart then
+lanes = require "lanes".configure{ on_state_create = janosh_install ;}
+end
+
 require "zmq"
 io = require "io"
 
@@ -15,7 +19,7 @@ function JanoshClass.request(self, req)
 end
 
 function JanoshClass.set(self, key, value)
-janosh_set({key,value});
+	janosh_set({key,value});
 end
 
 function JanoshClass.set_all(self, argv)
@@ -134,13 +138,14 @@ function JanoshClass.transaction(self, fn)
 end
 
 function JanoshClass.subscribe(self, keyprefix, callback)
-  binary = string.dump(callback);
-	formatted_binary = ""
-	for i = 1, string.len(binary) do
-		dec, _ = ("\\%3d"):format(binary:sub(i, i):byte()):gsub(' ', '0')
-		formatted_binary = formatted_binary .. dec
-	end
-  janosh_subscribe(keyprefix, formatted_binary);
+  janosh_subscribe(keyprefix);
+  lanes.gen("*", function() 
+		janosh_register_thread("Subscriber")
+		while true do
+			key, op, value = janosh_receive(keyprefix)
+			callback(key, op, value)
+		end
+	end)()
 end
 
 function JanoshClass.wsBroadcast(self, msg) 
@@ -151,15 +156,26 @@ function JanoshClass.wsOpen(self, port)
  janosh_wsopen(port)
 end
 
-function JanoshClass.wsOnReceive(self, callback) 
-  binary = string.dump(callback)
-  formatted_binary = ""
-  for i = 1, string.len(binary) do
-    dec, _ = ("\\%3d"):format(binary:sub(i, i):byte()):gsub(' ', '0')
-    formatted_binary = formatted_binary .. dec
-  end
 
- janosh_wsonreceive(formatted_binary)
+function JanoshClass.subscribe(self, keyprefix, callback)
+  janosh_subscribe(keyprefix);
+  lanes.gen("*", function()
+    janosh_register_thread("Subscriber")
+    while true do
+      key, op, value = janosh_receive(keyprefix)
+      callback(key, op, value)
+    end
+  end)()
+end
+
+function JanoshClass.wsOnReceive(self, callback) 
+  lanes.gen("*", function()
+    janosh_register_thread("WsReceiver")
+    while true do
+      key, op, value = janosh_wsreceive(keyprefix)
+      callback(key, op, value)
+    end
+  end)()
 end
 
 function JanoshClass.wsSend(self, handle, msg) 
@@ -179,9 +195,7 @@ function JanoshClass.unlock(self, name)
 end
 
 function JanoshClass.exec(self, commands) 
-print(commands)
   for i, cmd in ipairs(commands) do
-print(cmd)
 	  os.execute(cmd);
 	end
 end
