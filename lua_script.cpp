@@ -87,32 +87,6 @@ public:
 
 Subscriptions subscriptions;
 
-
-void make_receiver(string luaCode) {
-  LuaScript* parent = LuaScript::getInstance();
-//  lua_State* Lchild = lua_newthread(parent->L);
-  LuaScript* script = new LuaScript(parent->openCallback_, parent->requestCallback_, parent->closeCallback_);
-  string wrapped = "load(\"" + luaCode + "\")(...)";
-  script->loadString(wrapped.c_str());
-  lua_pushvalue(script->L, -1);
-  int ref = luaL_ref(script->L, LUA_REGISTRYINDEX);
-
-  std::thread t([=]() {
-    janosh::Logger::registerThread("Receiver");
-    LOG_DEBUG_STR("Installed receiver");
-    while(true) {
-
-
-      if(lua_pcall(script->L, 2, 0, 0)) {
-        LOG_ERR_MSG("Lua subscribe failed", lua_tostring(script->L, -1));
-      }
-      script->clean();
-      lua_rawgeti(script->L, LUA_REGISTRYINDEX, ref);
-    }
-  });
-  t.detach();
-}
-
 using std::vector;
 
 LuaScript* LuaScript::instance_ = NULL;
