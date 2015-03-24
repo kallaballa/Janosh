@@ -33,6 +33,7 @@ static int wrap_exceptions(lua_State *L, lua_CFunction f)
 }
 
 static std::map<string, std::mutex> lua_lock_map;
+static std::mutex lua_lock_map_mutex;
 
 class Subscriptions {
 private:
@@ -42,7 +43,9 @@ private:
 public:
   void make(const string& prefix) {
     std::unique_lock<std::mutex> lock(mutex);
-    assert(contextMap.find(prefix) == contextMap.end());
+    if(contextMap.find(prefix) != contextMap.end())
+      throw janosh_exception() << string_info( { "Attempt to create a duplicate subscription detected", prefix });
+
     zmq::context_t* context = new zmq::context_t(1);
     zmq::socket_t* subscriber = new zmq::socket_t(*context, ZMQ_SUB);
     string user = std::getenv("USER");
@@ -53,7 +56,9 @@ public:
   }
 
   std::tuple<string,string,string> receive(const string& prefix) {
-    assert(contextMap.find(prefix) != contextMap.end());
+    if(contextMap.find(prefix) == contextMap.end())
+      throw janosh_exception() << string_info( { "Attempt to read from an unknown subscription", prefix });
+
     zmq::message_t update;
     socketMap[prefix]->recv(&update);
     char* data = new char[update.size() + 1];
@@ -62,18 +67,26 @@ public:
     string s(data);
     delete[] data;
     size_t sep = s.find(' ');
-    assert(sep != std::string::npos);
+    if(sep == std::string::npos)
+      throw janosh_exception() << string_info({"Protocol exception", s});
+
     string key = s.substr(0, sep);
-    assert(s.size() >= sep + 2);
+    if(s.size() < sep + 2)
+      throw janosh_exception() << string_info({"Protocol exception", s});
+
     string op = string() + s[sep + 1];
-    assert(s[sep + 1] == 'W' || s[sep + 1] == 'D');
+    if(!(s[sep + 1] == 'W' || s[sep + 1] == 'D'))
+      throw janosh_exception() << string_info({"Protocol exception", s});
+
     string value = s.substr(sep + 2, s.size());
     return std::make_tuple(key, op, value);
   }
 
   void destroy(const string& prefix) {
     std::unique_lock<std::mutex> lock(mutex);
-    assert(contextMap.find(prefix) != contextMap.end());
+    if(contextMap.find(prefix) == contextMap.end())
+      throw janosh_exception() << string_info( { "Attempt to destroy an unknown subscription", prefix });
+
     zmq::context_t* context = contextMap[prefix];
     zmq::socket_t* subscriber = socketMap[prefix];
     contextMap.erase(prefix);
@@ -161,16 +174,21 @@ static int l_receive(lua_State* L) {
   return 3;
 }
 
+
 static int l_lock(lua_State* L) {
+  std::unique_lock<std::mutex> lock(lua_lock_map_mutex);
   string name = lua_tostring(L, -1);
   lua_lock_map[name].lock();
   return 0;
 }
 
 static int l_unlock(lua_State* L) {
+  std::unique_lock<std::mutex> lock(lua_lock_map_mutex);
   string name = lua_tostring(L, -1);
   auto it = lua_lock_map.find(name);
-  assert(it != lua_lock_map.end());
+  if(it == lua_lock_map.end())
+    throw janosh_exception() << string_info({"Attempt to unlock unknown lock", name});
+
   (*it).second.unlock();
   return 0;
 }
@@ -513,7 +531,9 @@ void LuaScript::performClose(bool lockRequest) {
 #ifdef __JANOSH_DEBUG_QUEUE__
     std::cerr << "### closelock: " << std::this_thread::get_id() << std::endl;
 #endif
-    assert(isOpen);
+    if(!isOpen)
+      throw janosh_exception() << string_info({"Attempt to close and request that isn't open"});
+
     closeCallback_();
     isOpen = false;
     if(!open_queue_.empty())
@@ -529,7 +549,8 @@ void LuaScript::performClose(bool lockRequest) {
 #ifdef __JANOSH_DEBUG_QUEUE__
     std::cerr << "### close: " << std::this_thread::get_id() << std::endl;
 #endif
-    assert(isOpen);
+    if(!isOpen)
+      throw janosh_exception() << string_info({"Attempt to close and request that isn't open"});
     closeCallback_();
     isOpen = false;
 #ifdef __JANOSH_DEBUG_QUEUE__
