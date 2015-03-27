@@ -9,6 +9,7 @@
 #include "cppzmq/zmq.hpp"
 #include "websocket.hpp"
 #include "exception.hpp"
+#include <execinfo.h>
 
 extern char _binary_JSON_lua_start;
 extern char _binary_JSON_lua_end;
@@ -33,6 +34,9 @@ static int wrap_exceptions(lua_State *L, lua_CFunction f)
   } catch (...) {
     message = "caught (...)";
   }
+  void * fpt = (void*)f;
+  backtrace_symbols_fd(&fpt, 1, 1);
+
   LOG_DEBUG_MSG("Caught message in lua call", message);
   lua_pushstring(L, message.c_str());
   return lua_error(L);  // Rethrow as a Lua error.
