@@ -57,7 +57,7 @@ Settings::Settings() {
        if(find(jObj, "port", v)) {
          this->port = std::stoi(v.get_str());
        } else {
-         error(this->janoshFile.string(), "No database file defined");
+         error(this->janoshFile.string(), "port definition not found");
        }
      } catch (exception& e) {
        error("Unable to load janosh configuration", e.what());
