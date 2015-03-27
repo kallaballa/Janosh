@@ -12,8 +12,8 @@ DESTDIR := /
 PREFIX  := /usr/local/
 
 CXXFLAGS += -DWEBSOCKETPP_STRICT_MASKING -DETLOG -std=c++0x -pedantic -Wall -I./luajit-rocks/luajit-2.0/src/ -I./websocketpp/ -I./backtrace/ -I/opt/local/include -D_ELPP_THREAD_SAFE  -D_ELPP_DISABLE_LOGGING_FLAGS_FROM_ARG -D_ELPP_DISABLE_DEFAULT_CRASH_HANDLING -D_ELPP_NO_DEFAULT_LOG_FILE
-LDFLAGS += -L/opt/local/lib 
-LIBS    += -lboost_program_options -lboost_serialization -lboost_system -lboost_filesystem -lpthread -lboost_thread-mt -lkyotocabinet -lluajit-5.1 -ldl -lzmq
+LDFLAGS += -L/opt/local/lib
+LIBS    += -lboost_program_options -lboost_serialization -lboost_system -lboost_filesystem -lpthread -lboost_thread -lkyotocabinet -lluajit-5.1 -ldl -lzmq
 
 BINOUTPUT := elf64-x86-64
 BINARCH := i386
