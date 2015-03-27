@@ -8,6 +8,7 @@
 #include <thread>
 #include "cppzmq/zmq.hpp"
 #include "websocket.hpp"
+#include "exception.hpp"
 
 extern char _binary_JSON_lua_start;
 extern char _binary_JSON_lua_end;
@@ -18,17 +19,22 @@ extern char _binary_JanoshAPI_lua_end;
 namespace janosh {
 namespace lua {
 
+using namespace janosh;
+
 static int wrap_exceptions(lua_State *L, lua_CFunction f)
 {
+  string message;
   try {
     return f(L);  // Call wrapped function and return result.
   } catch (const char *s) {  // Catch and convert exceptions.
-    lua_pushstring(L, s);
+    message = s;
   } catch (std::exception& e) {
-    lua_pushstring(L, e.what());
+    message = e.what();
   } catch (...) {
-    lua_pushliteral(L, "caught (...)");
+    message = "caught (...)";
   }
+  LOG_DEBUG_MSG("Caught message in lua call", message);
+  lua_pushstring(L, message.c_str());
   return lua_error(L);  // Rethrow as a Lua error.
 }
 
