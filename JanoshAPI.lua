@@ -28,6 +28,17 @@ function JanoshClass.system(self, cmdstring)
  os.execute(cmdstring)
 end
 
+function JanoshClass.capture(self, cmd, raw)
+  local f = assert(io.popen(cmd, 'r'))
+  local s = assert(f:read('*a'))
+  f:close()
+  if raw then return s end
+  s = string.gsub(s, '^%s+', '')
+  s = string.gsub(s, '%s+$', '')
+  s = string.gsub(s, '[\n\r]+', ' ')
+  return s
+end
+
 --FIXME causes wierd errors
 function JanoshClass.unsetenv(self,key)
   assert(false)
