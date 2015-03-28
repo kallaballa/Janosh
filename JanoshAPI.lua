@@ -306,7 +306,10 @@ function JanoshClass.subscribe(self, keyprefix, callback)
 		janosh_register_thread("Subscriber")
 		while true do
 			key, op, value = janosh_receive(keyprefix)
-			callback(key, op, value)
+			status, msg = pcall(function() callback(key, op, value) end)
+      if not status then
+        print("Subscriber " .. keyprefix .. " failed: ", msg)
+      end
 		end
 	end)()
 end
@@ -328,7 +331,10 @@ function JanoshClass.wsOnReceive(self, callback)
     janosh_register_thread("WsReceiver")
     while true do
       key, op, value = janosh_wsreceive(keyprefix)
-      callback(key, op, value)
+      status, msg = pcall(function() callback(key, op, value) end)
+      if not status then
+        print("Receiver " .. keyprefix .. " failed: ", msg)
+      end
     end
   end)()
 end
