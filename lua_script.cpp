@@ -28,6 +28,10 @@ static int wrap_exceptions(lua_State *L, lua_CFunction f)
     return f(L);  // Call wrapped function and return result.
   } catch (const char *s) {  // Catch and convert exceptions.
     message = s;
+  } catch (janosh::janosh_exception& e) {
+    std::stringstream ss;
+    printException(e, ss);
+    message = ss.str();
   } catch (std::exception& e) {
     message = e.what();
   } catch (...) {
