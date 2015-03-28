@@ -93,9 +93,7 @@ public:
     if(sep2 == std::string::npos)
       throw janosh_exception() << string_info({"Value separator missing", s});
 
-std::cerr << "sep: " << sep << " sep2: " << sep2 << std::endl;
     string op = s.substr(sep + 1, sep2 - (sep + 1));
-std::cerr << "op:" << op << std::endl;
     string value = s.substr(sep2 + 1, s.size() - (sep2 + 1));
     return std::make_tuple(key, op, value);
   }
