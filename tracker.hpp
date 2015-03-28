@@ -38,8 +38,6 @@ private:
   void printMeta(ostream& out);
   void printFull(ostream& out);
   long long revision_;
-  zmq::context_t context_;
-  zmq::socket_t publisher_;
 public:
   enum Operation {
     READ,

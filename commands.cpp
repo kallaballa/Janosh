@@ -306,30 +306,6 @@ public:
   }
 };
 
-class TriggerCommand: public Command {
-public:
-  TriggerCommand(janosh::Janosh* janosh) :
-      Command(janosh) {
-  }
-
-  virtual Result operator()(const vector<string>& params, std::ostream& out) {
-    if (params.empty()) {
-      return {-1, "Expected a list of triggers"};
-    } else {
-      for(const string& p : params) {
-        LOG_INFO_MSG("Execute trigger", p);
-        try {
-        janosh->triggers_.executeTrigger(Path(p), out);
-        } catch (path_exception&  ex) {
-          janosh::printException(ex);
-        }
-      }
-
-      return {params.size(), "Successful"};
-    }
-  }
-};
-
 class GetCommand: public Command {
 public:
   GetCommand(janosh::Janosh* janosh) :
@@ -352,26 +328,6 @@ public:
   }
 };
 
-class TargetCommand: public Command {
-public:
-  TargetCommand(janosh::Janosh* janosh) :
-      Command(janosh) {
-  }
-
-  virtual Result operator()(const vector<string>& params, std::ostream& out) {
-    size_t cnt = 0;
-    if (params.empty())
-      return {-1, "Expected a list of targets"};
-
-    for(const string& t : params) {
-      janosh->triggers_.executeTarget(t,out);
-      ++cnt;
-    }
-
-    return {cnt, "Successful"};
-  }
-};
-
 CommandMap makeCommandMap(Janosh* janosh) {
   CommandMap cm;
   cm.insert( { "load", new LoadCommand(janosh) });
@@ -386,8 +342,6 @@ CommandMap makeCommandMap(Janosh* janosh) {
   cm.insert( { "remove", new RemoveCommand(janosh) });
   cm.insert( { "shift", new ShiftCommand(janosh) });
   cm.insert( { "move", new MoveCommand(janosh) });
-  cm.insert( { "trigger", new TriggerCommand(janosh) });
-  cm.insert( { "target", new TargetCommand(janosh) });
   cm.insert( { "truncate", new TruncateCommand(janosh) });
   cm.insert( { "mkarr", new MakeArrayCommand(janosh) });
   cm.insert( { "mkobj", new MakeObjectCommand(janosh) });

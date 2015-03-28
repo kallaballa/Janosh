@@ -7,6 +7,7 @@
 
 #include "tracker.hpp"
 #include "logger.hpp"
+#include "message_queue.hpp"
 #include <sstream>
 
 namespace janosh {
@@ -15,44 +16,26 @@ using std::endl;
 
 map<thread::id, Tracker*> Tracker::instances_;
 Tracker::Tracker() :
-    printDirective_(DONTPRINT), revision_(0), context_(1), publisher_(context_, ZMQ_PUB) {
-  const char * val = std::getenv("USER");
-
-  if (val == NULL) {
-    LOG_ERR_STR("Environment variable USER not found");
-  } else {
-    string url = (string("ipc:///tmp/janosh-") + string(val) + string(".ipc"));
-    LOG_INFO_MSG("Binding ZMQ", url);
-    publisher_.bind(url.c_str());
-  }
+    printDirective_(DONTPRINT), revision_(0) {
 }
 
 Tracker::~Tracker() {
-  publisher_.close();
-  context_.close();
 }
 
-void Tracker::update(const string& s, const string& value, const Operation& op) {
-  update(s, value.c_str(), op);
+void Tracker::update(const string& key, const string& value, const Operation& op) {
+  update(key, value.c_str(), op);
 }
 
-void Tracker::update(const string& s, const char* value, const Operation& op) {
+void Tracker::update(const string& key, const char* value, const Operation& op) {
+  if(op == WRITE || op == DELETE)
+    MessageQueue::getInstance()->publish(key, (op == WRITE ? "W" : "D"), value);
+
   map<string, size_t>& m = get(op);
-  std::stringstream ss;
-  if(op == WRITE || op == DELETE) {
-    ++revision_;
-    ss << s << ' ' << (op == WRITE ? 'W' : 'D') << value;
-
-    const string& str = ss.str();
-    zmq::message_t message(str.length());
-    memcpy(message.data(), str.data(),str.length());
-    publisher_.send(message);
-  }
-  auto iter = m.find(s);
+  auto iter = m.find(key);
   if(iter != m.end()) {
-    m[s]++;
+    m[key]++;
   } else {
-    m[s]=1;
+    m[key]=1;
   }
 }
 

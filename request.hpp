@@ -31,7 +31,6 @@ public:
   Format format_ = janosh::Bash;
   string command_;
   vector<string> vecArgs_;
-  vector<string> vecTargets_;
   bool runTriggers_ = false;
   bool verbose_ = false;
   ProcessInfo pinfo_;
@@ -39,11 +38,10 @@ public:
   Request() {
   }
 
-  Request(const Format& format, const string& command, const vector<string>& vecArgs, const vector<string>& vecTargets, const bool& triggers, const bool& verbose, ProcessInfo pinfo_) :
+  Request(const Format& format, const string& command, const vector<string>& vecArgs, const bool& triggers, const bool& verbose, ProcessInfo pinfo_) :
    format_(format),
    command_(command),
    vecArgs_(vecArgs),
-   vecTargets_(vecTargets),
    runTriggers_(triggers),
    verbose_(verbose),
    pinfo_(pinfo_) {
@@ -53,7 +51,6 @@ public:
     this->format_ = other.format_;
     this->command_ = other.command_;
     this->vecArgs_ = other.vecArgs_;
-    this->vecTargets_ = other.vecTargets_;
     this->runTriggers_ = other.runTriggers_;
     this->verbose_ = other.verbose_;
     this->pinfo_ = other.pinfo_;
@@ -65,7 +62,6 @@ public:
       ar & format_;
       ar & command_;
       ar & vecArgs_;
-      ar & vecTargets_;
       ar & runTriggers_;
       ar & verbose_;
       ar & pinfo_;

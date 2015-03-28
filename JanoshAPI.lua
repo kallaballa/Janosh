@@ -19,16 +19,14 @@ function JanoshClass.setenv(self,key,value)
 	posix.setenv(key,value)
 end
 
+--FIXME causes wierd errors
 function JanoshClass.unsetenv(self,key)
+  assert(false)
 	posix.unsetenv(key)
 end
 
-function JanoshClass.fopen(self,path,oflags) 
-	return posix.open(path,oflags)
-end
-
-function JanoshClass.fwrite(self,fd,string)
-	return posix.write(fd,string)
+function JanoshClass.fopen(self,mode) 
+	return io.open(path,mode)
 end
 
 function JanoshClass.tprint(self, tbl, indent)

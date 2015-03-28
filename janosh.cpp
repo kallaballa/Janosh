@@ -47,7 +47,6 @@ namespace janosh {
 
   Janosh::Janosh() :
 		settings_(),
-        triggers_(settings_.triggerFile, settings_.triggerDirs),
         cm_(makeCommandMap(this)) {
  }
 
@@ -1089,7 +1088,6 @@ _INITIALIZE_EASYLOGGINGPP
 int main(int argc, char** argv) {
   _START_EASYLOGGINGPP(0, (const char**)NULL);
   try {
-    string targetList;
     string command;
     string luafile;
     vector<string> arguments;
@@ -1104,7 +1102,6 @@ int main(int argc, char** argv) {
       ("raw,r", "Produce raw output")
       ("bash,b", "Produce bash output")
       ("triggers,t", "Execute triggers")
-      ("targets,e", po::value<string>(&targetList), "Execute a comma separated list of targets")
       ("verbose,v", "Enable verbose output")
       ("tracing,p", "Enable tracing output")
       ("dblog,m", "Enable db logging")
@@ -1131,7 +1128,6 @@ int main(int argc, char** argv) {
 
     janosh::Format f = janosh::Bash;
     bool execTriggers = vm.count("triggers");
-    bool execTargets = vm.count("targets");
     bool verbose = vm.count("verbose");
     bool daemon = vm.count("daemon");
     bool tracing = vm.count("tracing");
@@ -1162,7 +1158,7 @@ int main(int argc, char** argv) {
     else if(vm.count("raw"))
       f = janosh::Raw;
 
-    if(vm.count("daemon") && (vm.count("bash") || vm.count("raw") || vm.count("json") || execTriggers || execTargets)) {
+    if(vm.count("daemon") && (vm.count("bash") || vm.count("raw") || vm.count("json") || execTriggers)) {
       LOG_FATAL_STR("Incompatible option(s) conflicting with daemon mode detected");
     }
 
@@ -1189,21 +1185,13 @@ int main(int argc, char** argv) {
         //FIXME
       }
     } else {
-      if (command.empty() && !execTargets && luafile.empty()) {
+      if (command.empty() && luafile.empty()) {
         throw janosh_exception() << msg_info("missing command");
-      }
-
-      vector<string> vecTargets;
-      if (execTargets) {
-        tokenizer<char_separator<char> > tok(targetList, char_separator<char>(","));
-        for (const string& t : tok) {
-          vecTargets.push_back(t);
-        }
       }
 
       if(luafile.empty()) {
         Settings s;
-        Request req(f, command, arguments, vecTargets, execTriggers, verbose, get_parent_info());
+        Request req(f, command, arguments, execTriggers, verbose, get_parent_info());
         TcpClient client;
         client.connect("localhost", s.port);
 

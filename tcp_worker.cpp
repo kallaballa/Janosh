@@ -10,7 +10,6 @@
 #include "database_thread.hpp"
 #include "flusher_thread.hpp"
 #include "cache_thread.hpp"
-#include "trigger_thread.hpp"
 #include "janosh.hpp"
 #include "tracker.hpp"
 #include "cache.hpp"
@@ -53,19 +52,6 @@ string reconstructCommandLine(Request& req) {
 
   if(req.runTriggers_)
      cmdline += "-t ";
-
-   if(!req.vecTargets_.empty()) {
-     cmdline += "-e ";
-     bool first = true;
-     for(const string& target : req.vecTargets_) {
-       if(!first)
-         cmdline+=",";
-       cmdline+=target;
-
-       first = false;
-     }
-     cmdline += " ";
-   }
 
    cmdline += (req.command_ + " ");
 
@@ -111,7 +97,7 @@ void TcpWorker::run() {
     LOG_INFO_STR(reconstructCommandLine(req));
 
     // only "-j get /." is cached
-    cacheable = req.command_ == "get" && req.format_ == janosh::Json && !req.runTriggers_ && req.vecTargets_.empty() && req.vecArgs_.size() == 1
+    cacheable = req.command_ == "get" && req.format_ == janosh::Json && !req.runTriggers_ && req.vecArgs_.size() == 1
         && req.vecArgs_[0] == "/.";
 
     Cache* cache = Cache::getInstance();
@@ -129,7 +115,6 @@ void TcpWorker::run() {
 
     Janosh* instance = Janosh::getInstance();
     instance->setFormat(req.format_);
-    Tracker* tracker = Tracker::getInstancePerThread();
 
     if (!cachehit) {
       streambuf_ptr out_buf(new boost::asio::streambuf());
@@ -155,15 +140,6 @@ void TcpWorker::run() {
         }
       } else {
         writeResponseHeader(socket_, 0);
-      }
-
-      if (req.runTriggers_ || !req.vecTargets_.empty()) {
-        TriggerThread* triggerThread = new TriggerThread(req);
-        triggerThread->runAsynchron();
-/*        if (!triggerThread->result()) {
-          shutdown(socket_);
-          return;
-        }*/
       }
 
       (*out_stream) << "__JANOSH_EOF\n";

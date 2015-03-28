@@ -9,7 +9,6 @@
 #include "cppzmq/zmq.hpp"
 #include "websocket.hpp"
 #include "exception.hpp"
-#include <execinfo.h>
 
 extern char _binary_JSON_lua_start;
 extern char _binary_JSON_lua_end;
@@ -34,8 +33,6 @@ static int wrap_exceptions(lua_State *L, lua_CFunction f)
   } catch (...) {
     message = "caught (...)";
   }
-  void * fpt = (void*)f;
-  backtrace_symbols_fd(&fpt, 1, 1);
 
   LOG_DEBUG_MSG("Caught message in lua call", message);
   lua_pushstring(L, message.c_str());
@@ -146,7 +143,7 @@ static janosh::Request make_request(lua_State* L) {
       lua_pop( L, 1 );
   }
 
-  return Request(janosh::Format::Json, command, args, {}, false, false, get_parent_info());
+  return Request(janosh::Format::Json, command, args, false, false, get_parent_info());
 }
 
 static janosh::Request make_request(string command, lua_State* L) {
@@ -160,7 +157,7 @@ static janosh::Request make_request(string command, lua_State* L) {
       lua_pop( L, 1 );
   }
 
-  return Request(janosh::Format::Json, command, args, {}, false, false, get_parent_info());
+  return Request(janosh::Format::Json, command, args, false, false, get_parent_info());
 }
 
 static int l_register_thread(lua_State* L) {
@@ -260,7 +257,6 @@ static int l_close(lua_State* L) {
 
 static int l_trigger(lua_State* L) {
   std::vector< string > args;
-  vector<string> trigger;
 
   const int len = lua_objlen( L, -1 );
   for ( int i = 1; i <= len; ++i ) {
@@ -270,7 +266,7 @@ static int l_trigger(lua_State* L) {
       lua_pop( L, 1 );
   }
 
-  Request req(janosh::Format::Json, "set", args, trigger, true, false, get_parent_info());
+  Request req(janosh::Format::Json, "set", args, true, false, get_parent_info());
   LuaScript::getInstance()->performRequest(req);
   return 0;
 }

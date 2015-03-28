@@ -6,7 +6,6 @@
 #include <string>
 #include <iostream>
 
-#include "trigger_base.hpp"
 #include "settings.hpp"
 #include "record.hpp"
 #include "format.hpp"
@@ -29,7 +28,6 @@ typedef map<const std::string, Command*> CommandMap;
 class Janosh {
 public:
   Settings settings_;
-  TriggerBase triggers_;
   CommandMap cm_;
 
   Janosh();

@@ -9,7 +9,6 @@
 #include "janosh.hpp"
 #include "commands.hpp"
 #include "exception.hpp"
-#include "trigger_thread.hpp"
 
 namespace janosh {
 
@@ -48,7 +47,7 @@ void DatabaseThread::run() {
         throw janosh_exception() << msg_info(r.second);
 
       LOG_INFO_MSG(r.second, r.first);
-    } else if (req_.vecTargets_.empty()) {
+    } else {
       throw janosh_exception() << msg_info("missing command");
     }
   } catch (janosh_exception& ex) {
