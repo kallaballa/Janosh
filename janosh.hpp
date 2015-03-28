@@ -40,6 +40,9 @@ public:
   bool beginTransaction();
   bool beginTransactionTry();
   void endTransaction(bool commit);
+  void publish(const string& key, const string& op, const char* value);
+  void publish(const string& key, const string& op, const string& value);
+
   size_t process(int argc, char** argv);
 
   size_t loadJson(const string& jsonfile);

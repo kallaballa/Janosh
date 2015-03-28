@@ -11,6 +11,7 @@
 #include "raw.hpp"
 #include "exithandler.hpp"
 #include "lua_script.hpp"
+#include "message_queue.hpp"
 
 #include <stack>
 #include <boost/program_options.hpp>
@@ -104,6 +105,14 @@ namespace janosh {
 
   void Janosh::endTransaction(bool commit) {
     Record::db.end_transaction(commit);
+  }
+
+  void Janosh::publish(const string& key, const string& op, const char* value) {
+    MessageQueue::getInstance()->publish(key,op, value);
+  }
+
+  void Janosh::publish(const string& key, const string& op, const string& value) {
+    MessageQueue::getInstance()->publish(key,op, value.c_str());
   }
 
   size_t Janosh::loadJson(const string& jsonfile) {
@@ -1074,6 +1083,7 @@ void printCommands() {
         <<  "  mkarr" << endl
         <<  "  mkobj" << endl
         <<  "  hash" << endl
+        <<  "  publish" << endl
         << endl;
       exit(0);
 }

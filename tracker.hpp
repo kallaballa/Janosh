@@ -35,6 +35,8 @@ private:
   map<string, size_t> triggers_;
   static map<thread::id, Tracker*> instances_;
   PrintDirective printDirective_;
+  bool doPublish_;
+
   void printMeta(ostream& out);
   void printFull(ostream& out);
   long long revision_;
@@ -60,6 +62,8 @@ public:
   static Tracker* getInstancePerThread();
   static void setPrintDirective(PrintDirective p);
   static PrintDirective getPrintDirective();
+  static void setDoPublish(bool p);
+  bool getDoPublish();
 };
 
 } /* namespace janosh */

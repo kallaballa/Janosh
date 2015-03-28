@@ -287,24 +287,16 @@ function JanoshClass.subscribe(self, keyprefix, callback)
 	end)()
 end
 
+function JanoshClass.publish(self, key, op, value) 
+  janosh_publish({key,op,value});
+end
+
 function JanoshClass.wsBroadcast(self, msg) 
   janosh_wsbroadcast(msg)
 end
 
 function JanoshClass.wsOpen(self, port)
  janosh_wsopen(port)
-end
-
-
-function JanoshClass.subscribe(self, keyprefix, callback)
-  janosh_subscribe(keyprefix);
-  lanes.gen("*", function()
-    janosh_register_thread("Subscriber")
-    while true do
-      key, op, value = janosh_receive(keyprefix)
-      callback(key, op, value)
-    end
-  end)()
 end
 
 function JanoshClass.wsOnReceive(self, callback) 

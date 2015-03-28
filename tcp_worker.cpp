@@ -126,6 +126,8 @@ void TcpWorker::run() {
           req.runTriggers_ = true;
         }
 
+        Tracker::setDoPublish(req.runTriggers_);
+
         JanoshThreadPtr dt(new DatabaseThread(req, out_stream));
         dt->runSynchron();
         bool result = dt->result();

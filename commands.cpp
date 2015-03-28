@@ -97,6 +97,22 @@ public:
   }
 };
 
+class PublishCommand: public Command {
+public:
+  PublishCommand(janosh::Janosh* janosh) :
+      Command(janosh) {
+  }
+
+  virtual Result operator()(const vector<string>& params, std::ostream& out) {
+    if (params.size() != 3)
+      return {0, "Expected three parameters (key, operation, value)"};
+
+    janosh->publish(params[0], params[1], params[2]);
+    return {1, "Successful"};
+  }
+};
+
+
 class TruncateCommand: public Command {
 public:
   TruncateCommand(janosh::Janosh* janosh) :
@@ -346,6 +362,7 @@ CommandMap makeCommandMap(Janosh* janosh) {
   cm.insert( { "mkarr", new MakeArrayCommand(janosh) });
   cm.insert( { "mkobj", new MakeObjectCommand(janosh) });
   cm.insert( { "hash", new HashCommand(janosh) });
+  cm.insert( { "publish", new PublishCommand(janosh) });
   return cm;
 }
 }

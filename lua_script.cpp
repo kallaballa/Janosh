@@ -338,6 +338,11 @@ static int l_hash(lua_State* L) {
   return 1;
 }
 
+static int l_publish(lua_State* L) {
+  LuaScript::getInstance()->performRequest(make_request("publish", L));
+  return 0;
+}
+
 
 static void install_janosh_functions(lua_State* L, bool first);
 static int l_install(lua_State* L) {
@@ -374,6 +379,9 @@ static void install_janosh_functions(lua_State* L, bool first) {
   lua_setglobal(L, "janosh_subscribe");
   lua_pushcfunction(L, l_receive);
   lua_setglobal(L, "janosh_receive");
+  lua_pushcfunction(L, l_publish);
+  lua_setglobal(L, "janosh_publish");
+
 
   lua_pushcfunction(L, l_sleep);
   lua_setglobal(L, "janosh_sleep");

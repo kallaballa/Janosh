@@ -27,7 +27,7 @@ void Tracker::update(const string& key, const string& value, const Operation& op
 }
 
 void Tracker::update(const string& key, const char* value, const Operation& op) {
-  if(op == WRITE || op == DELETE)
+  if(doPublish_ && (op == WRITE || op == DELETE))
     MessageQueue::getInstance()->publish(key, (op == WRITE ? "W" : "D"), value);
 
   map<string, size_t>& m = get(op);
@@ -157,6 +157,14 @@ string Tracker::revision() {
 
 Tracker::PrintDirective Tracker::getPrintDirective() {
   return Tracker::getInstancePerThread()->printDirective_;
+}
+
+void Tracker::setDoPublish(bool p) {
+  Tracker::getInstancePerThread()->doPublish_ = p;
+}
+
+bool Tracker::getDoPublish() {
+  return Tracker::getInstancePerThread()->doPublish_;
 }
 
 void Tracker::setPrintDirective(PrintDirective p) {
