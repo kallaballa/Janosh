@@ -81,11 +81,13 @@ public:
     if(s.size() < sep + 2)
       throw janosh_exception() << string_info({"Protocol exception", s});
 
-    string op = string() + s[sep + 1];
-    if(!(s[sep + 1] == 'W' || s[sep + 1] == 'D'))
+    size_t sep2 = s.find(s, sep + 1);
+    if(sep2 == std::string::npos)
       throw janosh_exception() << string_info({"Protocol exception", s});
 
-    string value = s.substr(sep + 2, s.size());
+    string op = s.substr(sep + 1, sep2);
+
+    string value = s.substr(sep2 + 1, s.size());
     return std::make_tuple(key, op, value);
   }
 
