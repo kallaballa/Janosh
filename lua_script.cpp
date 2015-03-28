@@ -79,19 +79,24 @@ public:
     delete[] data;
     size_t sep = s.find(' ');
     if(sep == std::string::npos)
-      throw janosh_exception() << string_info({"Protocol exception", s});
+      throw janosh_exception() << string_info({"Parsing key failed", s});
 
     string key = s.substr(0, sep);
+
+    if(key.empty())
+      throw janosh_exception() << string_info({"Key empty", s});
+
     if(s.size() < sep + 2)
-      throw janosh_exception() << string_info({"Protocol exception", s});
+      throw janosh_exception() << string_info({"Operation empty", s});
 
-    size_t sep2 = s.find(s, sep + 1);
+    size_t sep2 = s.find(' ', sep + 1);
     if(sep2 == std::string::npos)
-      throw janosh_exception() << string_info({"Protocol exception", s});
+      throw janosh_exception() << string_info({"Value separator missing", s});
 
-    string op = s.substr(sep + 1, sep2);
-
-    string value = s.substr(sep2 + 1, s.size());
+std::cerr << "sep: " << sep << " sep2: " << sep2 << std::endl;
+    string op = s.substr(sep + 1, sep2 - (sep + 1));
+std::cerr << "op:" << op << std::endl;
+    string value = s.substr(sep2 + 1, s.size() - (sep2 + 1));
     return std::make_tuple(key, op, value);
   }
 
