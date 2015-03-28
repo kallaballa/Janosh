@@ -15,8 +15,17 @@ function JanoshClass.new()
   return setmetatable({}, JanoshClass)
 end
 
+function JanoshClass.basename(self, path)
+  local name = string.gsub(path, "(.*/)(.*)", "%2")
+  return name
+end
+
 function JanoshClass.setenv(self,key,value)
 	posix.setenv(key,value)
+end
+
+function JanoshClass.system(self, cmdstring) 
+ os.execute(cmdstring)
 end
 
 --FIXME causes wierd errors
@@ -42,6 +51,10 @@ function JanoshClass.tprint(self, tbl, indent)
       print(formatting .. v)
     end
   end
+end
+
+function JanoshClass.pwrite(self, fd, string)
+	posix.write(fd,string)
 end
 
 function JanoshClass.pclose(self, fd) 
