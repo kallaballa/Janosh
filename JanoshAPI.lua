@@ -1,9 +1,10 @@
-#!/usr/local/bin/lua
+#!/usr/local/bin/luajit
 
 if __JanoshFirstStart then
-lanes = require "lanes".configure{ on_state_create = janosh_install ;}
+lanes = require "lanes".configure{ on_state_create = janosh_install; verbose_errors = true; }
 end
 
+posix = require "posix"
 require "zmq"
 io = require "io"
 
@@ -12,6 +13,146 @@ JanoshClass.__index = JanoshClass -- failed table lookups on the instances shoul
 
 function JanoshClass.new()
   return setmetatable({}, JanoshClass)
+end
+
+function JanoshClass.setenv(self,key,value)
+	posix.setenv(key,value)
+end
+
+function JanoshClass.unsetenv(self,key)
+	posix.unsetenv(key)
+end
+
+function JanoshClass.fopen(self,path,oflags) 
+	return posix.open(path,oflags)
+end
+
+function JanoshClass.fwrite(self,fd,string)
+	return posix.write(fd,string)
+end
+
+function JanoshClass.tprint(self, tbl, indent)
+  if not indent then indent = 0 end
+  for k, v in pairs(tbl) do
+    formatting = string.rep("  ", indent) .. k .. ": "
+    if type(v) == "table" then
+      print(formatting)
+      tprint(v, indent+1)
+    elseif type(v) == 'boolean' then
+      print(formatting .. tostring(v))
+    else
+      print(formatting .. v)
+    end
+  end
+end
+
+function JanoshClass.pclose(self, fd) 
+	posix.close(fd)
+end
+
+function JanoshClass.pread(self, fd, num) 
+	return posix.read(fd,num)
+end
+
+function JanoshClass.preadLine(self,fd)
+  line="";
+ 	while true do
+		char = self:pread(fd,1)
+		if char == nil then
+			return nil
+		end
+    if char == "\n" then break end
+		if #char > 0 then
+			line = line .. char
+		else
+			print("skip")
+    end
+	end
+  return line;
+end
+
+function JanoshClass.popen(self, path, ...)
+    local r1, w1 = posix.pipe()
+    local r2, w2 = posix.pipe()
+    local r3, w3 = posix.pipe()
+
+    assert((w1 ~= nil or r2 ~= nil or r3 ~= nil), "pipe() failed")
+
+    local pid, err = posix.fork()
+    assert(pid ~= nil, "fork() failed")
+    if pid == 0 then
+        posix.close(w1)
+        posix.close(r2)
+        posix.dup2(r1, posix.fileno(io.stdin))
+        posix.dup2(w2, posix.fileno(io.stdout))
+        posix.dup2(w3, posix.fileno(io.stderr))
+        posix.close(r1)
+        posix.close(w2)
+        posix.close(w3)
+
+        local ret, err = posix.execp(path, unpack({...}))
+        assert(ret ~= nil, "execp() failed")
+
+        posix._exit(1)
+        return
+    end
+
+    posix.close(r1)
+    posix.close(w2)
+    posix.close(w3)
+
+    return pid, w1, r2, r3
+end
+
+--
+-- Pipe input into cmd + optional arguments and wait for completion
+-- and then return status code, stdout and stderr from cmd.
+--
+function JanoshClass.pipe_simple(self, input, cmd, ...)
+    --
+    -- Launch child process
+    --
+    local pid, w, r, e = self:popen(cmd, unpack({...}))
+    assert(pid ~= nil, "filter() unable to popen3()")
+
+    --
+    -- Write to popen3's stdin, important to close it as some (most?) proccess
+    -- block until the stdin pipe is closed
+    --
+    posix.write(w, input)
+    posix.close(w)
+
+    local bufsize = 4096
+    --
+    -- Read popen3's stdout via Posix file handle
+    --
+    local stdout = {}
+    local i = 1
+    while true do
+        buf = posix.read(r, bufsize)
+        if buf == nil or #buf == 0 then break end
+        stdout[i] = buf
+        i = i + 1
+    end
+
+    --
+    -- Read popen3's stderr via Posix file handle
+    --
+    local stderr = {}
+    local i = 1
+    while true do
+        buf = posix.read(e, bufsize)
+        if buf == nil or #buf == 0 then break end
+        stderr[i] = buf
+        i = i + 1
+    end
+
+    --
+    -- Clean-up child (no zombies) and get return status
+    --
+    local wait_pid, wait_cause, wait_status = posix.wait(pid)
+
+    return wait_status, table.concat(stdout), table.concat(stderr)
 end
 
 function JanoshClass.request(self, req) 
@@ -199,15 +340,6 @@ function JanoshClass.exec(self, commands)
 	  os.execute(cmd);
 	end
 end
-
-function JanoshClass.popenr(self,cmd)
-  return io.popen(cmd, "r")
-end
-
-function JanoshClass.popenw(self,cmd)
-  return io.popen(cmd, "w")
-end
-
 
 function setfield (f, v)
 	local t = _G    -- start with the table of globals
