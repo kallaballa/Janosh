@@ -15,3 +15,5 @@ test -d /usr/lib/x86_64-linux-gnu/ && LIBDIR=/usr/lib/x86_64-linux-gnu/
 
 export PATH="$PATH:/usr/local/bin/"
 luarocks install https://raw.github.com/Neopallium/lua-zmq/master/rockspecs/lua-zmq-scm-1.rockspec ZEROMQ_DIR=/usr/ ZEROMQ_LIBDIR="$LIBDIR"
+
+luarocks install luaposix
