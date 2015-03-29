@@ -60,6 +60,7 @@ public:
     zmq::context_t* context = new zmq::context_t(1);
     zmq::socket_t* subscriber = new zmq::socket_t(*context, ZMQ_SUB);
     string user = std::getenv("USER");
+    LOG_DEBUG_STR("Connecting to: " + string("ipc:///tmp/janosh-") + user + ".ipc");
     subscriber->connect((string("ipc:///tmp/janosh-") + user + ".ipc").c_str());
     subscriber->setsockopt(ZMQ_SUBSCRIBE, prefix.data(), prefix.length());
     contextMap[prefix] = context;
