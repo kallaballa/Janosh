@@ -50,7 +50,7 @@ screeninvader_debug: CXXFLAGS += -D_JANOSH_DEBUG -mfloat-abi=hard -mfpu=neon -g3
 screeninvader_debug: LIBS = -Wl,-Bstatic -lboost_serialization -lboost_program_options -lboost_system -lboost_filesystem -lkyotocabinet  -llzma -llzo2 -Wl,-Bdynamic -lz -lpthread -lrt -ldl -lbfd -lluajit-5.1 -lzmq
 screeninvader_debug: ${TARGET}
 
-debug: CXXFLAGS += -g3 -O0 -rdynamic -D_JANOSH_DEBUG -D__JANOSH_DEBUG_QUEUE__
+debug: CXXFLAGS += -g3 -O0 -rdynamic -D_JANOSH_DEBUG
 debug: LDFLAGS += -Wl,--export-dynamic
 debug: LIBS+= -lbfd
 debug: ${TARGET}
