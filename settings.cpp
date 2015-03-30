@@ -28,7 +28,6 @@ Settings::Settings() {
    }
 
    this->janoshFile = fs::path(dir.string() + "janosh.json");
-   this->triggerFile = fs::path(dir.string() + "triggers.json");
    this->logFile = fs::path(dir.string() + "janosh.log");
 
    if(!fs::exists(janoshFile)) {
@@ -41,12 +40,6 @@ Settings::Settings() {
        js::read(is,janoshConf);
        js::Object jObj = janoshConf.get_obj();
        js::Value v;
-
-       if(find(jObj, "triggerDirectories", v)) {
-         for (const js::Value& vDir: v.get_array()) {
-           triggerDirs.push_back(fs::path(vDir.get_str() + "/"));
-         }
-       }
 
        if(find(jObj, "database", v)) {
          this->databaseFile = fs::path(v.get_str());

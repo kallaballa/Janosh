@@ -25,10 +25,8 @@ class Settings {
 public:
   fs::path janoshFile;
   fs::path databaseFile;
-  fs::path triggerFile;
   fs::path logFile;
   int port;
-  vector<fs::path> triggerDirs;
 
   Settings();
   template<typename T> void error(const string& msg, T t, int exitcode=1) {
