@@ -104,10 +104,18 @@ public:
   }
 
   virtual Result operator()(const vector<string>& params, std::ostream& out) {
-    if (params.size() != 3)
-      return {0, "Expected three parameters (key, operation, value)"};
+    size_t s = params.size();
+    if (s > 3 || s < 1)
+      return {0, "Expected one, two or three parameters (key, operation, value)"};
 
-    janosh->publish(params[0], params[1], params[2]);
+    if(s == 3)
+      janosh->publish(params[0], params[1], params[2]);
+    else if(s == 2)
+      janosh->publish(params[0], "W", params[1]);
+    else if(s == 1)
+      janosh->publish(params[0], "W", "");
+    else
+      assert(false);
     return {1, "Successful"};
   }
 };
