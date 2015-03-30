@@ -3,8 +3,9 @@
 if __JanoshFirstStart then
 lanes = require "lanes".configure{ on_state_create = janosh_install; verbose_errors = true; }
 end
-
+signal = require "posix.signal"
 posix = require "posix"
+
 require "zmq"
 io = require "io"
 
@@ -28,6 +29,20 @@ function JanoshClass.system(self, cmdstring)
  os.execute(cmdstring)
 end
 
+function JanoshClass.exitHandler(self, fn)
+ signal.signal(signal.SIGTERM, fn)
+ signal.signal(signal.SIGINT, fn)
+ signal.signal(signal.SIGQUIT, fn)
+end
+
+function JanoshClass.term(self, pid) 
+  self:kill(pid, signal.SIGTERM)
+end
+
+function JanoshClass.kill(self, pid, sig)
+ signal.kill(pid,sig)
+end
+
 function JanoshClass.capture(self, cmd, raw)
   local f = assert(io.popen(cmd, 'r'))
   local s = assert(f:read('*a'))
@@ -45,9 +60,22 @@ function JanoshClass.unsetenv(self,key)
 	posix.unsetenv(key)
 end
 
-function JanoshClass.fopen(self,mode) 
-	return io.open(path,mode)
+function JanoshClass.fopen(self,path,flags,mode) 
+	return posix.open(path,mode)
 end
+
+function JanoshClass.fopenr(self,path)
+  return posix.open(path, bit.bor(posix.O_RDONLY))
+end
+
+function JanoshClass.fopenw(self,path)
+  return posix.open(path, bit.bor(posix.O_WRONLY))
+end
+
+function JanoshClass.fwrite(self, fd, str)
+  return posix.write(fd,str)
+end
+
 
 function JanoshClass.tprint(self, tbl, indent)
   if not indent then indent = 0 end
@@ -80,15 +108,11 @@ function JanoshClass.preadLine(self,fd)
   line="";
  	while true do
 		char = self:pread(fd,1)
-		if char == nil then
+		if char == nil or #char == 0 then
 			return nil
 		end
     if char == "\n" then break end
-		if #char > 0 then
-			line = line .. char
-		else
-			print("skip")
-    end
+		line = line .. char
 	end
   return line;
 end
@@ -175,6 +199,14 @@ function JanoshClass.pipe_simple(self, input, cmd, ...)
     local wait_pid, wait_cause, wait_status = posix.wait(pid)
 
     return wait_status, table.concat(stdout), table.concat(stderr)
+end
+
+function JanoshClass.thread(self, fn) 
+  return lanes.gen("*", fn)
+end
+
+function JanoshClass.tjoin(self, t)
+  return t[1];
 end
 
 function JanoshClass.request(self, req) 
@@ -302,7 +334,7 @@ end
 
 function JanoshClass.subscribe(self, keyprefix, callback)
   janosh_subscribe(keyprefix);
-  lanes.gen("*", function() 
+  t = lanes.gen("*", function() 
 		janosh_register_thread("Subscriber")
 		while true do
 			key, op, value = janosh_receive(keyprefix)
@@ -311,7 +343,8 @@ function JanoshClass.subscribe(self, keyprefix, callback)
         print("Subscriber " .. keyprefix .. " failed: ", msg)
       end
 		end
-	end)()
+	end)
+  t()
 end
 
 function JanoshClass.publish(self, key, op, value) 
