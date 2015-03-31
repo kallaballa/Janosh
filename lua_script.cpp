@@ -6,10 +6,15 @@
 #include <thread>
 #include <mutex>
 #include <thread>
-#include "exception.hpp"
 #include "cppzmq/zmq.hpp"
 #include "websocket.hpp"
 #include "exception.hpp"
+
+extern char _binary_JSON_lua_start;
+extern char _binary_JSON_lua_end;
+
+extern char _binary_JanoshAPI_lua_start;
+extern char _binary_JanoshAPI_lua_end;
 
 namespace janosh {
 namespace lua {
@@ -431,21 +436,22 @@ static void install_janosh_functions(lua_State* L, bool first) {
   lua_setglobal(L, "janosh_hash");
 
   std::stringstream ss;
-  lua_getglobal(L, "require");
-  lua_pushliteral(L, "JSONLib");
- 
-  if(lua_pcall(L, 1, 1, 0)) {
+  char*  p = &_binary_JSON_lua_start;
+  while ( p != &_binary_JSON_lua_end ) ss << *p++;
+  luaL_loadstring(L, ss.str().c_str());
+  if(lua_pcall(L, 0, 1, 0)) {
     LOG_ERR_MSG("Preloading JSON library failed", lua_tostring(L, -1));
   }
   lua_setglobal(L, "JSON");
 
-  lua_pushboolean(L, first);
+  ss.str("");
 
-  lua_getglobal(L, "require");
-  lua_pushliteral(L, "JanoshAPI");
+  p = &_binary_JanoshAPI_lua_start;
+  while ( p != &_binary_JanoshAPI_lua_end ) ss << *p++;
   lua_pushboolean(L, first);
   lua_setglobal(L, "__JanoshFirstStart");
-  if(lua_pcall(L, 1, 1, 0)) {
+  luaL_loadstring(L, ss.str().c_str());
+  if(lua_pcall(L, 0, 1, 0)) {
     LOG_ERR_MSG("Preloading JanoshAPI library failed", lua_tostring(L, -1));
   }
   lua_setglobal(L, "Janosh");

@@ -1093,10 +1093,10 @@ using namespace boost;
 using namespace janosh;
 namespace po = boost::program_options;
 
-INITIALIZE_EASYLOGGINGPP
+_INITIALIZE_EASYLOGGINGPP
 
 int main(int argc, char** argv) {
-  START_EASYLOGGINGPP(0, (const char**)NULL);
+  _START_EASYLOGGINGPP(0, (const char**)NULL);
   try {
     string command;
     string luafile;

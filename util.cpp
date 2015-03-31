@@ -2,12 +2,6 @@
 #include "util.hpp"
 #include "exception.hpp"
 
-// Don't use /proc, lol.
-#if defined(__APPLE__) && defined(__MACH__)
-#include <crt_externs.h>
-#endif
-
-
 namespace janosh {
 
 string read_proc_val(const string& filename) {
@@ -27,18 +21,11 @@ string read_proc_val(const string& filename) {
   return v;
 }
 
-ProcessInfo get_process_info(pid_t pid) {
-  ProcessInfo pinfo;
-  pinfo.pid_ = pid;
-
-#if defined(__APPLE__) && defined(__MACH__)
-  char **argv = *_NSGetArgv();
-  pinfo.cmdline_ = argv[0];
-#else
+ProcessInfo get_process_info(__pid_t pid) {
   string procDir = "/proc/" + std::to_string(pid) + "/";
+  ProcessInfo pinfo;
   pinfo.cmdline_ = read_proc_val(procDir + "cmdline");
-#endif
-
+  pinfo.pid_ = pid;
   return pinfo;
 }
 

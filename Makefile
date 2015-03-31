@@ -3,38 +3,31 @@ TARGET  := janosh
 SRCS    := janosh.cpp logger.cpp record.cpp path.cpp value.cpp exception.cpp cache.cpp json_spirit/json_spirit_reader.cpp  json_spirit/json_spirit_value.cpp  json_spirit/json_spirit_writer.cpp tcp_server.cpp tcp_client.cpp janosh_thread.cpp commands.cpp settings.cpp request.cpp tracker.cpp backward.cpp component.cpp json.cpp bash.cpp raw.cpp util.cpp exithandler.cpp cache_thread.cpp database_thread.cpp flusher_thread.cpp tcp_worker.cpp lua_script.cpp websocket.cpp message_queue.cpp
 #precompiled headers
 HEADERS := backward.h easylogging++.h json_spirit/json_spirit.h
+LUAFILES:= JSON.lua JanoshAPI.lua
 GCH     := ${HEADERS:.h=.gch}
-OBJS    := ${SRCS:.cpp=.o}
+OBJS    := ${SRCS:.cpp=.o} 
 DEPS    := ${SRCS:.cpp=.dep} 
+LUAOBJS := ${LUAFILES:.lua=.o} 
 DESTDIR := /
 PREFIX  := /usr/local/
-UNAME := $(shell uname)
+
+CXXFLAGS += -DWEBSOCKETPP_STRICT_MASKING -DETLOG -std=c++0x -pedantic -Wall -I./luajit-rocks/luajit-2.0/src/ -I./websocketpp/ -I./backtrace/ -I/opt/local/include -D_ELPP_THREAD_SAFE  -D_ELPP_DISABLE_LOGGING_FLAGS_FROM_ARG -D_ELPP_DISABLE_DEFAULT_CRASH_HANDLING -D_ELPP_NO_DEFAULT_LOG_FILE
+LDFLAGS += -L/opt/local/lib
+LIBS    += -lboost_program_options -lboost_serialization -lboost_system -lboost_filesystem -lpthread -lboost_thread -lkyotocabinet -lluajit-5.1 -ldl -lzmq
 
 BINOUTPUT := elf64-x86-64
 BINARCH := i386
 
-
-ifeq ($(UNAME), Linux)
-CXXFLAGS += -DWEBSOCKETPP_STRICT_MASKING -DETLOG -std=c++0x -pedantic -Wall -I./websocketpp/ -I./backtrace/ -I/opt/local/include -D_ELPP_THREAD_SAFE  -D_ELPP_DISABLE_LOGGING_FLAGS_FROM_ARG -D_ELPP_DISABLE_DEFAULT_CRASH_HANDLING -D_ELPP_NO_DEFAULT_LOG_FILE -D_XOPEN_SOURCE 
-LDFLAGS += -L/opt/local/lib -s
-LIBS    += -lboost_program_options -lboost_serialization -lboost_system -lboost_filesystem -lpthread -lboost_thread -lkyotocabinet -lluajit-5.1 -ldl -lzmq
-endif
+.PHONY: all release static clean distclean 
 
 ifeq ($(UNAME), Darwin)
-CXXFLAGS = -DWEBSOCKETPP_STRICT_MASKING -DETLOG -Wall -I./luajit-rocks/luajit-2.0/src/ -I./websocketpp/ -I./backtrace/ -I/opt/local/include -DELPP_DEBUG_ERRORS -DELPP_THREAD_SAFE -DELPP_STL_LOGGING -DELPP_LOG_UNORDERED_SET -DELPP_LOG_UNORDERED_MAP -DELPP_STACKTRACE_ON_CRASH -DELPP_LOGGING_FLAGS_FROM_ARG -D_XOPEN_SOURCE -std=c++11 -stdlib=libc++ -pthread  -Wall -Wextra -pedantic 
-LIBS    := -lboost_program_options -lboost_serialization -lboost_system -lboost_filesystem -lpthread -lboost_thread-mt -lkyotocabinet -lluajit-5.1 -ldl -lzmq
-#Darwin - we use clang
-CXX := clang++
-HEADERS := 
-GCH :=
+ CXXFLAGS +=  -stdlib=libc++
 endif
-
-.PHONY: all release static clean distclean 
 
 all: release
 
-#release: LDFLAGS += -s
-#release: CXXFLAGS += -g0 -O3 -D_ELPP_DISABLE_DEBUG_LOGS
+release: LDFLAGS += -s
+release: CXXFLAGS += -g0 -O3 -D_ELPP_DISABLE_DEBUG_LOGS
 release: ${TARGET}
 
 reduce: CXXFLAGS = -DWEBSOCKETPP_STRICT_MASKING -DETLOG -std=c++0x -pedantic -Wall -I./backtrace/ -g0 -Os -fvisibility=hidden -fvisibility-inlines-hidden
@@ -67,14 +60,11 @@ asan: LDFLAGS += -Wl,--export-dynamic -fsanitize=address
 asan: LIBS+= -lbfd
 asan: ${TARGET}
 
-JanoshAPI.o:	JanoshAPI.lua
-	luajit -b JanoshAPI.lua JanoshAPI.o
-JSONLib.o:	JSONLib.lua
-	luajit -b JSONLib.lua JSONLib.o
-
-
-${TARGET}: ${OBJS} JSONLib.o JanoshAPI.o 
+${TARGET}: ${LUAOBJS} ${OBJS}
 	${CXX} ${LDFLAGS} -o $@ $^ ${LIBS} 
+
+${LUAOBJS}: %.o: ${LUAFILES} 
+	objcopy --input binary --output ${BINOUTPUT} --binary-architecture ${BINARCH} ${@:.o=.lua} $@
 
 ${OBJS}: %.o: %.cpp %.dep ${GCH}
 	${CXX} ${CXXFLAGS} -o $@ -c $< 
@@ -93,7 +83,7 @@ uninstall:
 	rm ${DESTDIR}/${PREFIX}/${TARGET}
 
 clean:
-	rm -f *~ ${DEPS} ${OBJS} ${GCH} ${TARGET} JanoshAPI.o JSONLib.o
+	rm -f *~ ${DEPS} ${OBJS} ${GCH} ${TARGET} 
 
 distclean: clean
 

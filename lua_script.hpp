@@ -9,7 +9,6 @@
 #include <mutex>
 #include <condition_variable>
 #include  <lua.hpp>
-#include <thread>
 
 namespace janosh {
 namespace lua {
