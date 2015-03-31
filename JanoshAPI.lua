@@ -1,7 +1,10 @@
 #!/usr/local/bin/luajit
 
 if __JanoshFirstStart then
+print("JanoshAPI First start:YES")
 lanes = require "lanes".configure{ on_state_create = janosh_install; verbose_errors = true; }
+else
+print("JanoshAPI First start:NO")
 end
 signal = require "posix.signal"
 posix = require "posix"
@@ -407,5 +410,7 @@ for key,value in pairs(getmetatable(self)) do
   setfield("J" .. key, function(...) return value(self,...) end)
 end
 end
+
+print ("Embedded JanoshAPI Library is loaded.")
 
 return JanoshClass:new()

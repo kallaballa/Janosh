@@ -16,7 +16,7 @@ BINARCH := i386
 
 ifeq ($(UNAME), Linux)
 CXXFLAGS += -DWEBSOCKETPP_STRICT_MASKING -DETLOG -std=c++0x -pedantic -Wall -I./websocketpp/ -I./backtrace/ -I/opt/local/include -D_ELPP_THREAD_SAFE  -D_ELPP_DISABLE_LOGGING_FLAGS_FROM_ARG -D_ELPP_DISABLE_DEFAULT_CRASH_HANDLING -D_ELPP_NO_DEFAULT_LOG_FILE -D_XOPEN_SOURCE 
-LDFLAGS += -L/opt/local/lib -s
+LDFLAGS += -Lluajit-rocks/build/luajit-2.0/ -L/opt/local/lib -s
 LIBS    += -lboost_program_options -lboost_serialization -lboost_system -lboost_filesystem -lpthread -lboost_thread -lkyotocabinet -lluajit-5.1 -ldl -lzmq
 endif
 
@@ -68,9 +68,9 @@ asan: LIBS+= -lbfd
 asan: ${TARGET}
 
 JanoshAPI.o:	JanoshAPI.lua
-	luajit -b JanoshAPI.lua JanoshAPI.o
+	luajit-rocks/build/luajit-2.0/luajit -b JanoshAPI.lua JanoshAPI.o
 JSONLib.o:	JSONLib.lua
-	luajit -b JSONLib.lua JSONLib.o
+	luajit-rocks/build/luajit-2.0/luajit -b JSONLib.lua JSONLib.o
 
 
 ${TARGET}: ${OBJS} JSONLib.o JanoshAPI.o 
