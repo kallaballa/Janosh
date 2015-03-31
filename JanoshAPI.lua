@@ -29,28 +29,24 @@ function JanoshClass.system(self, cmdstring)
  os.execute(cmdstring)
 end
 
-function JanoshClass.exitHandler(self, fn)
- signal.signal(signal.SIGTERM, fn)
- signal.signal(signal.SIGINT, fn)
- signal.signal(signal.SIGQUIT, fn)
-end
-
 function JanoshClass.term(self, pid) 
   self:kill(pid, signal.SIGTERM)
 end
+
+function JanoshClass.kill(self, pid)
+  self:kill(pid, signal.SIGKILL)
+end
+
 
 function JanoshClass.kill(self, pid, sig)
  signal.kill(pid,sig)
 end
 
-function JanoshClass.capture(self, cmd, raw)
+function JanoshClass.capture(self, cmd)
   local f = assert(io.popen(cmd, 'r'))
   local s = assert(f:read('*a'))
   f:close()
-  if raw then return s end
-  s = string.gsub(s, '^%s+', '')
-  s = string.gsub(s, '%s+$', '')
-  s = string.gsub(s, '[\n\r]+', ' ')
+
   return s
 end
 
