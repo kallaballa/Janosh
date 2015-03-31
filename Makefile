@@ -13,6 +13,7 @@ UNAME := $(shell uname)
 BINOUTPUT := elf64-x86-64
 BINARCH := i386
 
+EXTRA_BUILDFLAGS = 
 
 ifeq ($(UNAME), Linux)
 CXXFLAGS += -DWEBSOCKETPP_STRICT_MASKING -DETLOG -std=c++0x -pedantic -Wall -I./websocketpp/ -I./backtrace/ -I/opt/local/include -D_ELPP_THREAD_SAFE  -D_ELPP_DISABLE_LOGGING_FLAGS_FROM_ARG -D_ELPP_DISABLE_DEFAULT_CRASH_HANDLING -D_ELPP_NO_DEFAULT_LOG_FILE -D_XOPEN_SOURCE 
@@ -21,8 +22,9 @@ LIBS    += -lboost_program_options -lboost_serialization -lboost_system -lboost_
 endif
 
 ifeq ($(UNAME), Darwin)
-CXXFLAGS = -DWEBSOCKETPP_STRICT_MASKING -DETLOG -Wall -I./luajit-rocks/luajit-2.0/src/ -I./websocketpp/ -I./backtrace/ -I/opt/local/include -DELPP_DEBUG_ERRORS -DELPP_THREAD_SAFE -DELPP_STL_LOGGING -DELPP_LOG_UNORDERED_SET -DELPP_LOG_UNORDERED_MAP -DELPP_STACKTRACE_ON_CRASH -DELPP_LOGGING_FLAGS_FROM_ARG -D_XOPEN_SOURCE -std=c++11 -stdlib=libc++ -pthread  -Wall -Wextra -pedantic 
+CXXFLAGS = -DWEBSOCKETPP_STRICT_MASKING -DETLOG -Wall -I./luajit-rocks/luajit-2.0/src/ -I./websocketpp/ -I./backtrace/ -I/opt/local/include -DELPP_DEBUG_ERRORS -DELPP_THREAD_SAFE -DELPP_STL_LOGGING -DELPP_LOG_UNORDERED_SET -DELPP_LOG_UNORDERED_MAP -DELPP_STACKTRACE_ON_CRASH -DELPP_LOGGING_FLAGS_FROM_ARG -D_XOPEN_SOURCE -std=c++11 -stdlib=libc++ -pthread  -Wall -Wextra -pedantic
 LIBS    := -lboost_program_options -lboost_serialization -lboost_system -lboost_filesystem -lpthread -lboost_thread-mt -lkyotocabinet -lluajit-5.1 -ldl -lzmq
+EXTRA_BUILDFLAGS = -pagezero_size 10000 -image_base 100000000
 #Darwin - we use clang
 CXX := clang++
 HEADERS := 
@@ -74,7 +76,7 @@ JSONLib.o:	JSONLib.lua
 
 
 ${TARGET}: ${OBJS} JSONLib.o JanoshAPI.o 
-	${CXX} ${LDFLAGS} -o $@ $^ ${LIBS} 
+	${CXX} ${LDFLAGS} -o $@ $^ ${LIBS} ${EXTRA_BUILDFLAGS}
 
 ${OBJS}: %.o: %.cpp %.dep ${GCH}
 	${CXX} ${CXXFLAGS} -o $@ -c $< 
