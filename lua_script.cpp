@@ -434,16 +434,18 @@ static void install_janosh_functions(lua_State* L, bool first) {
   lua_getglobal(L, "require");
   lua_pushliteral(L, "JSONLib");
  
-  if(lua_pcall(L, 1, 0, 0)) {
+  if(lua_pcall(L, 1, 1, 0)) {
     LOG_ERR_MSG("Preloading JSON library failed", lua_tostring(L, -1));
   }
   lua_setglobal(L, "JSON");
 
   lua_pushboolean(L, first);
-  
+
   lua_getglobal(L, "require");
   lua_pushliteral(L, "JanoshAPI");
-  if(lua_pcall(L, 1, 0, 0)) {
+  lua_pushboolean(L, first);
+  lua_setglobal(L, "__JanoshFirstStart");
+  if(lua_pcall(L, 1, 1, 0)) {
     LOG_ERR_MSG("Preloading JanoshAPI library failed", lua_tostring(L, -1));
   }
   lua_setglobal(L, "Janosh");
