@@ -19,7 +19,7 @@ using std::ifstream;
 
 struct ProcessInfo {
   string cmdline_;
-  __pid_t pid_;
+  pid_t pid_;
 
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version) {
@@ -28,7 +28,7 @@ struct ProcessInfo {
   }
 };
 
-ProcessInfo get_process_info(__pid_t pid);
+ProcessInfo get_process_info(pid_t pid);
 ProcessInfo get_parent_info();
 } /* namespace janosh */
 
