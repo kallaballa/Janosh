@@ -22,6 +22,11 @@
 #include <iostream>
 #include <sstream>
 
+
+/* Amirs' custom ThreadNameLookup .. !J! */
+#include <thread>
+extern el::base::Storage* elStorage;
+using std::string;
 namespace el {
   namespace base {
     ThreadNameLookup* ThreadNameLookup::instance_ = NULL;
