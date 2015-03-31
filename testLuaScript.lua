@@ -26,6 +26,10 @@ function echo(handle, message)
   -- Janosh:wsSend(handle, message)
 end
 
+
+table.foreach(_G,print)
+
+
 -- init the db and /val
 print("Yo:A")
 Janosh:truncate()
