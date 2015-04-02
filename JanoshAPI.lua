@@ -79,7 +79,7 @@ function JanoshClass.tprint(self, tbl, indent)
     formatting = string.rep("  ", indent) .. k .. ": "
     if type(v) == "table" then
       print(formatting)
-      tprint(v, indent+1)
+      self:tprint(v, indent+1)
     elseif type(v) == 'boolean' then
       print(formatting .. tostring(v))
     else
