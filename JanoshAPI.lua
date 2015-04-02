@@ -113,6 +113,10 @@ function JanoshClass.preadLine(self,fd)
   return line;
 end
 
+function JanoshClass.psystem(self,cmd)
+  return Janosh:popen("bash", "-c", "exec " .. cmd)
+end
+
 function JanoshClass.popen(self, path, ...)
     local r1, w1 = posix.pipe()
     local r2, w2 = posix.pipe()
