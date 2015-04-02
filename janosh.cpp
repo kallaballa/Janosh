@@ -237,8 +237,10 @@ namespace janosh {
         else
           parentType = hierachy.top().second;
 
-        hierachy.push( { name, Value::Object });
-        vis->beginObject(path, parentType == Value::Array, last.isEmpty() || last == parent);
+        if(!name.pretty().empty()) {
+          hierachy.push( { name, Value::Object });
+          vis->beginObject(path, parentType == Value::Array, last.isEmpty() || last == parent);
+        }
       } else {
         bool first = last.isEmpty() || last == parent;
         if (!hierachy.empty()) {
