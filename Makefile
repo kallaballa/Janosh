@@ -18,7 +18,7 @@ LIBS    += -lboost_program_options -lboost_serialization -lboost_system -lboost_
 BINOUTPUT := elf64-x86-64
 BINARCH := i386
 
-ifeq ($(uname -m), amv7hl)
+ifeq ($(shell uname -m), armv7l)
   BINOUTPUT = elf32-littlearm
   BINARCH = arm
   CXXFLAGS += -mfloat-abi=hard -mfpu=neon
