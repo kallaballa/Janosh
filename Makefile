@@ -46,12 +46,12 @@ static: ${TARGET}
 
 screeninvader: LDFLAGS += -s
 screeninvader: CXXFLAGS += -D_JANOSH_DEBUG -g0 -O3 
-screeninvader: LIBS = -Wl,-Bstatic -lboost_serialization -lboost_system -lboost_filesystem -lkyotocabinet  -llzma -llzo2 -Wl,-Bdynamic -lz -lpthread -lrt -ldl -lboost_program_options -lluajit-5.1 -lzmq
+screeninvader: LIBS = -lboost_program_options -Wl,-Bstatic -lboost_serialization -lboost_system -lboost_filesystem -lkyotocabinet  -llzma -llzo2 -Wl,-Bdynamic -lz -lpthread -lrt -ldl -lluajit-5.1 -lzmq
 screeninvader: ${TARGET}
 
 screeninvader_debug: LDFLAGS += -Wl,--export-dynamic
 screeninvader_debug: CXXFLAGS += -D_JANOSH_DEBUG -g3 -O0 -rdynamic -D_JANOSH_DEBUG
-screeninvader_debug: LIBS = -Wl,-Bstatic -lboost_serialization -lboost_program_options -lboost_system -lboost_filesystem -lkyotocabinet  -llzma -llzo2 -Wl,-Bdynamic -lz -lpthread -lrt -ldl -lbfd -lluajit-5.1 -lzmq
+screeninvader_debug: LIBS = -lboost_program_options -Wl,-Bstatic -lboost_serialization -lboost_system -lboost_filesystem -lkyotocabinet  -llzma -llzo2 -Wl,-Bdynamic -lz -lpthread -lrt -ldl -lbfd -lluajit-5.1 -lzmq
 screeninvader_debug: ${TARGET}
 
 debug: CXXFLAGS += -g3 -O0 -rdynamic -D_JANOSH_DEBUG
