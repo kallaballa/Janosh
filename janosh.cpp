@@ -1182,6 +1182,8 @@ int main(int argc, char** argv) {
     }
 
     if (daemon) {
+      //initialize the message queue early
+      MessageQueue::getInstance();
       Logger::setTracing(tracing);
       Logger::setDBLogging(dblog);
       Tracker::setPrintDirective(printDirective);
