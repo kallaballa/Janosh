@@ -28,6 +28,7 @@
 #include <boost/lexical_cast.hpp>
 #include <kcdb.h>
 #include <sstream>
+#include <mutex>
 
 namespace janosh {
   using std::string;
