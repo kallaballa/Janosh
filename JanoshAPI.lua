@@ -1,10 +1,10 @@
 #!/usr/local/bin/luajit
 
 if __JanoshFirstStart then
-lanes = require "lanes".configure{ on_state_create = janosh_install; verbose_errors = true; }
+local  lanes = require "lanes".configure{ on_state_create = janosh_install; verbose_errors = true; protect_allocator = true; with_timers = false; }
 end
-signal = require "posix.signal"
-posix = require "posix"
+local signal = require "posix.signal"
+local posix = require "posix"
 
 require "zmq"
 io = require "io"
@@ -23,6 +23,14 @@ end
 
 function JanoshClass.setenv(self,key,value)
 	posix.setenv(key,value)
+end
+
+function JanoshClass.mktemp(self)
+  return Janosh:capture("mktemp"):gsub("^%s*(.-)%s*$", "%1")  
+end
+
+function JanoshClass.mktempDir(self)
+  return Janosh:capture("mktemp -d"):gsub("^%s*(.-)%s*$", "%1")
 end
 
 function JanoshClass.system(self, cmdstring) 
@@ -71,6 +79,11 @@ end
 function JanoshClass.fwrite(self, fd, str)
   return posix.write(fd,str)
 end
+
+function JanoshClass.fwriteln(self, fd, str)
+  return posix.write(fd,str .. "\n")
+end
+
 
 function JanoshClass.fclose(self, fd)
   posix.close(fd)
