@@ -1,7 +1,7 @@
 #!/usr/local/bin/luajit
 
 if __JanoshFirstStart then
-local  lanes = require "lanes".configure{ on_state_create = janosh_install; verbose_errors = true; protect_allocator = true; with_timers = false; }
+  lanes = require "lanes".configure{ on_state_create = janosh_install; verbose_errors = true; protect_allocator = true; with_timers = false; }
 end
 local signal = require "posix.signal"
 local posix = require "posix"
