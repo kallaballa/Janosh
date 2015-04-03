@@ -72,6 +72,9 @@ function JanoshClass.fwrite(self, fd, str)
   return posix.write(fd,str)
 end
 
+function JanoshClass.fclose(self, fd)
+  posix.close(fd)
+end
 
 function JanoshClass.tprint(self, tbl, indent)
   if not indent then indent = 0 end
