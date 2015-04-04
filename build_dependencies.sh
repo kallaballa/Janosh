@@ -7,9 +7,3 @@ cd build
 cmake ..
 make install
 
-LIBDIR=/usr/lib
-test -d /usr/lib64 && LIBDIR=/usr/lib64
-test -d /usr/lib/arm-linux-gnueabihf && LIBDIR=/usr/lib/arm-linux-gnueabihf
-test -d /usr/lib/x86_64-linux-gnu/ && LIBDIR=/usr/lib/x86_64-linux-gnu/
-export PATH="$PATH:/usr/local/bin/"
-
