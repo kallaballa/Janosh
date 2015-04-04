@@ -6,7 +6,6 @@ end
 local signal = require "posix.signal"
 local posix = require "posix"
 
-require "zmq"
 io = require "io"
 
 local JanoshClass = {} -- the table representing the class, which will double as the metatable for the instances
