@@ -9,6 +9,7 @@ DEPS    := ${SRCS:.cpp=.dep}
 DESTDIR := /
 PREFIX  := /usr/local/
 UNAME := $(shell uname)
+export PATH := /usr/local/bin:$(PATH)
 
 EXTRA_BUILDFLAGS = 
 
