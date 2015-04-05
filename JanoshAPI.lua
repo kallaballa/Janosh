@@ -3,7 +3,6 @@
 if __JanoshFirstStart then
   lanes = require "lanes".configure{ on_state_create = janosh_install; verbose_errors = true; protect_allocator = true; with_timers = false; }
 end
-local signal = require "posix.signal"
 local posix = require "posix"
 
 io = require "io"
@@ -34,19 +33,6 @@ end
 
 function JanoshClass.system(self, cmdstring) 
  os.execute(cmdstring)
-end
-
-function JanoshClass.term(self, pid) 
-  self:kill(pid, signal.SIGTERM)
-end
-
-function JanoshClass.kill(self, pid)
-  self:kill(pid, signal.SIGKILL)
-end
-
-
-function JanoshClass.kill(self, pid, sig)
- signal.kill(pid,sig)
 end
 
 function JanoshClass.capture(self, cmd)
