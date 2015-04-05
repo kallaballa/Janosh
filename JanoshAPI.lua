@@ -262,9 +262,9 @@ end
 function JanoshClass.size(self, keys)
   if type(keys) == "table" then
     table.insert(keys, 1, "size")
-    return janosh_request(keys);
+    return tonumber(janosh_request(keys))
   else
-    return janosh_request({"size", keys})
+    return tonumber(janosh_request({"size", keys}))
   end
 end
 
@@ -363,100 +363,101 @@ function JanoshClass.publish(self, key, op, value)
 end
 
 function JanoshClass.set_t(self, key, value)
-  janosh_request({"set",key,value});
+  janosh_request_t({"set",key,value});
 end
 
 function JanoshClass.set_all_t(self, argv)
+  print("SET_ALL_T")
   table.insert(argv,1,"set")
-  janosh_request(argv);
+  janosh_request_t(argv);
 end
 
 function JanoshClass.add_t(self, key, value)
-  janosh_request({"add",key,value});
+  janosh_request_t({"add",key,value});
 end
 
 function JanoshClass.add_all_t(self, argv)
   table.insert(argv,1,"add")
-  janosh_request(argv);
+  janosh_request_t(argv);
 end
 
 function JanoshClass.replace_t(self, key, value)
-  janosh_request({"replace",key,value});
+  janosh_request_t({"replace",key,value});
 end
 
 function JanoshClass.replace_all_t(self, argv)
   table.insert(argv,1,"replace")
-  janosh_request(argv);
+  janosh_request_t(argv);
 end
 
 function JanoshClass.append_t(self, key, value)
   if type(value) == "table" then
     table.insert(value, 1, key)
 		table.insert(value, 1, "append")
-    janosh_request(value);
+    janosh_request_t(value);
 	else
-		janosh_request({"append",key,value})
+		janosh_request_t({"append",key,value})
 	end
 end
 
 function JanoshClass.dump_t(self)
-   return janosh_request({"dump"})
+   return janosh_request_t({"dump"})
 end
 
 function JanoshClass.size_t(self, keys)
   if type(keys) == "table" then
     table.insert(keys, 1, "size")
-    return janosh_request(keys);
+    return janosh_request_t(keys);
   else
-    return janosh_request({"size", keys})
+    return janosh_request_t({"size", keys})
   end
 end
 
 function JanoshClass.get_t(self, keys)
   if type(keys) == "table" then
     table.insert(keys, 1, "get")
-    return JSON:decode(janosh_request(keys));
+    return JSON:decode(janosh_request_t(keys));
   else
-    return JSON:decode(janosh_request({"get", keys}))
+    return JSON:decode(janosh_request_t({"get", keys}))
   end
 end
   
 function JanoshClass.copy_t(self, from, to)
-  janosh_request({"copy",from,to})
+  janosh_request_t({"copy",from,to})
 end
 
 function JanoshClass.remove_t(self, keys)
   if type(keys) == "table" then
     table.insert(keys, 1, "remove")
-    janosh_request(keys);
+    janosh_request_t(keys);
   else
-    janosh_request({"remove", keys})
+    janosh_request_t({"remove", keys})
   end
 end
 
 function JanoshClass.shift_t(self, from, to)
-  janosh_request({"shift", from,to})
+  janosh_request_t({"shift", from,to})
 end
 
 function JanoshClass.move_t(self, from, to)
-  janosh_request({"move", from,to})
+  janosh_request_t({"move", from,to})
 end
 
 function JanoshClass.mkarr_t(self, keys)
   if type(keys) == "table" then
     table.insert(keys, 1, "mkarr")
-    janosh_request(keys);
+    janosh_request_t(keys);
   else
-    janosh_request({"mkarr", keys})
+    janosh_request_t({"mkarr", keys})
   end
 end
 
 function JanoshClass.mkobj_t(self, keys)
   if type(keys) == "table" then
    table.insert(keys, 1, "mkobj")
-   janosh_request(keys);
+   janosh_request_t(keys);
   else
-    janosh_request({"mkobj", keys})
+    janosh_request_t({"mkobj", keys})
   end
 end
 
