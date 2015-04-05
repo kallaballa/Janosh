@@ -71,10 +71,9 @@ asan: LIBS+= -lbfd
 asan: ${TARGET}
 
 JanoshAPI.o:	JanoshAPI.lua
-	luajit-rocks/build/luajit-2.0/luajit -b JanoshAPI.lua JanoshAPI.o
+	luajit -b JanoshAPI.lua JanoshAPI.o
 JSONLib.o:	JSONLib.lua
-	luajit-rocks/build/luajit-2.0/luajit -b JSONLib.lua JSONLib.o
-
+	luajit -b JSONLib.lua JSONLib.o
 
 ${TARGET}: ${OBJS} JSONLib.o JanoshAPI.o 
 	${CXX} ${LDFLAGS} -o $@ $^ ${LIBS} ${EXTRA_BUILDFLAGS}
