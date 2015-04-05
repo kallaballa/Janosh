@@ -133,7 +133,7 @@ static inline std::string &trim(std::string &s) {
         return ltrim(rtrim(s));
 }
 
-static janosh::Request make_request(lua_State* L) {
+static janosh::Request make_request(lua_State* L, bool trigger = false) {
   std::vector< string > args;
 
   lua_pushinteger( L, 1 );
@@ -149,10 +149,10 @@ static janosh::Request make_request(lua_State* L) {
       lua_pop( L, 1 );
   }
 
-  return Request(janosh::Format::Json, command, args, false, false, get_parent_info());
+  return Request(janosh::Format::Json, command, args, trigger, false, get_parent_info());
 }
 
-static janosh::Request make_request(string command, lua_State* L) {
+static janosh::Request make_request(string command, lua_State* L, bool trigger = false) {
   std::vector< string > args;
 
   const int len = lua_objlen( L, -1 );
@@ -163,7 +163,7 @@ static janosh::Request make_request(string command, lua_State* L) {
       lua_pop( L, 1 );
   }
 
-  return Request(janosh::Format::Json, command, args, false, false, get_parent_info());
+  return Request(janosh::Format::Json, command, args, trigger, false, get_parent_info());
 }
 
 static int l_register_thread(lua_State* L) {
@@ -241,13 +241,8 @@ static int l_request(lua_State* L) {
   return 1;
 }
 
-static int l_get(lua_State* L) {
-  lua_pushstring(L, (LuaScript::getInstance()->performRequest(make_request("get", L))).c_str());
-  return 1;
-}
-
-static int l_set(lua_State* L) {
-  lua_pushstring(L, (LuaScript::getInstance()->performRequest(make_request("set", L))).c_str());
+static int l_request_trigger(lua_State* L) {
+  lua_pushstring(L, (LuaScript::getInstance()->performRequest(make_request(L,true))).c_str());
   return 1;
 }
 
@@ -261,93 +256,6 @@ static int l_close(lua_State* L) {
   return 0;
 }
 
-static int l_trigger(lua_State* L) {
-  std::vector< string > args;
-
-  const int len = lua_objlen( L, -1 );
-  for ( int i = 1; i <= len; ++i ) {
-      lua_pushinteger( L, i );
-      lua_gettable( L, -2 );
-      args.push_back( lua_tostring( L, -1 ) );
-      lua_pop( L, 1 );
-  }
-
-  Request req(janosh::Format::Json, "set", args, true, false, get_parent_info());
-  LuaScript::getInstance()->performRequest(req);
-  return 0;
-}
-
-static int l_remove(lua_State* L) {
-  LuaScript::getInstance()->performRequest(make_request("remove", L));
-  return 0;
-}
-
-static int l_append(lua_State* L) {
-  LuaScript::getInstance()->performRequest(make_request("append", L));
-  return 0;
-}
-
-static int l_add(lua_State* L) {
-  LuaScript::getInstance()->performRequest(make_request("add", L));
-  return 0;
-}
-
-static int l_replace(lua_State* L) {
-  LuaScript::getInstance()->performRequest(make_request("replace", L));
-  return 0;
-}
-
-static int l_dump(lua_State* L) {
- lua_pushstring(L, LuaScript::getInstance()->performRequest(make_request("dump", L)).c_str());
- return 1;
-}
-
-static int l_shift(lua_State* L) {
-  LuaScript::getInstance()->performRequest(make_request("shift", L));
-  return 0;
-}
-
-static int l_mkarr(lua_State* L) {
-  LuaScript::getInstance()->performRequest(make_request("mkarr", L));
-  return 0;
-}
-
-static int l_mkobj(lua_State* L) {
-  LuaScript::getInstance()->performRequest(make_request("mkobj", L));
-  return 0;
-}
-
-static int l_size(lua_State* L) {
-  std::string strSize = LuaScript::getInstance()->performRequest(make_request("size", L));
-  size_t size = boost::lexical_cast<size_t>(trim(strSize));
-  lua_pushinteger(L, size);
-  return 1;
-}
-
-static int l_copy(lua_State* L) {
-  LuaScript::getInstance()->performRequest(make_request("copy", L));
-  return 0;
-}
-
-static int l_move(lua_State* L) {
-  LuaScript::getInstance()->performRequest(make_request("move", L));
-  return 0;
-}
-
-static int l_truncate(lua_State* L) {
-  LuaScript::getInstance()->performRequest(make_request("truncate", L));
-  return 0;
-}
-
-static int l_hash(lua_State* L) {
-  lua_pushstring(L, (LuaScript::getInstance()->performRequest(make_request("hash", L))).c_str());
-  return 1;
-}
-
-static int l_publish(lua_State* L) {
-  LuaScript::getInstance()->performRequest(make_request("publish", L));
-  return 0;
-}
 
 
 static void install_janosh_functions(lua_State* L, bool first);
@@ -372,6 +280,11 @@ static void install_janosh_functions(lua_State* L, bool first) {
   lua_pushcfunction(L, l_unlock);
   lua_setglobal(L, "janosh_unlock");
 
+  lua_pushcfunction(L, l_open);
+  lua_setglobal(L, "janosh_open");
+  lua_pushcfunction(L, l_close);
+  lua_setglobal(L, "janosh_close");
+
   lua_pushcfunction(L, l_wsopen);
   lua_setglobal(L, "janosh_wsopen");
   lua_pushcfunction(L, l_wsbroadcast);
@@ -385,8 +298,6 @@ static void install_janosh_functions(lua_State* L, bool first) {
   lua_setglobal(L, "janosh_subscribe");
   lua_pushcfunction(L, l_receive);
   lua_setglobal(L, "janosh_receive");
-  lua_pushcfunction(L, l_publish);
-  lua_setglobal(L, "janosh_publish");
 
 
   lua_pushcfunction(L, l_sleep);
@@ -394,42 +305,8 @@ static void install_janosh_functions(lua_State* L, bool first) {
 
   lua_pushcfunction(L, l_request);
   lua_setglobal(L, "janosh_request");
-  lua_pushcfunction(L, l_set);
-  lua_setglobal(L, "janosh_set");
-  lua_pushcfunction(L, l_open);
-  lua_setglobal(L, "janosh_open");
-  lua_pushcfunction(L, l_close);
-  lua_setglobal(L, "janosh_close");
-  lua_pushcfunction(L, l_add);
-  lua_setglobal(L, "janosh_add");
-  lua_pushcfunction(L, l_trigger);
-  lua_setglobal(L, "janosh_trigger");
-  lua_pushcfunction(L, l_replace);
-  lua_setglobal(L, "janosh_replace");
-  lua_pushcfunction(L, l_append);
-  lua_setglobal(L, "janosh_append");
-  lua_pushcfunction(L, l_dump);
-  lua_setglobal(L, "janosh_dump");
-  lua_pushcfunction(L, l_size);
-  lua_setglobal(L, "janosh_size");
-  lua_pushcfunction(L, l_get);
-  lua_setglobal(L, "janosh_get");
-  lua_pushcfunction(L, l_copy);
-  lua_setglobal(L, "janosh_copy");
-  lua_pushcfunction(L, l_remove);
-  lua_setglobal(L, "janosh_remove");
-  lua_pushcfunction(L, l_shift);
-  lua_setglobal(L, "janosh_shift");
-  lua_pushcfunction(L, l_move);
-  lua_setglobal(L, "janosh_move");
-  lua_pushcfunction(L, l_truncate);
-  lua_setglobal(L, "janosh_truncate");
-  lua_pushcfunction(L, l_mkarr);
-  lua_setglobal(L, "janosh_mkarr");
-  lua_pushcfunction(L, l_mkobj);
-  lua_setglobal(L, "janosh_mkobj");
-  lua_pushcfunction(L, l_hash);
-  lua_setglobal(L, "janosh_hash");
+  lua_pushcfunction(L, l_request_trigger);
+  lua_setglobal(L, "janosh_request_t");
 
   // Load the JSONLib, set it to the JSON table
   lua_getglobal(L, "require");
