@@ -27,10 +27,16 @@ WebsocketServer::WebsocketServer() {
   m_server.set_open_handler(bind(&WebsocketServer::on_open, this, ::_1));
   m_server.set_close_handler(bind(&WebsocketServer::on_close, this, ::_1));
   m_server.set_message_handler(bind(&WebsocketServer::on_message, this, ::_1, ::_2));
+  m_server.set_access_channels(websocketpp::log::alevel::all);
+  m_server.set_error_channels(websocketpp::log::elevel::all);
+
   ExitHandler::getInstance()->addExitFunc([&](){
+    m_server.stop_perpetual();
     m_server.stop();
-    if (m_server.is_listening())
+    if (m_server.is_listening()) {
+      m_server.stop_perpetual();
       m_server.stop_listening();
+    }
 
     for (auto& conn : m_connections) {
       m_server.close(conn, websocketpp::close::status::normal, "closed");
