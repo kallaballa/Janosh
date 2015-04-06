@@ -1,6 +1,7 @@
 #include "websocket.hpp"
 #include "websocketpp/endpoint.hpp"
 #include "exithandler.hpp"
+#include "logger.hpp"
 
 namespace janosh {
 namespace lua {
@@ -18,8 +19,8 @@ using websocketpp::lib::unique_lock;
 using websocketpp::lib::condition_variable;
 
 WebsocketServer::WebsocketServer() {
-  m_server.clear_access_channels(websocketpp::log::alevel::all);
-
+  m_server.set_access_channels(websocketpp::log::alevel::all);
+  m_server.set_error_channels(websocketpp::log::elevel::all);
   // Initialize Asio Transport
   m_server.init_asio();
 
@@ -27,8 +28,6 @@ WebsocketServer::WebsocketServer() {
   m_server.set_open_handler(bind(&WebsocketServer::on_open, this, ::_1));
   m_server.set_close_handler(bind(&WebsocketServer::on_close, this, ::_1));
   m_server.set_message_handler(bind(&WebsocketServer::on_message, this, ::_1, ::_2));
-  m_server.set_access_channels(websocketpp::log::alevel::all);
-  m_server.set_error_channels(websocketpp::log::elevel::all);
 
   ExitHandler::getInstance()->addExitFunc([&](){
     m_server.stop_perpetual();
@@ -89,6 +88,7 @@ void WebsocketServer::process_messages() {
   while (1) {
     unique_lock<mutex> lock(m_action_lock);
 
+    try {
     while (m_actions.empty()) {
       m_action_cond.wait(lock);
     }
@@ -121,7 +121,11 @@ void WebsocketServer::process_messages() {
     } else {
       assert(false);
     }
+    } catch(std::exception& ex) {
+      LOG_ERR_MSG("Exception in websocket run loop", ex);
+    }
   }
+
 }
 
 void WebsocketServer::broadcast(const std::string& s) {
