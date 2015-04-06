@@ -89,39 +89,39 @@ void WebsocketServer::process_messages() {
     unique_lock<mutex> lock(m_action_lock);
 
     try {
-    while (m_actions.empty()) {
-      m_action_cond.wait(lock);
-    }
-
-    action a = m_actions.front();
-    m_actions.pop();
-
-    lock.unlock();
-
-    if (a.type == SUBSCRIBE) {
-      unique_lock<mutex> lock(m_receive_lock);
-      unique_lock<mutex> con_lock(m_connection_lock);
-      m_connections.insert(a.hdl);
-      m_luahandles[++luaHandleMax] = a.hdl;
-      m_luahandles_rev[a.hdl] = luaHandleMax;
-    } else if (a.type == UNSUBSCRIBE) {
-      unique_lock<mutex> lock(m_receive_lock);
-      unique_lock<mutex> con_lock(m_connection_lock);
-      m_connections.erase(a.hdl);
-      size_t intHandle = m_luahandles_rev[a.hdl];
-      m_luahandles.erase(intHandle);
-      m_luahandles_rev.erase(a.hdl);
-    } else if (a.type == MESSAGE) {
-      unique_lock<mutex> con_lock(m_connection_lock);
-
-      con_list::iterator it;
-      for (it = m_connections.begin(); it != m_connections.end(); ++it) {
-        m_server.send(*it, a.msg, websocketpp::frame::opcode::TEXT);
+      while (m_actions.empty()) {
+        m_action_cond.wait(lock);
       }
-    } else {
-      assert(false);
-    }
-    } catch(std::exception& ex) {
+
+      action a = m_actions.front();
+      m_actions.pop();
+
+      lock.unlock();
+
+      if (a.type == SUBSCRIBE) {
+        unique_lock<mutex> lock(m_receive_lock);
+        unique_lock<mutex> con_lock(m_connection_lock);
+        m_connections.insert(a.hdl);
+        m_luahandles[++luaHandleMax] = a.hdl;
+        m_luahandles_rev[a.hdl] = luaHandleMax;
+      } else if (a.type == UNSUBSCRIBE) {
+        unique_lock<mutex> lock(m_receive_lock);
+        unique_lock<mutex> con_lock(m_connection_lock);
+        m_connections.erase(a.hdl);
+        size_t intHandle = m_luahandles_rev[a.hdl];
+        m_luahandles.erase(intHandle);
+        m_luahandles_rev.erase(a.hdl);
+      } else if (a.type == MESSAGE) {
+        unique_lock<mutex> con_lock(m_connection_lock);
+
+        con_list::iterator it;
+        for (it = m_connections.begin(); it != m_connections.end(); ++it) {
+          m_server.send(*it, a.msg, websocketpp::frame::opcode::TEXT);
+        }
+      } else {
+        assert(false);
+      }
+    } catch (std::exception& ex) {
       LOG_ERR_MSG("Exception in websocket run loop", ex);
     }
   }
@@ -146,10 +146,13 @@ std::pair<size_t, std::string> WebsocketServer::receive() {
 void WebsocketServer::send(size_t handle, const std::string& message) {
   unique_lock<mutex> con_lock(m_connection_lock);
   unique_lock<mutex> lock(m_receive_lock);
-
-  auto it = m_luahandles.find(handle);
-  if(it != m_luahandles.end())
-    m_server.send((*it).second, message, websocketpp::frame::opcode::TEXT);
+  try {
+    auto it = m_luahandles.find(handle);
+    if(it != m_luahandles.end())
+      m_server.send((*it).second, message, websocketpp::frame::opcode::TEXT);
+  } catch (std::exception& ex) {
+    LOG_ERR_MSG("Exception in websocket run loop", ex);
+  }
 }
 
 void WebsocketServer::init(int port) {
