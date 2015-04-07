@@ -30,27 +30,27 @@ void TcpClient::connect(string host, int port) {
 }
 
 int TcpClient::run(Request& req, std::ostream& out) {
-  boost::asio::streambuf request;
-  std::ostream request_stream(&request);
-
-  write_request(req, request_stream);
-
-  boost::asio::write(socket, request);
-  boost::asio::streambuf response;
-  std::istream response_stream(&response);
-  boost::array<char, 1> buf;
-
-  socket.read_some(boost::asio::buffer(buf));
-
-  int returnCode = std::stoi(string() + buf[0]);
-
-  if (returnCode == 0) {
-    LOG_DEBUG_STR("Successful");
-  } else {
-    LOG_INFO_MSG("Failed", returnCode);
-  }
-
   try {
+    boost::asio::streambuf request;
+    std::ostream request_stream(&request);
+
+    write_request(req, request_stream);
+
+    boost::asio::write(socket, request);
+    boost::asio::streambuf response;
+    std::istream response_stream(&response);
+    boost::array<char, 1> buf;
+
+    socket.read_some(boost::asio::buffer(buf));
+
+    int returnCode = std::stoi(string() + buf[0]);
+
+    if (returnCode == 0) {
+      LOG_DEBUG_STR("Successful");
+    } else {
+      LOG_INFO_MSG("Failed", returnCode);
+    }
+
     string line;
     while (response_stream) {
       boost::asio::read_until(socket, response, "\n");
@@ -60,6 +60,7 @@ int TcpClient::run(Request& req, std::ostream& out) {
       out << line << std::endl;
     }
   } catch (std::exception& ex) {
+    LOG_ERR_MSG("Caught in tcp_client run", ex.what());
   }
   return returnCode;
 }
