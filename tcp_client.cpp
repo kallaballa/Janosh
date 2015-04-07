@@ -30,6 +30,7 @@ void TcpClient::connect(string host, int port) {
 }
 
 int TcpClient::run(Request& req, std::ostream& out) {
+  int returnCode = -1;
   try {
     boost::asio::streambuf request;
     std::ostream request_stream(&request);

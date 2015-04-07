@@ -30,8 +30,7 @@ WebsocketServer::WebsocketServer() {
   m_server.set_message_handler(bind(&WebsocketServer::on_message, this, ::_1, ::_2));
 
   ExitHandler::getInstance()->addExitFunc([&](){
-    m_server.stop_perpetual();
-    m_server.stop();
+    std::cerr << "Shutdown websocket" << std::endl;
     if (m_server.is_listening()) {
       m_server.stop_perpetual();
       m_server.stop_listening();
@@ -40,6 +39,7 @@ WebsocketServer::WebsocketServer() {
     for (auto& conn : m_connections) {
       m_server.close(conn, websocketpp::close::status::normal, "closed");
     }
+    m_server.stop();
   });
 }
 
@@ -61,33 +61,41 @@ void WebsocketServer::run(uint16_t port) {
 }
 
 void WebsocketServer::on_open(connection_hdl hdl) {
+  std::cerr << "### on_open_lock" << std::endl;
   unique_lock<mutex> lock(m_action_lock);
-  //std::cout << "on_open" << std::endl;
+  std::cerr << "### on_open" << std::endl;
   m_actions.push(action(SUBSCRIBE, hdl));
   lock.unlock();
   m_action_cond.notify_one();
+  std::cerr << "### on_open_end" << std::endl;
 }
 
 void WebsocketServer::on_close(connection_hdl hdl) {
+  std::cerr << "### on_close_lock" << std::endl;
   unique_lock<mutex> lock(m_action_lock);
-  //std::cout << "on_close" << std::endl;
+  std::cout << "### on_close" << std::endl;
   m_actions.push(action(UNSUBSCRIBE, hdl));
   lock.unlock();
   m_action_cond.notify_one();
+  std::cerr << "### on_close_end" << std::endl;
 }
 
 void WebsocketServer::on_message(connection_hdl hdl, server::message_ptr msg) {
+  std::cerr << "### on_message_lock" << std::endl;
   unique_lock<mutex> lock(m_receive_lock);
+  std::cerr << "### on_message" << std::endl;
   if(m_luahandles_rev.find(hdl) != m_luahandles_rev.end())
     m_receive = std::make_pair(m_luahandles_rev[hdl], msg->get_payload());
   lock.unlock();
   m_receive_cond.notify_one();
+  std::cerr << "### on_message_end" << std::endl;
 }
 
 void WebsocketServer::process_messages() {
   while (1) {
+    std::cerr << "### process_lock" << std::endl;
     unique_lock<mutex> lock(m_action_lock);
-
+    std::cerr << "### process" << std::endl;
     try {
       while (m_actions.empty()) {
         m_action_cond.wait(lock);
@@ -122,37 +130,50 @@ void WebsocketServer::process_messages() {
         assert(false);
       }
     } catch (std::exception& ex) {
-      LOG_ERR_MSG("Exception in websocket run loop", ex);
+      LOG_ERR_MSG("Exception in websocket run loop", ex.what());
+    } catch (...) {
+      LOG_ERR_STR("Caught (...) in websocket run loop");
     }
+    std::cerr << "### process_end" << std::endl;
   }
 
 }
 
 void WebsocketServer::broadcast(const std::string& s) {
-  // queue message up for sending by processing thread
+  std::cerr << "### broadcast_lock" << std::endl;
   unique_lock<mutex> lock(m_action_lock);
-  //std::cout << "on_message" << std::endl;
+  std::cerr << "### broadcast" << std::endl;
   m_actions.push(action(MESSAGE, s));
   lock.unlock();
   m_action_cond.notify_one();
+  std::cerr << "### broadcast_end" << std::endl;
 }
 
 std::pair<size_t, std::string> WebsocketServer::receive() {
+  std::cerr << "### receive_lock" << std::endl;
   unique_lock<mutex> lock(m_receive_lock);
+  std::cerr << "### receive" << std::endl;
   m_receive_cond.wait(lock);
+  std::cerr << "### receive_end" << std::endl;
   return m_receive;
 }
 
 void WebsocketServer::send(size_t handle, const std::string& message) {
+  std::cerr << "### send_lock" << std::endl;
   unique_lock<mutex> con_lock(m_connection_lock);
   unique_lock<mutex> lock(m_receive_lock);
+  std::cerr << "### send" << std::endl;
+
   try {
     auto it = m_luahandles.find(handle);
     if(it != m_luahandles.end())
       m_server.send((*it).second, message, websocketpp::frame::opcode::TEXT);
   } catch (std::exception& ex) {
-    LOG_ERR_MSG("Exception in websocket run loop", ex);
+    LOG_ERR_MSG("Exception in websocket run loop", ex.what());
+  } catch (...) {
+    LOG_ERR_STR("Caught (...) in websocket run loop");
   }
+  std::cerr << "### send_end" << std::endl;
 }
 
 void WebsocketServer::init(int port) {
