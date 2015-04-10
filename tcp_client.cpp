@@ -67,6 +67,8 @@ int TcpClient::run(Request& req, std::ostream& out) {
 }
 
 void TcpClient::close() {
+  LOG_DEBUG_MSG("Closing socket", &socket);
+  socket.shutdown(boost::asio::socket_base::shutdown_both);
   socket.close();
 }
 } /* namespace janosh */

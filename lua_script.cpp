@@ -187,6 +187,13 @@ static int l_receive(lua_State* L) {
   return 3;
 }
 
+static int l_try_lock(lua_State* L) {
+  std::unique_lock<std::mutex> lock(lua_lock_map_mutex);
+  string name = lua_tostring(L, -1);
+  bool result = lua_lock_map[name].try_lock();
+  lua_pushboolean(L, result);
+  return 1;
+}
 
 static int l_lock(lua_State* L) {
   std::unique_lock<std::mutex> lock(lua_lock_map_mutex);
@@ -275,6 +282,8 @@ static void install_janosh_functions(lua_State* L, bool first) {
   lua_pushcfunction(L, l_register_thread);
   lua_setglobal(L, "janosh_register_thread");
 
+  lua_pushcfunction(L, l_try_lock);
+  lua_setglobal(L, "janosh_try_lock");
   lua_pushcfunction(L, l_lock);
   lua_setglobal(L, "janosh_lock");
   lua_pushcfunction(L, l_unlock);

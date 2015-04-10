@@ -494,6 +494,10 @@ function JanoshClass.lock(self, name)
 	janosh_lock(name)
 end
 
+function JanoshClass.try_lock(self, name)
+  return janosh_try_lock(name)
+end
+
 function JanoshClass.unlock(self, name)
   janosh_unlock(name)
 end

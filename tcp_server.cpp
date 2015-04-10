@@ -91,7 +91,7 @@ bool TcpServer::run() {
 
 	    w->runSynchron();
       janosh->endTransaction(true);
-	  } while(w->result());
+  } while(w->result());
 
 	  if(w)
       delete w;
@@ -113,6 +113,7 @@ bool TcpServer::run() {
     }
     printException(ex);
   }
+  
   return true;
 }
 } /* namespace janosh */
