@@ -386,7 +386,7 @@ namespace janosh {
       throw janosh_exception() << record_info({"Out of array bounds",target});
     }
     changeContainerSize(target.parent(), 1);
-    announceOperation(target.path().pretty(), lexical_cast<string>(size), Tracker::WRITE);
+    announceOperation(target.path().pretty(), "A" + lexical_cast<string>(size), Tracker::WRITE);
     return Record::db.add(target.path(), "A" + lexical_cast<string>(size)) ? 1 : 0;
   }
 
@@ -412,7 +412,7 @@ namespace janosh {
     if(!target.path().isRoot())
       changeContainerSize(target.parent(), 1);
 
-    announceOperation(target.path().pretty(), lexical_cast<string>(size), Tracker::WRITE);
+    announceOperation(target.path().pretty(), "O" + lexical_cast<string>(size), Tracker::WRITE);
     return Record::db.add(target.path(), "O" + lexical_cast<string>(size)) ? 1 : 0;
   }
 
