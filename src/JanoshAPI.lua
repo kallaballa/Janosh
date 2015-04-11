@@ -97,6 +97,10 @@ function JanoshClass.pclose(self, fd)
 	posix.close(fd)
 end
 
+function JanoshClass.pwait(self, fd)
+  posix.wait(fd)
+end
+
 function JanoshClass.pread(self, fd, num) 
 	return posix.read(fd,num)
 end
