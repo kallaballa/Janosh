@@ -357,15 +357,17 @@ static int l_mouse_up(lua_State* L) {
 }
 
 static int l_key_down(lua_State* L) {
-  size_t keyCode = lua_tointeger( L, -1);
+  string keySym = lua_tostring( L, -1);
+
 #ifndef JANOSH_NO_X11
   Display* display = LuaScript::getInstance()->display_;
+  KeyCode code = XKeysymToKeycode(display, XStringToKeysym(keySym.c_str()));
   XEvent event;
 
   memset(&event, 0x00, sizeof(event));
 
   event.type = KeyPress;
-  event.xkey.keycode = keyCode;
+  event.xkey.keycode = code;
   event.xkey.same_screen = True;
 
   XQueryPointer(display, RootWindow(display, DefaultScreen(display)), &event.xkey.root, &event.xkey.window, &event.xkey.x_root, &event.xkey.y_root,
@@ -392,15 +394,16 @@ static int l_key_down(lua_State* L) {
 }
 
 static int l_key_up(lua_State* L) {
-  size_t keyCode = lua_tointeger( L, -1);
+  string keySym = lua_tostring( L, -1);
 #ifndef JANOSH_NO_X11
   Display* display = LuaScript::getInstance()->display_;
+  KeyCode code = XKeysymToKeycode(display, XStringToKeysym(keySym.c_str()));
   XEvent event;
 
   memset(&event, 0x00, sizeof(event));
 
   event.type = KeyRelease;
-  event.xkey.keycode = keyCode;
+  event.xkey.keycode = code;
   event.xkey.same_screen = True;
 
   XQueryPointer(display, RootWindow(display, DefaultScreen(display)), &event.xkey.root, &event.xkey.window, &event.xkey.x_root, &event.xkey.y_root,

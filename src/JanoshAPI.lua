@@ -518,12 +518,12 @@ function JanoshClass.mouseDown(self, button)
   janosh_mouse_down(button)
 end
 
-function JanoshClass.keyUp(self, keycode)
-  janosh_key_up(keycode)
+function JanoshClass.keyUp(self, keySym)
+  janosh_key_up(keySym)
 end
 
-function JanoshClass.keyDown(self, keycode)
-  janosh_key_down(keycode)
+function JanoshClass.keyDown(self, keySym)
+  janosh_key_down(keySym)
 end
 
 function setfield (f, v)
