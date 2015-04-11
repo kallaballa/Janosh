@@ -26,7 +26,7 @@ endif
 
 ifeq ($(UNAME), Darwin)
 CXXFLAGS = -Isrc/ -DWEBSOCKETPP_STRICT_MASKING -DETLOG -Wall -I./luajit-rocks/luajit-2.0/src/ -I./websocketpp/ -I./backtrace/ -I/opt/local/include -DELPP_DEBUG_ERRORS -DELPP_THREAD_SAFE -DELPP_STL_LOGGING -DELPP_LOG_UNORDERED_SET -DELPP_LOG_UNORDERED_MAP -DELPP_STACKTRACE_ON_CRASH -DELPP_LOGGING_FLAGS_FROM_ARG -D_XOPEN_SOURCE -std=c++11 -stdlib=libc++ -pthread  -Wall -Wextra -pedantic
-LIBS    := -lboost_program_options -lboost_serialization -lboost_system -lboost_filesystem -lpthread -lboost_thread-mt -lkyotocabinet -lluajit-5.1 -ldl -lzmq
+LIBS    := -lboost_program_options -lboost_serialization -lboost_system -lboost_filesystem -lpthread -lboost_thread-mt -lkyotocabinet -lluajit-5.1 -ldl -lzmq -lX11
 EXTRA_BUILDFLAGS = -pagezero_size 10000 -image_base 100000000
 #Darwin - we use clang
 CXX := clang++

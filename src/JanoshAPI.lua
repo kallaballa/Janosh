@@ -502,10 +502,8 @@ function JanoshClass.unlock(self, name)
   janosh_unlock(name)
 end
 
-function JanoshClass.exec(self, commands) 
-  for i, cmd in ipairs(commands) do
-	  os.execute(cmd);
-	end
+function JanoshClass.mouseMove(self, x, y)
+  janosh_mouse_move(x,y)
 end
 
 function setfield (f, v)

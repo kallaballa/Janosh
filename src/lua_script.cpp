@@ -11,6 +11,10 @@
 #include "websocket.hpp"
 #include "exception.hpp"
 
+#ifndef JANOSH_NO_X11
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#endif
 
 namespace janosh {
 namespace lua {
@@ -263,7 +267,19 @@ static int l_close(lua_State* L) {
   return 0;
 }
 
+static int l_mouse_move(lua_State* L) {
+  size_t x = lua_tointeger( L, -1 );
+  size_t y = lua_tointeger( L, -2);
+#ifndef JANOSH_NO_X11
+  std::cerr << "Warp: " << LuaScript::getInstance()->display_ << "\t" << x << "\t" << y << std::endl;
+  XWarpPointer(LuaScript::getInstance()->display_, None, LuaScript::getInstance()->rootWin_, 0, 0, 0, 0, x, y);
+  XFlush(LuaScript::getInstance()->display_);
+#else
+  LOG_DEBUG_STR("Compiled without X11 support. mousemove disabled");
+#endif
 
+  return 0;
+}
 
 static void install_janosh_functions(lua_State* L, bool first);
 static int l_install(lua_State* L) {
@@ -281,6 +297,9 @@ static void install_janosh_functions(lua_State* L, bool first) {
   lua_setglobal(L, "janosh_install");
   lua_pushcfunction(L, l_register_thread);
   lua_setglobal(L, "janosh_register_thread");
+
+  lua_pushcfunction(L, l_mouse_move);
+  lua_setglobal(L, "janosh_mouse_move");
 
   lua_pushcfunction(L, l_try_lock);
   lua_setglobal(L, "janosh_try_lock");
@@ -342,6 +361,13 @@ static void install_janosh_functions(lua_State* L, bool first) {
 LuaScript::LuaScript(std::function<void()> openCallback,
     std::function<std::pair<string,string>(janosh::Request&)> requestCallback,
     std::function<void()> closeCallback, lua_State* l) : openCallback_(openCallback), requestCallback_(requestCallback), closeCallback_(closeCallback) {
+#ifndef JANOSH_NO_X11
+  display_ = XOpenDisplay(0);
+  rootWin_ = DefaultRootWindow(display_);
+  if(display_ == NULL) {
+    LOG_ERR_STR("Unable to open display");
+  }
+#endif
   if(l == NULL) {
     L = luaL_newstate();
     install_janosh_functions(L, true);

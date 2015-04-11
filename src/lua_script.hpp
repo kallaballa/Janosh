@@ -11,8 +11,11 @@
 #include  <lua.hpp>
 #include <thread>
 
+class _XDisplay;
+
 namespace janosh {
 namespace lua {
+
 class LuaScript {
 public:
   LuaScript(std::function<void()> openCallback,
@@ -42,6 +45,10 @@ public:
     std::function<std::pair<string,string>(janosh::Request&)> requestCallback_;
     std::function<void()> closeCallback_;
     lua_State* L;
+#ifndef JANOSH_NO_X11
+    _XDisplay* display_;
+    unsigned long rootWin_;
+#endif
 private:
     int level_ = 0;
     static LuaScript* instance_;
@@ -50,6 +57,7 @@ private:
     std::queue<std::thread::id> open_queue_;
     std::thread::id open_current_id;
     bool isOpen = false;
+
 };
 }
 }
