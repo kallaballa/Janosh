@@ -518,6 +518,14 @@ function JanoshClass.mouseDown(self, button)
   janosh_mouse_down(button)
 end
 
+function JanoshClass.keyUp(self, keycode)
+  janosh_key_up(keycode)
+end
+
+function JanoshClass.keyDown(self, keycode)
+  janosh_key_down(keycode)
+end
+
 function setfield (f, v)
 	local t = _G    -- start with the table of globals
 	for w, d in string.gfind(f, "([%w_]+)(.?)") do
