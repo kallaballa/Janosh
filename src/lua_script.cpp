@@ -280,6 +280,77 @@ static int l_mouse_move(lua_State* L) {
   return 0;
 }
 
+static int l_mouse_down(lua_State* L) {
+  size_t button = lua_tointeger( L, -1);
+#ifndef JANOSH_NO_X11
+  Display* display = LuaScript::getInstance()->display_;
+  XEvent event;
+
+  memset(&event, 0x00, sizeof(event));
+
+  event.type = ButtonPress;
+  event.xbutton.button = button;
+  event.xbutton.same_screen = True;
+
+  XQueryPointer(display, RootWindow(display, DefaultScreen(display)), &event.xbutton.root, &event.xbutton.window, &event.xbutton.x_root, &event.xbutton.y_root,
+      &event.xbutton.x, &event.xbutton.y, &event.xbutton.state);
+
+  event.xbutton.subwindow = event.xbutton.window;
+
+  while (event.xbutton.subwindow) {
+    event.xbutton.window = event.xbutton.subwindow;
+
+    XQueryPointer(display, event.xbutton.window, &event.xbutton.root, &event.xbutton.subwindow, &event.xbutton.x_root, &event.xbutton.y_root, &event.xbutton.x,
+        &event.xbutton.y, &event.xbutton.state);
+  }
+
+  if (XSendEvent(display, PointerWindow, True, 0xfff, &event) == 0)
+    LOG_DEBUG_STR("XSendEvent failed")
+
+  XFlush(display);
+#else
+  LOG_DEBUG_STR("Compiled without X11 support. mousemove disabled");
+#endif
+
+  return 0;
+}
+
+static int l_mouse_up(lua_State* L) {
+  size_t button = lua_tointeger( L, -1);
+#ifndef JANOSH_NO_X11
+  Display* display = LuaScript::getInstance()->display_;
+  XEvent event;
+
+  memset(&event, 0x00, sizeof(event));
+
+  event.type = ButtonRelease;
+  event.xbutton.button = button;
+  event.xbutton.same_screen = True;
+  event.xbutton.state = 0x100;
+
+  XQueryPointer(display, RootWindow(display, DefaultScreen(display)), &event.xbutton.root, &event.xbutton.window, &event.xbutton.x_root, &event.xbutton.y_root,
+      &event.xbutton.x, &event.xbutton.y, &event.xbutton.state);
+
+  event.xbutton.subwindow = event.xbutton.window;
+
+  while (event.xbutton.subwindow) {
+    event.xbutton.window = event.xbutton.subwindow;
+
+    XQueryPointer(display, event.xbutton.window, &event.xbutton.root, &event.xbutton.subwindow, &event.xbutton.x_root, &event.xbutton.y_root, &event.xbutton.x,
+        &event.xbutton.y, &event.xbutton.state);
+  }
+
+  if(XSendEvent(display, PointerWindow, True, 0xfff, &event) == 0)
+    LOG_DEBUG_STR("XSendEvent failed")
+
+  XFlush(display);
+#else
+  LOG_DEBUG_STR("Compiled without X11 support. mousemove disabled");
+#endif
+
+  return 0;
+}
+
 static void install_janosh_functions(lua_State* L, bool first);
 static int l_install(lua_State* L) {
   install_janosh_functions(L, false);
@@ -299,6 +370,10 @@ static void install_janosh_functions(lua_State* L, bool first) {
 
   lua_pushcfunction(L, l_mouse_move);
   lua_setglobal(L, "janosh_mouse_move");
+  lua_pushcfunction(L, l_mouse_up);
+  lua_setglobal(L, "janosh_mouse_up");
+  lua_pushcfunction(L, l_mouse_down);
+  lua_setglobal(L, "janosh_mouse_down");
 
   lua_pushcfunction(L, l_try_lock);
   lua_setglobal(L, "janosh_try_lock");

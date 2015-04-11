@@ -510,6 +510,14 @@ function JanoshClass.mouseMove(self, x, y)
   janosh_mouse_move(x,y)
 end
 
+function JanoshClass.mouseUp(self, button)
+  janosh_mouse_up(button)
+end
+
+function JanoshClass.mouseDown(self, button)
+  janosh_mouse_down(button)
+end
+
 function setfield (f, v)
 	local t = _G    -- start with the table of globals
 	for w, d in string.gfind(f, "([%w_]+)(.?)") do
