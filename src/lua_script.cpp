@@ -271,7 +271,6 @@ static int l_mouse_move(lua_State* L) {
   size_t x = lua_tointeger( L, -1 );
   size_t y = lua_tointeger( L, -2);
 #ifndef JANOSH_NO_X11
-  std::cerr << "Warp: " << LuaScript::getInstance()->display_ << "\t" << x << "\t" << y << std::endl;
   XWarpPointer(LuaScript::getInstance()->display_, None, LuaScript::getInstance()->rootWin_, 0, 0, 0, 0, x, y);
   XFlush(LuaScript::getInstance()->display_);
 #else
