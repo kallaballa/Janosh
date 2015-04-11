@@ -268,11 +268,16 @@ static int l_close(lua_State* L) {
 }
 
 static int l_mouse_move(lua_State* L) {
-  size_t y = lua_tointeger( L, -1 );
-  size_t x = lua_tointeger( L, -2);
+  float y = boost::lexical_cast<float>(lua_tostring( L, -1 ));
+  float x = boost::lexical_cast<float>(lua_tostring( L, -2));
 #ifndef JANOSH_NO_X11
-  XWarpPointer(LuaScript::getInstance()->display_, None, LuaScript::getInstance()->rootWin_, 0, 0, 0, 0, x, y);
-  XFlush(LuaScript::getInstance()->display_);
+  Display* display = LuaScript::getInstance()->display_;
+  Screen*  scrn = DefaultScreenOfDisplay(display);
+  int height = scrn->height;
+  int width  = scrn->width;
+
+  XWarpPointer(display, None, LuaScript::getInstance()->rootWin_, 0, 0, 0, 0, x * width, y * height);
+  XFlush(display);
 #else
   LOG_DEBUG_STR("Compiled without X11 support. mousemove disabled");
 #endif
