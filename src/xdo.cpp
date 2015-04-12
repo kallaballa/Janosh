@@ -22,6 +22,10 @@ void XDO::mouseMove(size_t x, size_t y) {
   xdo_move_mouse(xdo_, x, y, 0);
 }
 
+void XDO::mouseMoveRelative(int x, int y) {
+  xdo_move_mouse_relative(xdo_, x, y);
+}
+
 void XDO::mouseDown(int button) {
   xdo_mouse_down(xdo_, CURRENTWINDOW, button);
 }
@@ -29,6 +33,7 @@ void XDO::mouseDown(int button) {
 void XDO::mouseUp(int button) {
   xdo_mouse_up(xdo_, CURRENTWINDOW, button);
 }
+
 
 void XDO::keyDown(const string& sequence) {
   xdo_send_keysequence_window_down(xdo_, CURRENTWINDOW, sequence.c_str(), 0);

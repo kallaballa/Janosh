@@ -279,6 +279,18 @@ static int l_mouse_move(lua_State* L) {
   return 0;
 }
 
+static int l_mouse_move_rel(lua_State* L) {
+  int y = lua_tointeger( L, -1 );
+  int x = lua_tointeger( L, -2);
+#ifndef JANOSH_NO_XDO
+  XDO::getInstance()->mouseMoveRelative(x,y);
+#else
+  LOG_DEBUG_STR("Compiled without XDO support");
+#endif
+
+  return 0;
+}
+
 static int l_mouse_down(lua_State* L) {
   size_t button = lua_tointeger( L, -1);
 #ifndef JANOSH_NO_XDO
@@ -354,6 +366,8 @@ static void install_janosh_functions(lua_State* L, bool first) {
 
   lua_pushcfunction(L, l_mouse_move);
   lua_setglobal(L, "janosh_mouse_move");
+  lua_pushcfunction(L, l_mouse_move_rel);
+  lua_setglobal(L, "janosh_mouse_move_rel");
   lua_pushcfunction(L, l_mouse_up);
   lua_setglobal(L, "janosh_mouse_up");
   lua_pushcfunction(L, l_mouse_down);
