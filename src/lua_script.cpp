@@ -519,7 +519,8 @@ LuaScript::LuaScript(std::function<void()> openCallback,
     std::function<std::pair<string,string>(janosh::Request&)> requestCallback,
     std::function<void()> closeCallback, lua_State* l) : openCallback_(openCallback), requestCallback_(requestCallback), closeCallback_(closeCallback) {
 #ifndef JANOSH_NO_X11
-  display_ = XOpenDisplay(0);
+  XInitThreads();
+  display_ = XOpenDisplay(NULL);
   rootWin_ = DefaultRootWindow(display_);
   if(display_ == NULL) {
     LOG_ERR_STR("Unable to open display");
