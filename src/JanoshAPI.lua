@@ -510,6 +510,10 @@ function JanoshClass.mouseMove(self, x, y)
   janosh_mouse_move(x,y)
 end
 
+function JanoshClass.mouseMoveRel(self, x, y)
+  janosh_mouse_move_rel(x,y)
+end
+
 function JanoshClass.mouseUp(self, button)
   janosh_mouse_up(button)
 end
