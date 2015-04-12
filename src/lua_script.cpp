@@ -11,9 +11,8 @@
 #include "websocket.hpp"
 #include "exception.hpp"
 
-#ifndef JANOSH_NO_X11
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
+#ifndef JANOSH_NO_XDO
+#include "xdo.hpp"
 #endif
 
 namespace janosh {
@@ -270,16 +269,11 @@ static int l_close(lua_State* L) {
 static int l_mouse_move(lua_State* L) {
   float y = boost::lexical_cast<float>(lua_tostring( L, -1 ));
   float x = boost::lexical_cast<float>(lua_tostring( L, -2));
-#ifndef JANOSH_NO_X11
-  Display* display = LuaScript::getInstance()->display_;
-  Screen*  scrn = DefaultScreenOfDisplay(display);
-  int height = scrn->height;
-  int width  = scrn->width;
-
-  XWarpPointer(display, None, LuaScript::getInstance()->rootWin_, 0, 0, 0, 0, x * width, y * height);
-  XFlush(display);
+#ifndef JANOSH_NO_XDO
+  auto size = XDO::getInstance()->getScreenSize();
+  XDO::getInstance()->mouseMove(x * size.first,y * size.second);
 #else
-  LOG_DEBUG_STR("Compiled without X11 support. mousemove disabled");
+  LOG_DEBUG_STR("Compiled without XDO support");
 #endif
 
   return 0;
@@ -287,34 +281,10 @@ static int l_mouse_move(lua_State* L) {
 
 static int l_mouse_down(lua_State* L) {
   size_t button = lua_tointeger( L, -1);
-#ifndef JANOSH_NO_X11
-  Display* display = LuaScript::getInstance()->display_;
-  XEvent event;
-
-  memset(&event, 0x00, sizeof(event));
-
-  event.type = ButtonPress;
-  event.xbutton.button = button;
-  event.xbutton.same_screen = True;
-
-  XQueryPointer(display, RootWindow(display, DefaultScreen(display)), &event.xbutton.root, &event.xbutton.window, &event.xbutton.x_root, &event.xbutton.y_root,
-      &event.xbutton.x, &event.xbutton.y, &event.xbutton.state);
-
-  event.xbutton.subwindow = event.xbutton.window;
-
-  while (event.xbutton.subwindow) {
-    event.xbutton.window = event.xbutton.subwindow;
-
-    XQueryPointer(display, event.xbutton.window, &event.xbutton.root, &event.xbutton.subwindow, &event.xbutton.x_root, &event.xbutton.y_root, &event.xbutton.x,
-        &event.xbutton.y, &event.xbutton.state);
-  }
-
-  if (XSendEvent(display, PointerWindow, True, 0xfff, &event) == 0)
-    LOG_DEBUG_STR("XSendEvent failed")
-
-  XFlush(display);
+#ifndef JANOSH_NO_XDO
+  XDO::getInstance()->mouseDown(button);
 #else
-  LOG_DEBUG_STR("Compiled without X11 support. mousemove disabled");
+  LOG_DEBUG_STR("Compiled without xdo support");
 #endif
 
   return 0;
@@ -322,35 +292,10 @@ static int l_mouse_down(lua_State* L) {
 
 static int l_mouse_up(lua_State* L) {
   size_t button = lua_tointeger( L, -1);
-#ifndef JANOSH_NO_X11
-  Display* display = LuaScript::getInstance()->display_;
-  XEvent event;
-
-  memset(&event, 0x00, sizeof(event));
-
-  event.type = ButtonRelease;
-  event.xbutton.button = button;
-  event.xbutton.same_screen = True;
-  event.xbutton.state = 0x100;
-
-  XQueryPointer(display, RootWindow(display, DefaultScreen(display)), &event.xbutton.root, &event.xbutton.window, &event.xbutton.x_root, &event.xbutton.y_root,
-      &event.xbutton.x, &event.xbutton.y, &event.xbutton.state);
-
-  event.xbutton.subwindow = event.xbutton.window;
-
-  while (event.xbutton.subwindow) {
-    event.xbutton.window = event.xbutton.subwindow;
-
-    XQueryPointer(display, event.xbutton.window, &event.xbutton.root, &event.xbutton.subwindow, &event.xbutton.x_root, &event.xbutton.y_root, &event.xbutton.x,
-        &event.xbutton.y, &event.xbutton.state);
-  }
-
-  if(XSendEvent(display, PointerWindow, True, 0xfff, &event) == 0)
-    LOG_DEBUG_STR("XSendEvent failed")
-
-  XFlush(display);
+#ifndef JANOSH_NO_XDO
+  XDO::getInstance()->mouseUp(button);
 #else
-  LOG_DEBUG_STR("Compiled without X11 support. mousemove disabled");
+  LOG_DEBUG_STR("Compiled without XDO support");
 #endif
 
   return 0;
@@ -359,35 +304,10 @@ static int l_mouse_up(lua_State* L) {
 static int l_key_down(lua_State* L) {
   string keySym = lua_tostring( L, -1);
 
-#ifndef JANOSH_NO_X11
-  Display* display = LuaScript::getInstance()->display_;
-  KeyCode code = XKeysymToKeycode(display, XStringToKeysym(keySym.c_str()));
-  XEvent event;
-
-  memset(&event, 0x00, sizeof(event));
-
-  event.type = KeyPress;
-  event.xkey.keycode = code;
-  event.xkey.same_screen = True;
-
-  XQueryPointer(display, RootWindow(display, DefaultScreen(display)), &event.xkey.root, &event.xkey.window, &event.xkey.x_root, &event.xkey.y_root,
-      &event.xkey.x, &event.xkey.y, &event.xkey.state);
-
-  event.xkey.subwindow = event.xkey.window;
-
-  while (event.xkey.subwindow) {
-    event.xkey.window = event.xkey.subwindow;
-
-    XQueryPointer(display, event.xkey.window, &event.xkey.root, &event.xkey.subwindow, &event.xkey.x_root, &event.xkey.y_root, &event.xkey.x,
-        &event.xkey.y, &event.xkey.state);
-  }
-
-  if (XSendEvent(display, PointerWindow, True, 0xfff, &event) == 0)
-    LOG_DEBUG_STR("XSendEvent failed")
-
-  XFlush(display);
+#ifndef JANOSH_NO_XDO
+  XDO::getInstance()->keyDown(keySym);
 #else
-  LOG_DEBUG_STR("Compiled without X11 support. mousemove disabled");
+  LOG_DEBUG_STR("Compiled without XDO support");
 #endif
 
   return 0;
@@ -395,35 +315,21 @@ static int l_key_down(lua_State* L) {
 
 static int l_key_up(lua_State* L) {
   string keySym = lua_tostring( L, -1);
-#ifndef JANOSH_NO_X11
-  Display* display = LuaScript::getInstance()->display_;
-  KeyCode code = XKeysymToKeycode(display, XStringToKeysym(keySym.c_str()));
-  XEvent event;
-
-  memset(&event, 0x00, sizeof(event));
-
-  event.type = KeyRelease;
-  event.xkey.keycode = code;
-  event.xkey.same_screen = True;
-
-  XQueryPointer(display, RootWindow(display, DefaultScreen(display)), &event.xkey.root, &event.xkey.window, &event.xkey.x_root, &event.xkey.y_root,
-      &event.xkey.x, &event.xkey.y, &event.xkey.state);
-
-  event.xkey.subwindow = event.xkey.window;
-
-  while (event.xkey.subwindow) {
-    event.xkey.window = event.xkey.subwindow;
-
-    XQueryPointer(display, event.xkey.window, &event.xkey.root, &event.xkey.subwindow, &event.xkey.x_root, &event.xkey.y_root, &event.xkey.x,
-        &event.xkey.y, &event.xkey.state);
-  }
-
-  if (XSendEvent(display, PointerWindow, True, 0xfff, &event) == 0)
-    LOG_DEBUG_STR("XSendEvent failed")
-
-  XFlush(display);
+#ifndef JANOSH_NO_XDO
+  XDO::getInstance()->keyUp(keySym);
 #else
-  LOG_DEBUG_STR("Compiled without X11 support. mousemove disabled");
+  LOG_DEBUG_STR("Compiled without XDO support");
+#endif
+
+  return 0;
+}
+
+static int l_key_type(lua_State* L) {
+  string keySym = lua_tostring( L, -1);
+#ifndef JANOSH_NO_XDO
+  XDO::getInstance()->keyType(keySym);
+#else
+  LOG_DEBUG_STR("Compiled without XDO support");
 #endif
 
   return 0;
@@ -456,7 +362,8 @@ static void install_janosh_functions(lua_State* L, bool first) {
   lua_setglobal(L, "janosh_key_down");
   lua_pushcfunction(L, l_key_up);
   lua_setglobal(L, "janosh_key_up");
-
+  lua_pushcfunction(L, l_key_type);
+  lua_setglobal(L, "janosh_key_type");
 
   lua_pushcfunction(L, l_try_lock);
   lua_setglobal(L, "janosh_try_lock");
@@ -518,13 +425,6 @@ static void install_janosh_functions(lua_State* L, bool first) {
 LuaScript::LuaScript(std::function<void()> openCallback,
     std::function<std::pair<string,string>(janosh::Request&)> requestCallback,
     std::function<void()> closeCallback, lua_State* l) : openCallback_(openCallback), requestCallback_(requestCallback), closeCallback_(closeCallback) {
-#ifndef JANOSH_NO_X11
-  display_ = XOpenDisplay(0);
-  rootWin_ = DefaultRootWindow(display_);
-  if(display_ == NULL) {
-    LOG_ERR_STR("Unable to open display");
-  }
-#endif
   if(l == NULL) {
     L = luaL_newstate();
     install_janosh_functions(L, true);

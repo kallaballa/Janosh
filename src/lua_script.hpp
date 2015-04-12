@@ -11,8 +11,6 @@
 #include  <lua.hpp>
 #include <thread>
 
-class _XDisplay;
-
 namespace janosh {
 namespace lua {
 
@@ -45,10 +43,6 @@ public:
     std::function<std::pair<string,string>(janosh::Request&)> requestCallback_;
     std::function<void()> closeCallback_;
     lua_State* L;
-#ifndef JANOSH_NO_X11
-    _XDisplay* display_;
-    unsigned long rootWin_;
-#endif
 private:
     int level_ = 0;
     static LuaScript* instance_;
