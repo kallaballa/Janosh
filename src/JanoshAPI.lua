@@ -530,6 +530,10 @@ function JanoshClass.keyDown(self, keySym)
   janosh_key_down(keySym)
 end
 
+function JanoshClass.keyType(self, keySym)
+  janosh_key_type(keySym)
+end
+
 function setfield (f, v)
 	local t = _G    -- start with the table of globals
 	for w, d in string.gfind(f, "([%w_]+)(.?)") do
