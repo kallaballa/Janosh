@@ -647,7 +647,8 @@ namespace janosh {
 
     for(size_t i = 0; i < n; ++i) {
        if(!rec.isDirectory()) {
-         announceOperation(rec.path().pretty(), "", Tracker::DELETE);
+         if(pack && parent.isArray())
+           announceOperation(rec.path().pretty(), "", Tracker::DELETE);
          rec.remove();
          ++cnt;
        } else {
@@ -656,7 +657,8 @@ namespace janosh {
      }
 
     if(target.isDirectory()) {
-      announceOperation(target.path().pretty(), "", Tracker::DELETE);
+      if(pack && parent.isArray())
+        announceOperation(target.path().pretty(), "", Tracker::DELETE);
       target.remove();
       changeContainerSize(parent, -1);
     } else {
