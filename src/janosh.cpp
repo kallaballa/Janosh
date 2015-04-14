@@ -535,8 +535,8 @@ namespace janosh {
       }
     }
 
-    src.fetch();
-    dest.fetch();
+    src.read();
+    dest.read();
 
     return r;
   }
@@ -948,6 +948,7 @@ namespace janosh {
         backRec.previous();
         forwardRec.previous();
       } else {
+        backRec.read();
         backRec.next();
         forwardRec.next();
       }
@@ -964,7 +965,7 @@ namespace janosh {
 
   void Janosh::setContainerSize(Record container, const size_t s) {
     JANOSH_TRACE({container}, s);
-
+    std::cerr << "size: " << s << std::endl;
     string containerValue;
     string strContainer;
     const Value::Type& containerType = container.getType();
