@@ -493,8 +493,9 @@ namespace janosh {
    * @param dest destination record.
    * @return 1 if successful, 0 if not
    */
-  size_t Janosh::replace(Record& src, Record& dest) {
-    JANOSH_TRACE({src, dest});
+  size_t Janosh::replace(Record& from, Record& dest) {
+    JANOSH_TRACE({from, dest});
+    Record src = from;
     src.fetch();
     dest.fetch();
 
@@ -519,7 +520,8 @@ namespace janosh {
         r = this->copy(src,target);
       }
 
-      dest = target;
+      dest = Record(target.path());
+      dest.fetch();
     } else {
       if(src.isDirectory()) {
         Record target = dest.path().asDirectory();
@@ -535,7 +537,7 @@ namespace janosh {
       }
     }
 
-    src.read();
+    from.read();
     dest.read();
 
     return r;
@@ -948,7 +950,6 @@ namespace janosh {
         backRec.previous();
         forwardRec.previous();
       } else {
-        backRec.read();
         backRec.next();
         forwardRec.next();
       }
