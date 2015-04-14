@@ -20,7 +20,7 @@ ifeq ($(shell uname -m), armv7l)
 endif
 
 CXXFLAGS += -Isrc/ -DWEBSOCKETPP_STRICT_MASKING -DETLOG -std=c++0x -pedantic -Wall -I./websocketpp/ -I./backtrace/ -I/opt/local/include -DELPP_THREAD_SAFE  -DELPP_DISABLE_LOGGING_FLAGS_FROM_ARG -DELPP_DISABLE_DEFAULT_CRASH_HANDLING -DELPP_NO_DEFAULT_LOG_FILE -D_XOPEN_SOURCE 
-LDFLAGS += -Lluajit-rocks/build/luajit-2.0/ -L/opt/local/lib -s
+LDFLAGS += -Lluajit-rocks/build/luajit-2.0/ -L/opt/local/lib
 LIBS    += -lboost_program_options -lboost_serialization -lboost_system -lboost_filesystem -lpthread -lboost_thread -lkyotocabinet -lluajit-5.1 -ldl -lzmq -lX11 -lxdo
 endif
 

@@ -34,6 +34,8 @@ void DatabaseThread::run() {
       Command::Result r;
       try {
         r = (*cmd)(req_.vecArgs_, *out_);
+        if (r.first == -1)
+          throw janosh_exception() << msg_info(r.second);
         setResult(true);
       } catch(janosh_exception& ex) {
         Record::db.end_transaction(false);
@@ -42,9 +44,6 @@ void DatabaseThread::run() {
         Record::db.end_transaction(false);
         throw ex;
       }
-
-      if (r.first == -1)
-        throw janosh_exception() << msg_info(r.second);
 
       LOG_INFO_MSG(r.second, r.first);
     } else {

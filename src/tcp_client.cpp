@@ -44,7 +44,7 @@ int TcpClient::run(Request& req, std::ostream& out) {
 
     socket.read_some(boost::asio::buffer(buf));
 
-    int returnCode = std::stoi(string() + buf[0]);
+    returnCode = std::stoi(string() + buf[0]);
 
     if (returnCode == 0) {
       LOG_DEBUG_STR("Successful");
