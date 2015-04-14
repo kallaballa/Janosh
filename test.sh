@@ -138,6 +138,46 @@ function test_shift() {
   [ `janosh -r get /array/#8/#0` -eq 7  ] || return 1
 }
 
+function test_shift_dir() {
+  janosh mkarr /array/.                 || return 1
+  janosh mkobj /array/#0/.              || return 1
+  janosh set /array/#0/label 0          || return 1
+  janosh set /array/#0/balast 0          || return 1
+
+  janosh mkobj /array/#1/.              || return 1
+  janosh set /array/#1/label 1          || return 1
+  janosh set /array/#1/balast 1          || return 1
+
+  janosh mkobj /array/#2/.              || return 1
+  janosh set /array/#2/label 2          || return 1
+  janosh set /array/#2/balast 2          || return 1
+
+  janosh mkobj /array/#3/.              || return 1
+  janosh set /array/#3/label 3          || return 1
+  janosh set /array/#3/balast 3          || return 
+
+  janosh shift /array/#2/. /array/#0/.  || return 1
+  [ `janosh -r get /array/#0/label` -eq 2  ] || return 1
+  [ `janosh -r get /array/#1/label` -eq 0  ] || return 1
+  [ `janosh -r get /array/#2/label` -eq 1  ] || return 1
+
+  janosh shift /array/#1/. /array/#0/.  || return 1
+  [ `janosh -r get /array/#0/label` -eq 0  ] || return 1
+  [ `janosh -r get /array/#1/label` -eq 2  ] || return 1
+  [ `janosh -r get /array/#2/label` -eq 1  ] || return 1
+
+  janosh shift /array/#1/. /array/#2/.  || return 1
+  [ `janosh -r get /array/#0/label` -eq 0  ] || return 1
+  [ `janosh -r get /array/#1/label` -eq 1  ] || return 1
+  [ `janosh -r get /array/#2/label` -eq 2  ] || return 1
+
+  janosh shift /array/#0/. /array/#3/.  || return 1
+  [ `janosh -r get /array/#0/label` -eq 1  ] || return 1
+  [ `janosh -r get /array/#1/label` -eq 2  ] || return 1
+  [ `janosh -r get /array/#2/label` -eq 3  ] || return 1
+  [ `janosh -r get /array/#3/label` -eq 0  ] || return 1
+}
+
 function run() {
   ( 
     prepare
@@ -175,6 +215,7 @@ if [ -z "$1" ]; then
   run replace
   run copy
   run shift
+  run shift_dir
 else
   run $1
 fi
