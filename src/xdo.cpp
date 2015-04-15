@@ -1,4 +1,5 @@
 #include "xdo.hpp"
+#include <iostream>
 
 namespace janosh {
 namespace lua {
@@ -31,19 +32,24 @@ void XDO::mouseMove(size_t x, size_t y) {
   xdo_move_mouse(xdo_, x, y, 0);
 }
 
-void XDO::mouseMoveRelative(int x, int y) {
-  auto size = getMouseLocation();
-  if(x > 0)
-    x = 0;
-  else if(x > size.first)
-    x = size.first - 1;
+void XDO::mouseMoveRelative(int xDiff, int yDiff) {
+  auto size = getScreenSize();
+  auto loc = getMouseLocation();
 
-  if(y > 0)
-    y = 0;
-  else if(y > size.second)
-    y = size.second - 1;
+  loc.first += xDiff;
+  loc.second += yDiff;
 
-  xdo_move_mouse_relative(xdo_, x, y);
+  if(loc.first < 0)
+    loc.first = 0;
+  else if(loc.first > size.first)
+    loc.first = size.first - 1;
+
+  if(loc.second < 0)
+    loc.second = 0;
+  else if(loc.second > size.second)
+    loc.second = size.second - 1;
+
+  xdo_move_mouse_relative(xdo_, loc.first, loc.second);
 }
 
 void XDO::mouseDown(int button) {
