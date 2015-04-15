@@ -19,6 +19,7 @@ namespace lua {
     ~XDO();
 
     std::pair<unsigned int, unsigned int> getScreenSize();
+    std::pair<int, int> getMouseLocation();
     void mouseMove(size_t x, size_t y);
     void mouseMoveRelative(int x, int y);
     void mouseDown(int button);

@@ -15,7 +15,16 @@ std::pair<unsigned int, unsigned int> XDO::getScreenSize() {
   unsigned int w;
   unsigned int h;
   xdo_get_viewport_dimensions(xdo_, &w, &h, 0);
+
   return std::make_pair(w,h);
+}
+
+std::pair<int, int> XDO::getMouseLocation() {
+  int x;
+  int y;
+  xdo_get_mouse_location2(xdo_, &x, &y, NULL, NULL);
+
+  return std::make_pair(x,y);
 }
 
 void XDO::mouseMove(size_t x, size_t y) {
@@ -23,6 +32,17 @@ void XDO::mouseMove(size_t x, size_t y) {
 }
 
 void XDO::mouseMoveRelative(int x, int y) {
+  auto size = getMouseLocation();
+  if(x > 0)
+    x = 0;
+  else if(x > size.first)
+    x = size.first - 1;
+
+  if(y > 0)
+    y = 0;
+  else if(y > size.second)
+    y = size.second - 1;
+
   xdo_move_mouse_relative(xdo_, x, y);
 }
 
