@@ -49,8 +49,7 @@ void XDO::mouseMoveRelative(int xDiff, int yDiff) {
   else if(loc.second > size.second)
     loc.second = size.second - 1;
 
-  std::cerr << loc.first << "\t" << loc.second << std::endl;
-  xdo_move_mouse_relative(xdo_, loc.first, loc.second);
+  xdo_move_mouse(xdo_, loc.first, loc.second,0);
 }
 
 void XDO::mouseDown(int button) {
