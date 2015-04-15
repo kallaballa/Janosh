@@ -6,6 +6,7 @@ namespace lua {
 
 XDO::XDO() :
     xdo_(xdo_new(NULL)) {
+  XInitThreads();
 }
 
 XDO::~XDO() {
