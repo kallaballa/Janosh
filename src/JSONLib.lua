@@ -704,7 +704,6 @@ function OBJDEF:new(args)
    return setmetatable(new, OBJDEF)
 end
 
-print ("Embedded JSON Library is loaded.")
 return OBJDEF:new()
 
 
