@@ -359,9 +359,8 @@ function JanoshClass.subscribe(self, keyprefix, callback)
       end
 		end
 	end)
-  t()
-
-  print("Subscriber " .. keyprefix .. " terminated")
+  result = t()
+  print("Subscriber " .. keyprefix .. " terminated: " .. result[1])
 end
 
 function JanoshClass.publish(self, key, op, value) 
