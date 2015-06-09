@@ -359,6 +359,7 @@ function JanoshClass.subscribe(self, keyprefix, callback)
       end
 		end
 	end)
+  t()
 end
 
 function JanoshClass.publish(self, key, op, value) 
