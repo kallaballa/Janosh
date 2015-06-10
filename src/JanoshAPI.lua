@@ -19,6 +19,10 @@ function JanoshClass.basename(self, path)
   return name
 end
 
+function JanoshClass.epoch(self,key,value)
+  return posix.time()
+end
+
 function JanoshClass.setenv(self,key,value)
 	posix.setenv(key,value)
 end
