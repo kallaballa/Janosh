@@ -47,7 +47,7 @@ WebsocketServer::~WebsocketServer() {
 }
 void WebsocketServer::run(uint16_t port) {
   // listen on specified port
-  m_server.listen(port);
+  m_server.listen(boost::asio::ip::tcp::v4(),port);
 
   // Start the server accept loop
   m_server.start_accept();
