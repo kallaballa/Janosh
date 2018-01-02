@@ -15,9 +15,9 @@ EXTRA_BUILDFLAGS =
 
 ifeq ($(UNAME), Linux)
 
-ifeq ($(shell uname -m), armv7l)
-  CXXFLAGS += -mfloat-abi=hard -mfpu=neon
-endif
+#ifeq ($(shell uname -m), armv7l)
+#  CXXFLAGS += -mfloat-abi=hard -mfpu=neon
+#endif
 
 CXXFLAGS += -Isrc/ -DWEBSOCKETPP_STRICT_MASKING -DETLOG -std=c++0x -pedantic -Wall -I./websocketpp/ -I/opt/local/include -DELPP_THREAD_SAFE  -DELPP_DISABLE_LOGGING_FLAGS_FROM_ARG -DELPP_DISABLE_DEFAULT_CRASH_HANDLING -DELPP_NO_DEFAULT_LOG_FILE -D_XOPEN_SOURCE 
 LDFLAGS += -Lluajit-rocks/build/luajit-2.0/ -L/opt/local/lib
