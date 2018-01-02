@@ -3,31 +3,21 @@
 #include "exception.hpp"
 
 #ifdef _JANOSH_DEBUG
-#include "backward.h"
+#define BACKWARD_HAS_BFD 1
+#define BACKWARD_HAS_DW 1
+#include "backward.hpp"
 #endif
 
 namespace janosh {
 janosh_exception::janosh_exception() {
 #ifdef _JANOSH_DEBUG
   using namespace backward;
-  StackTrace st;
-  void* error_addr = 0;
-
-#if defined(REG_R14)
-  register void* r14 asm ("r14");
-  error_addr = r14;
-#else
-# warning ":/ sorry, ain't know no nothing none not of your architecture!"
-#endif
-  if (error_addr) {
-    st.load_from(error_addr, 32);
-  } else {
-    st.load_here(32);
-  }
-
-  Printer printer;
-  printer.address = true;
-  printer.print(st, stderr);
+  StackTrace st; st.load_here(32);
+  Printer p;
+  p.object = true;
+  p.color_mode = ColorMode::always;
+  p.address = true;
+  p.print(st, stderr);
 #endif
 }
 

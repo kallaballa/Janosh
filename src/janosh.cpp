@@ -14,6 +14,8 @@
 #include "message_queue.hpp"
 
 #include <stack>
+#include <thread>
+#include <chrono>
 #include <boost/program_options.hpp>
 #include <boost/functional/hash.hpp>
 #include <boost/tokenizer.hpp>
