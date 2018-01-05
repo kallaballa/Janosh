@@ -146,7 +146,7 @@ function JanoshClass.popen(self, path, ...)
         posix.close(w3)
 
         local ret, err = posix.execp(path, unpack({...}))
-        assert(ret ~= nil, "execp() failed")
+        assert(ret ~= nil, "execp() failed: " .. path)
 
         posix._exit(1)
         return

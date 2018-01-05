@@ -33,8 +33,6 @@ static int wrap_exceptions(lua_State *L, lua_CFunction f)
     message = ss.str();
   } catch (std::exception& e) {
     message = e.what();
-  } catch (...) {
-    message = "caught (...)";
   }
 
   LOG_DEBUG_MSG("Caught message in lua call", message);
