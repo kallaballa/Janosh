@@ -87,7 +87,7 @@ namespace janosh {
   #define LOG_FATAL_STR(x) LOG(plog::fatal) << x
   #define LOG_GLOBAL_MSG(msg,x) LOG(plog::verbose) << msg << ": " << x
   #define LOG_DEBUG_MSG(msg,x) LOG(plog::debug) << msg << ": " << x
-  #define LOG_INFO_MSG(msg,x) iLOG(plog::info) << msg << ": " << x
+  #define LOG_INFO_MSG(msg,x) LOG(plog::info) << msg << ": " << x
   #define LOG_WARN_MSG(msg,x) LOG(plog::warning) << msg << ": " << x
   #define LOG_ERR_MSG(msg,x) LOG(plog::error) << msg << ": " << x
   #define LOG_FATAL_MSG(msg,x) LOG(plog::fatal) << msg << ": " << x
