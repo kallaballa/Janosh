@@ -79,24 +79,24 @@ namespace janosh {
     }
   };
 
-  #define LOG_GLOBAL_STR(x) if(Logger::getLevel() >= L_GLOBAL) { LOG(plog::verbose) << x; }
-  #define LOG_DEBUG_STR(x) if(Logger::getLevel() >= L_DEBUG)  { LOG(plog::debug) << x; }
-  #define LOG_INFO_STR(x) if(Logger::getLevel() >= L_INFO)  { LOG(plog::info) << x; }
-  #define LOG_WARN_STR(x) if(Logger::getLevel() >= L_WARNING)  { LOG(plog::warning) << x; }
-  #define LOG_ERR_STR(x) if(Logger::getLevel() >= L_ERROR)  { LOG(plog::error) << x; }
-  #define LOG_FATAL_STR(x) if(Logger::getLevel() >= L_FATAL)  { LOG(plog::fatal) << x; }
-  #define LOG_GLOBAL_MSG(msg,x) if(Logger::getLevel() >= L_GLOBAL)  { LOG(plog::verbose) << msg << ": " << x; }
-  #define LOG_DEBUG_MSG(msg,x) if(Logger::getLevel() >= L_DEBUG)  { LOG(plog::debug) << msg << ": " << x; }
-  #define LOG_INFO_MSG(msg,x) if(Logger::getLevel() >= L_INFO)  { LOG(plog::info) << msg << ": " << x; }
-  #define LOG_WARN_MSG(msg,x) if(Logger::getLevel() >= L_WARNING)  { LOG(plog::warning) << msg << ": " << x; }
-  #define LOG_ERR_MSG(msg,x) if(Logger::getLevel() >= L_ERROR)  { LOG(plog::error) << msg << ": " << x; }
-  #define LOG_FATAL_MSG(msg,x) if(Logger::getLevel() >= L_FATAL)  { LOG(plog::fatal) << msg << ": " << x; }
-  #define LOG_GLOBAL(x) if(Logger::getLevel() >= L_GLOBAL)  { LOG(plog::verbose) << x; }
-  #define LOG_DEBUG(x) if(Logger::getLevel() >= L_DEBUG)  { LOG(plog::debug) << x; }
-  #define LOG_INFO(x) if(Logger::getLevel() >= L_INFO)  { LOG(plog::info) << x; }
-  #define LOG_WARN(x) if(Logger::getLevel() >= L_WARNING)  { LOG(plog::warning) << x; }
-  #define LOG_ERR(x) if(Logger::getLevel() >= L_ERROR)  { LOG(plog::error) << x; }
-  #define LOG_FATAL(x) if(Logger::getLevel() >= L_FATAL)  { LOG(plog::fatal) << x; }
+  #define LOG_GLOBAL_STR(x) LOG(plog::verbose) << x
+  #define LOG_DEBUG_STR(x) LOG(plog::debug) << x
+  #define LOG_INFO_STR(x) LOG(plog::info) << x
+  #define LOG_WARN_STR(x) LOG(plog::warning) << x
+  #define LOG_ERR_STR(x) LOG(plog::error) << x
+  #define LOG_FATAL_STR(x) LOG(plog::fatal) << x
+  #define LOG_GLOBAL_MSG(msg,x) LOG(plog::verbose) << msg << ": " << x
+  #define LOG_DEBUG_MSG(msg,x) LOG(plog::debug) << msg << ": " << x
+  #define LOG_INFO_MSG(msg,x) iLOG(plog::info) << msg << ": " << x
+  #define LOG_WARN_MSG(msg,x) LOG(plog::warning) << msg << ": " << x
+  #define LOG_ERR_MSG(msg,x) LOG(plog::error) << msg << ": " << x
+  #define LOG_FATAL_MSG(msg,x) LOG(plog::fatal) << msg << ": " << x
+  #define LOG_GLOBAL(x) LOG(plog::verbose) << x
+  #define LOG_DEBUG(x) LOG(plog::debug) << x
+  #define LOG_INFO(x) LOG(plog::info) << x
+  #define LOG_WARN(x) LOG(plog::warning) << x
+  #define LOG_ERR(x) LOG(plog::error) << x
+  #define LOG_FATAL(x) LOG(plog::fatal) << x
 
   #define JANOSH_TRACE(...) if(Logger::isTracing()) Logger::trace(string(__FUNCTION__), ##__VA_ARGS__);
 }
