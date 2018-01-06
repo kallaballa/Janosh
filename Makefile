@@ -19,13 +19,13 @@ ifeq ($(UNAME), Linux)
 #  CXXFLAGS += -mfloat-abi=hard -mfpu=neon
 #endif
 
-CXXFLAGS += -Isrc/ -DWEBSOCKETPP_STRICT_MASKING -DETLOG -std=c++0x -pedantic -Wall -I./websocketpp/ -I/opt/local/include -D_XOPEN_SOURCE 
+CXXFLAGS += -Isrc/ -DWEBSOCKETPP_STRICT_MASKING -std=c++0x -pedantic -Wall -I./websocketpp/ -I/opt/local/include -D_XOPEN_SOURCE 
 LDFLAGS += -Lluajit-rocks/build/luajit-2.0/ -L/opt/local/lib
 LIBS    += -lboost_program_options -lboost_serialization -lboost_system -lboost_filesystem -lpthread -lboost_thread -lkyotocabinet -lluajit-5.1 -ldl -lzmq -lX11 -lxdo
 endif
 
 ifeq ($(UNAME), Darwin)
-CXXFLAGS = -DJANOSH_NO_XDO -Isrc/ -DWEBSOCKETPP_STRICT_MASKING -DETLOG -Wall -I./luajit-rocks/luajit-2.0/src/ -I./websocketpp/ -I/opt/local/include -D_XOPEN_SOURCE -std=c++11 -stdlib=libc++ -pthread  -Wall -Wextra -pedantic
+CXXFLAGS = -DJANOSH_NO_XDO -Isrc/ -DWEBSOCKETPP_STRICT_MASKING -Wall -I./luajit-rocks/luajit-2.0/src/ -I./websocketpp/ -I/opt/local/include -D_XOPEN_SOURCE -std=c++11 -stdlib=libc++ -pthread  -Wall -Wextra -pedantic
 LIBS    := -lboost_program_options -lboost_serialization -lboost_system -lboost_filesystem -lpthread -lboost_thread-mt -lkyotocabinet -lluajit-5.1 -ldl -lzmq
 EXTRA_BUILDFLAGS = -pagezero_size 10000 -image_base 100000000
 #Darwin - we use clang
