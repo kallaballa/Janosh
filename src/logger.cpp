@@ -124,15 +124,15 @@ namespace janosh {
 
     switch (kind) {
     case DEBUG:
-      LOG(DEBUG) << ss.str();
+      std::cerr << ss.str() << std::endl;
       break;
       case INFO:
       break;
       case WARN:
-      LOG(WARNING) << ss.str();
+      std::cerr << ss.str() << std::endl;
       break;
       case ERROR:
-      LOG(ERROR) << ss.str();
+      std::cerr << ss.str() << std::endl;
       break;
     }
   }
@@ -172,7 +172,7 @@ namespace janosh {
 
   void Logger::registerThread(const string& name) {
     el::base::ThreadNameLookup::set(std::this_thread::get_id(),name);
-    LOG_DEBUG_MSG("Register thread", el::base::ThreadNameLookup::size());
+//    LOG_DEBUG_MSG("Register thread", el::base::ThreadNameLookup::size());
   }
 
   void Logger::removeThread() {

@@ -2,7 +2,7 @@ CXX     := g++
 TARGET  := janosh
 SRCS    := src/janosh.cpp src/tcp_server.cpp src/commands.cpp src/lua_script.cpp src/json.cpp src/websocket.cpp src/exception.cpp src/cache_thread.cpp src/exithandler.cpp src/value.cpp src/request.cpp src/logger.cpp src/cache.cpp src/flusher_thread.cpp src/path.cpp src/tcp_worker.cpp src/settings.cpp src/raw.cpp src/json_spirit/json_spirit_reader.cpp src/json_spirit/json_spirit_value.cpp src/json_spirit/json_spirit_writer.cpp src/tracker.cpp src/message_queue.cpp src/janosh_thread.cpp src/record.cpp src/backward.cpp src/bash.cpp src/tcp_client.cpp src/util.cpp src/database_thread.cpp src/component.cpp src/xdo.cpp
 #precompiled headers
-HEADERS := src/easylogging++.h src/json_spirit/json_spirit.h
+HEADERS :=  src/json_spirit/json_spirit.h
 GCH     := ${HEADERS:.h=.gch}
 OBJS    := ${SRCS:.cpp=.o}
 DEPS    := ${SRCS:.cpp=.dep} 
@@ -67,7 +67,7 @@ debug: ${TARGET}
 
 asan: CXXFLAGS += -g3 -O0 -rdynamic -D_JANOSH_DEBUG -fno-omit-frame-pointer -fsanitize=address
 asan: LDFLAGS += -Wl,--export-dynamic -fsanitize=address
-asan: LIBS+= -lbfd
+asan: LIBS+= -lbfd -ldw
 asan: ${TARGET}
 
 src/JanoshAPI.o:	src/JanoshAPI.lua

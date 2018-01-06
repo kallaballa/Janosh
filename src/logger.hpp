@@ -23,7 +23,6 @@
 #include <string>
 #include <initializer_list>
 #include <assert.h>
-#include "easylogging++.h"
 #include <sstream>
 #include <boost/lexical_cast.hpp>
 #include <kcdb.h>
@@ -75,28 +74,28 @@ namespace janosh {
 
     template<typename Tvalue>
     static void trace(const string& caller, std::initializer_list<janosh::Record> records, Tvalue value) {
-      LOG(TRACE) << makeCallString(caller, records), boost::lexical_cast<string>(value);
+      std::cerr << makeCallString(caller, records) << "=" << boost::lexical_cast<string>(value) << std::endl;
     }
   };
 
-  #define LOG_GLOBAL_STR(x) if(Logger::getLevel() >= L_GLOBAL) LOG(INFO) << x;
-  #define LOG_DEBUG_STR(x) if(Logger::getLevel() >= L_DEBUG) LOG(INFO) << x;
-  #define LOG_INFO_STR(x) if(Logger::getLevel() >= L_INFO) LOG(INFO) << x;
-  #define LOG_WARN_STR(x) if(Logger::getLevel() >= L_WARNING) LOG(INFO) << x;
-  #define LOG_ERR_STR(x) if(Logger::getLevel() >= L_ERROR) LOG(INFO) << x;
-  #define LOG_FATAL_STR(x) if(Logger::getLevel() >= L_FATAL) LOG(INFO) << x;
-  #define LOG_GLOBAL_MSG(msg,x) if(Logger::getLevel() >= L_GLOBAL) LOG(INFO) << msg << ": " << x;
-  #define LOG_DEBUG_MSG(msg,x) if(Logger::getLevel() >= L_DEBUG) LOG(INFO) << msg << ": " << x;
-  #define LOG_INFO_MSG(msg,x) if(Logger::getLevel() >= L_INFO) LOG(INFO) << msg << ": " << x;
-  #define LOG_WARN_MSG(msg,x) if(Logger::getLevel() >= L_WARNING) LOG(INFO) << msg << ": " << x;
-  #define LOG_ERR_MSG(msg,x) if(Logger::getLevel() >= L_ERROR) LOG(INFO) << msg << ": " << x;
-  #define LOG_FATAL_MSG(msg,x) if(Logger::getLevel() >= L_FATAL) LOG(INFO) << msg << ": " << x;
-  #define LOG_GLOBAL(x) if(Logger::getLevel() >= L_GLOBAL) LOG(INFO) << x;
-  #define LOG_DEBUG(x) if(Logger::getLevel() >= L_DEBUG) LOG(INFO) << x;
-  #define LOG_INFO(x) if(Logger::getLevel() >= L_INFO) LOG(INFO) << x;
-  #define LOG_WARN(x) if(Logger::getLevel() >= L_WARNING) LOG(INFO) << x;
-  #define LOG_ERR(x) if(Logger::getLevel() >= L_ERROR) LOG(INFO) << x;
-  #define LOG_FATAL(x) if(Logger::getLevel() >= L_FATAL) LOG(INFO) << x;
+  #define LOG_GLOBAL_STR(x) if(Logger::getLevel() >= L_GLOBAL) std::cerr << x << std::endl
+  #define LOG_DEBUG_STR(x) if(Logger::getLevel() >= L_DEBUG) std::cerr << x << std::endl
+  #define LOG_INFO_STR(x) if(Logger::getLevel() >= L_INFO) std::cerr << x << std::endl
+  #define LOG_WARN_STR(x) if(Logger::getLevel() >= L_WARNING) std::cerr << x << std::endl
+  #define LOG_ERR_STR(x) if(Logger::getLevel() >= L_ERROR) std::cerr << x << std::endl
+  #define LOG_FATAL_STR(x) if(Logger::getLevel() >= L_FATAL) std::cerr << x << std::endl
+  #define LOG_GLOBAL_MSG(msg,x) if(Logger::getLevel() >= L_GLOBAL) std::cerr << msg << ": " << x << std::endl;
+  #define LOG_DEBUG_MSG(msg,x) if(Logger::getLevel() >= L_DEBUG) std::cerr << msg << ": " << x << std::endl;
+  #define LOG_INFO_MSG(msg,x) if(Logger::getLevel() >= L_INFO) std::cerr << msg << ": " << x << std::endl;
+  #define LOG_WARN_MSG(msg,x) if(Logger::getLevel() >= L_WARNING) std::cerr << msg << ": " << x << std::endl;
+  #define LOG_ERR_MSG(msg,x) if(Logger::getLevel() >= L_ERROR) std::cerr << msg << ": " << x << std::endl;
+  #define LOG_FATAL_MSG(msg,x) if(Logger::getLevel() >= L_FATAL) std::cerr << msg << ": " << x << std::endl;
+  #define LOG_GLOBAL(x) if(Logger::getLevel() >= L_GLOBAL) std::cerr << x << std::endl
+  #define LOG_DEBUG(x) if(Logger::getLevel() >= L_DEBUG) std::cerr << x << std::endl
+  #define LOG_INFO(x) if(Logger::getLevel() >= L_INFO) std::cerr << x << std::endl
+  #define LOG_WARN(x) if(Logger::getLevel() >= L_WARNING) std::cerr << x << std::endl
+  #define LOG_ERR(x) if(Logger::getLevel() >= L_ERROR) std::cerr << x << std::endl
+  #define LOG_FATAL(x) if(Logger::getLevel() >= L_FATAL) std::cerr << x << std::endl
 
   #define JANOSH_TRACE(...) if(Logger::isTracing()) Logger::trace(string(__FUNCTION__), ##__VA_ARGS__);
 }
