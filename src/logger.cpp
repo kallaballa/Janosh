@@ -1,5 +1,5 @@
 /*
- * Ctrl-Cut - A laser cutter CUPS driver
+s * Ctrl-Cut - A laser cutter CUPS driver
  * Copyright (C) 2009-2010 Amir Hassan <amir@viel-zu.org> and Marius Kintel <marius@kintel.net>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -25,10 +25,8 @@
 
 /* Amirs' custom ThreadNameLookup .. !J! */
 #include <thread>
-extern el::base::Storage* elStorage;
 using std::string;
-namespace el {
-  namespace base {
+
 class ThreadNameLookup {
   std::mutex mutex_;
   std::map<std::thread::id, string> idLookup_;
@@ -88,30 +86,33 @@ public:
   }
 };
 
+ ThreadNameLookup* ThreadNameLookup::instance_ = NULL;
 
-
-
-   ThreadNameLookup* ThreadNameLookup::instance_ = NULL;
-  }
-}
 namespace janosh {
   Logger* Logger::instance_ = NULL;
 
-
-  Logger::Logger(const LogLevel l) : tracing_(false), dblog_(false), level_(l) {
-    el::Configurations defaultConf;
-    defaultConf.setToDefault();
-
-    defaultConf.set(el::Level::Info, el::ConfigurationType::Format,
-        "%thread %datetime %msg\t(%loc)");
-    defaultConf.set(el::Level::Fatal, el::ConfigurationType::Format,
-        "%thread %datetime %level %msg\t(%loc)");
-    defaultConf.set(el::Level::Debug, el::ConfigurationType::Format,
-        "%thread %datetime %level %msg\t(%loc)");
-
-    // To set GLOBAL configurations you may use
-    defaultConf.setGlobally(el::ConfigurationType::Format, "%thread %datetime %level %msg\t(%loc)");
-    el::Loggers::reconfigureLogger("default", defaultConf);
+  Logger::Logger(const LogLevel l) :
+      tracing_(false), dblog_(false), level_(l) {
+    switch (l) {
+    case L_DEBUG:
+      plog::init(plog::debug, "/dev/stderr");
+      break;
+    case L_INFO:
+      plog::init(plog::info, "/dev/stderr");
+      break;
+    case L_WARNING:
+      plog::init(plog::warning, "/dev/stderr");
+      break;
+    case L_ERROR:
+      plog::init(plog::error, "/dev/stderr");
+      break;
+    case L_FATAL:
+      plog::init(plog::fatal, "/dev/stderr");
+      break;
+    case L_GLOBAL:
+      plog::init(plog::verbose, "/dev/stderr");
+      break;
+    }
   }
 
   DBLogger::~DBLogger() {
@@ -124,15 +125,16 @@ namespace janosh {
 
     switch (kind) {
     case DEBUG:
-      std::cerr << ss.str() << std::endl;
+        LOG(plog::debug) << ss.str();
       break;
       case INFO:
+        LOG(plog::info) << ss.str();
       break;
       case WARN:
-      std::cerr << ss.str() << std::endl;
+        LOG(plog::warning) << ss.str();
       break;
       case ERROR:
-      std::cerr << ss.str() << std::endl;
+        LOG(plog::error) << ss.str();
       break;
     }
   }
@@ -171,17 +173,17 @@ namespace janosh {
   }
 
   void Logger::registerThread(const string& name) {
-    el::base::ThreadNameLookup::set(std::this_thread::get_id(),name);
-//    LOG_DEBUG_MSG("Register thread", el::base::ThreadNameLookup::size());
+    ThreadNameLookup::set(std::this_thread::get_id(),name);
+    LOG_DEBUG_MSG("Register thread", ThreadNameLookup::size());
   }
 
   void Logger::removeThread() {
     LOG_DEBUG("Remove thread");
-    el::base::ThreadNameLookup::remove(std::this_thread::get_id());
+    ThreadNameLookup::remove(std::this_thread::get_id());
   }
 
   void Logger::trace(const string& caller, std::initializer_list<janosh::Record> records) {
-    LOG(TRACE) << makeCallString(caller, records);
+    LOG_DEBUG(makeCallString(caller, records));
   }
 
   const string Logger::makeCallString(const string& caller, std::initializer_list<janosh::Record> records) {
