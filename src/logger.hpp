@@ -29,6 +29,7 @@
 #include <sstream>
 #include <mutex>
 #include "plog/Log.h"
+#include "plog/Appenders/ConsoleAppender.h"
 
 namespace janosh {
   using std::string;

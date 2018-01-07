@@ -93,24 +93,25 @@ namespace janosh {
 
   Logger::Logger(const LogLevel l) :
       tracing_(false), dblog_(false), level_(l) {
+    plog::ConsoleAppender<plog::TxtFormatter>* consoleAppender = new plog::ConsoleAppender<plog::TxtFormatter>();
     switch (l) {
     case L_DEBUG:
-      plog::init(plog::debug, "/dev/stderr");
+      plog::init(plog::debug, consoleAppender);
       break;
     case L_INFO:
-      plog::init(plog::info, "/dev/stderr");
+      plog::init(plog::info, consoleAppender);
       break;
     case L_WARNING:
-      plog::init(plog::warning, "/dev/stderr");
+      plog::init(plog::warning, consoleAppender);
       break;
     case L_ERROR:
-      plog::init(plog::error, "/dev/stderr");
+      plog::init(plog::error, consoleAppender);
       break;
     case L_FATAL:
-      plog::init(plog::fatal, "/dev/stderr");
+      plog::init(plog::fatal, consoleAppender);
       break;
     case L_GLOBAL:
-      plog::init(plog::verbose, "/dev/stderr");
+      plog::init(plog::verbose, consoleAppender);
       break;
     }
   }

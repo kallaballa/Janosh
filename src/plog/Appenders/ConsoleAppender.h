@@ -11,7 +11,7 @@ namespace plog
     {
     public:
 #ifdef _WIN32
-        ConsoleAppender() : m_isatty(!!_isatty(_fileno(stdout))), m_stdoutHandle()
+        ConsoleAppender() : m_isatty(!!_isatty(_fileno(stderr))), m_stdoutHandle()
         {
             if (m_isatty)
             {
@@ -19,7 +19,7 @@ namespace plog
             }
         }
 #else
-        ConsoleAppender() : m_isatty(!!isatty(fileno(stdout))) {}
+        ConsoleAppender() : m_isatty(!!isatty(fileno(stderr))) {}
 #endif
 
         virtual void write(const Record& record)
