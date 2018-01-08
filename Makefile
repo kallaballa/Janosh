@@ -52,7 +52,7 @@ static: ${TARGET}
 
 screeninvader: LDFLAGS += -s
 screeninvader: CXXFLAGS += -D_JANOSH_DEBUG -g0 -O3 
-screeninvader: LIBS = -lboost_program_options -Wl,-Bstatic -lboost_serialization -lboost_system -lboost_filesystem -lkyotocabinet  -llzma -llzo2 -Wl,-Bdynamic -lz -lpthread -lrt -ldl -lluajit-5.1 -lzmq -lX11 -lxdo
+screeninvader: LIBS = -lboost_program_options -Wl,-Bstatic -lboost_serialization -lboost_system -lboost_filesystem -lkyotocabinet  -llzma -llzo2 -Wl,-Bdynamic -lz -lpthread -lrt -ldl -lluajit-5.1 -lzmq -lX11 -lxdo -ldw
 screeninvader: ${TARGET}
 
 screeninvader_debug: LDFLAGS += -Wl,--export-dynamic
