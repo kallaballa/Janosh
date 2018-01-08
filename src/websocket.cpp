@@ -32,16 +32,18 @@ WebsocketServer::WebsocketServer() {
   m_server.set_message_handler(bind(&WebsocketServer::on_message, this, std::placeholders::_1, std::placeholders::_2));
 
   ExitHandler::getInstance()->addExitFunc([&](){
-    std::cerr << "Shutdown websocket" << std::endl;
+    LOG_DEBUG_STR("Shutdown");
     if (m_server.is_listening()) {
       m_server.stop_perpetual();
       m_server.stop_listening();
     }
+    LOG_DEBUG_STR("Stopped listening");
 
     for (auto& conn : m_connections) {
       m_server.close(conn, websocketpp::close::status::normal, "closed");
     }
     m_server.stop();
+    LOG_DEBUG_STR("Stopped");
   });
   LOG_DEBUG_STR("Websocket: Init end");
 }
