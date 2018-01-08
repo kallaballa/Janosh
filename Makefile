@@ -38,8 +38,8 @@ endif
 
 all: release
 
-#release: LDFLAGS += -s
-#release: CXXFLAGS += -g0 -O3 
+release: LDFLAGS += -s
+release: CXXFLAGS += -g0 -O3 
 release: ${TARGET}
 
 reduce: CXXFLAGS = -DWEBSOCKETPP_STRICT_MASKING -DETLOG -std=c++0x -pedantic -Wall -g0 -Os -fvisibility=hidden -fvisibility-inlines-hidden
