@@ -20,8 +20,9 @@ Cache* Cache::getInstance() {
 }
 
 Cache::Cache() : valid_(false), len_(2048), data_((char*)malloc(len_)) {
-  if(data_ == NULL)
+  if(data_ == NULL) {
     LOG_FATAL_STR("Unable to allocate cache");
+  }
 }
 
 Cache::~Cache() {
@@ -48,8 +49,9 @@ void Cache::setData(const char * data, const size_t& len) {
   lock();
   if(len > len_) {
     data_ = (char*) realloc(data_, len);
-    if(data_ == NULL)
+    if(data_ == NULL) {
       LOG_FATAL_STR("Unable to allocate cache");
+    }
   }
   len_ = len;
   memcpy(data_, data, len_);
