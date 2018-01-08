@@ -27,9 +27,9 @@ WebsocketServer::WebsocketServer() {
   m_server.init_asio();
 
   // Register handler callbacks
-  m_server.set_open_handler(bind(&WebsocketServer::on_open, this, ::_1));
-  m_server.set_close_handler(bind(&WebsocketServer::on_close, this, ::_1));
-  m_server.set_message_handler(bind(&WebsocketServer::on_message, this, ::_1, ::_2));
+  m_server.set_open_handler(bind(&WebsocketServer::on_open, this, std::placeholders::_1));
+  m_server.set_close_handler(bind(&WebsocketServer::on_close, this, std::placeholders::_1));
+  m_server.set_message_handler(bind(&WebsocketServer::on_message, this, std::placeholders::_1, std::placeholders::_2));
 
   ExitHandler::getInstance()->addExitFunc([&](){
     std::cerr << "Shutdown websocket" << std::endl;
