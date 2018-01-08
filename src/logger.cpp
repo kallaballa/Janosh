@@ -21,7 +21,8 @@ s * Ctrl-Cut - A laser cutter CUPS driver
 #include "record.hpp"
 #include <iostream>
 #include <sstream>
-
+#include <iomanip>
+#include "plog/Util.h"
 
 /* Amirs' custom ThreadNameLookup .. !J! */
 #include <thread>
@@ -29,8 +30,8 @@ using std::string;
 
 class ThreadNameLookup {
   std::mutex mutex_;
-  std::map<std::thread::id, string> idLookup_;
-  std::map<string, std::thread::id> nameLookup_;
+  std::map<unsigned int, string> idLookup_;
+  std::map<string, unsigned int> nameLookup_;
   std::map<string, size_t> nameCount_;
 
   static ThreadNameLookup* instance_;
@@ -45,7 +46,7 @@ public:
     return instance_;
   }
 
-  static void set(const std::thread::id& threadID, const string& threadName) {
+  static void set(const unsigned int id, const string& threadName) {
     getInstance()->mutex_.lock();
     auto itname = getInstance()->nameCount_.find(threadName);
     string name = threadName;
@@ -56,14 +57,14 @@ public:
 
     name += ("-" + std::to_string(cnt));
     getInstance()->nameCount_[threadName] = cnt + 1;
-    getInstance()->nameLookup_[name] = threadID;
-    getInstance()->idLookup_[threadID] = name;
+    getInstance()->nameLookup_[name] = id;
+    getInstance()->idLookup_[id] = name;
     getInstance()->mutex_.unlock();
   }
 
-  static string get(const std::thread::id& threadID) {
+  static string get(const unsigned int& id) {
     getInstance()->mutex_.lock();
-    auto it = getInstance()->idLookup_.find(threadID);
+    auto it = getInstance()->idLookup_.find(id);
     string name;
     if(it != getInstance()->idLookup_.end())
       name = (*it).second;
@@ -73,11 +74,11 @@ public:
     return name;
   }
 
-  static void remove(const std::thread::id& threadID) {
+  static void remove(const unsigned int& id) {
     getInstance()->mutex_.lock();
-    string name = getInstance()->idLookup_[threadID];
+    string name = getInstance()->idLookup_[id];
     getInstance()->nameLookup_.erase(name);
-    getInstance()->idLookup_.erase(threadID);
+    getInstance()->idLookup_.erase(id);
     getInstance()->mutex_.unlock();
   }
 
@@ -88,12 +89,41 @@ public:
 
  ThreadNameLookup* ThreadNameLookup::instance_ = NULL;
 
+ namespace plog
+ {
+     class JanoshFormatter
+     {
+     public:
+         static util::nstring header()
+         {
+             return util::nstring();
+         }
+
+         static util::nstring format(const Record& record)
+         {
+           tm t;
+           util::localtime_s(&t, &record.getTime().time);
+
+           util::nostringstream ss;
+           ss << t.tm_year + 1900 << "-" << std::setfill(PLOG_NSTR('0')) << std::setw(2) << t.tm_mon + 1 << PLOG_NSTR("-") << std::setfill(PLOG_NSTR('0')) << std::setw(2) << t.tm_mday << PLOG_NSTR(" ");
+           ss << std::setfill(PLOG_NSTR('0')) << std::setw(2) << t.tm_hour << PLOG_NSTR(":") << std::setfill(PLOG_NSTR('0')) << std::setw(2) << t.tm_min << PLOG_NSTR(":") << std::setfill(PLOG_NSTR('0')) << std::setw(2) << t.tm_sec << PLOG_NSTR(".") << std::setfill(PLOG_NSTR('0')) << std::setw(3) << record.getTime().millitm << PLOG_NSTR(" ");
+           ss << std::setfill(PLOG_NSTR(' ')) << std::setw(5) << std::left << severityToString(record.getSeverity()) << PLOG_NSTR(" ");
+           ss << PLOG_NSTR("[") << ThreadNameLookup::get(record.getTid())  << PLOG_NSTR("] ");
+           ss << PLOG_NSTR("[") << record.getFunc() << PLOG_NSTR("@") << record.getLine() << PLOG_NSTR("] ");
+           ss << record.getMessage() << PLOG_NSTR("\n");
+
+           return ss.str();
+         }
+     };
+ }
+
+
 namespace janosh {
   Logger* Logger::instance_ = NULL;
 
   Logger::Logger(const LogLevel l) :
       tracing_(false), dblog_(false), level_(l) {
-    plog::ConsoleAppender<plog::TxtFormatter>* consoleAppender = new plog::ConsoleAppender<plog::TxtFormatter>();
+    plog::ConsoleAppender<plog::JanoshFormatter>* consoleAppender = new plog::ConsoleAppender<plog::JanoshFormatter>();
     switch (l) {
     case L_DEBUG:
       plog::init(plog::debug, consoleAppender);
@@ -174,13 +204,13 @@ namespace janosh {
   }
 
   void Logger::registerThread(const string& name) {
-    ThreadNameLookup::set(std::this_thread::get_id(),name);
+    ThreadNameLookup::set(plog::util::gettid(),name);
     LOG_DEBUG_MSG("Register thread", ThreadNameLookup::size());
   }
 
   void Logger::removeThread() {
     LOG_DEBUG("Remove thread");
-    ThreadNameLookup::remove(std::this_thread::get_id());
+    ThreadNameLookup::remove(plog::util::gettid());
   }
 
   void Logger::trace(const string& caller, std::initializer_list<janosh::Record> records) {
