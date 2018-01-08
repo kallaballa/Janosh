@@ -5,7 +5,6 @@
 #include <chrono>
 #include <thread>
 #include <mutex>
-#include <thread>
 #include "exception.hpp"
 #include "cppzmq/zmq.hpp"
 #include "websocket.hpp"
