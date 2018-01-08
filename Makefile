@@ -19,8 +19,8 @@ ifeq ($(UNAME), Linux)
 #  CXXFLAGS += -mfloat-abi=hard -mfpu=neon
 #endif
 
-CXXFLAGS += -Isrc/ -DWEBSOCKETPP_STRICT_MASKING -std=c++0x -pedantic -Wall -I./ -I/opt/local/include -D_XOPEN_SOURCE 
-LDFLAGS += -Lluajit-rocks/build/luajit-2.0/ -L/opt/local/lib
+CXXFLAGS += -Isrc/ -DWEBSOCKETPP_STRICT_MASKING -std=c++0x -pedantic -Wall -I./ -rdynamic -I/opt/local/include -D_XOPEN_SOURCE 
+LDFLAGS += -Lluajit-rocks/build/luajit-2.0/ -L/opt/local/lib -Wl,--export-dynamic
 LIBS    += -lboost_program_options -lboost_serialization -lboost_system -lboost_filesystem -lpthread -lboost_thread -lkyotocabinet -lluajit-5.1 -ldl -lzmq -lX11 -lxdo
 endif
 
@@ -38,8 +38,9 @@ endif
 
 all: release
 
-release: LDFLAGS += -s
-release: CXXFLAGS += -g0 -O3 
+release: LDFLAGS += -Wl,--export-dynamic -s
+release: CXXFLAGS += -g0 -O3
+release: LIBS += -ldw 
 release: ${TARGET}
 
 reduce: CXXFLAGS = -DWEBSOCKETPP_STRICT_MASKING -DETLOG -std=c++0x -pedantic -Wall -g0 -Os -fvisibility=hidden -fvisibility-inlines-hidden
@@ -56,7 +57,7 @@ screeninvader: LIBS = -lboost_program_options -Wl,-Bstatic -lboost_serialization
 screeninvader: ${TARGET}
 
 screeninvader_debug: LDFLAGS += -Wl,--export-dynamic
-screeninvader_debug: CXXFLAGS += -D_JANOSH_DEBUG -g3 -O0 -rdynamic -D_JANOSH_DEBUG
+screeninvader_debug: CXXFLAGS += -D_JANOSH_DEBUG -g3 -O0 -rdynamic
 screeninvader_debug: LIBS = -lboost_program_options -Wl,-Bstatic -lboost_serialization -lboost_system -lboost_filesystem -lkyotocabinet  -llzma -llzo2 -Wl,-Bdynamic -lz -lpthread -lrt -ldl -lbfd -lluajit-5.1 -lzmq -lX11 -lxdo -ldw
 screeninvader_debug: ${TARGET}
 
