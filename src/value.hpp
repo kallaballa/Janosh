@@ -14,7 +14,7 @@ namespace janosh {
     };
 
     Value();
-    Value(Type t);
+    explicit Value(Type t);
     Value(const string& v, Type t);
     Value(const string v, bool dir);
     Value(const Value& other);

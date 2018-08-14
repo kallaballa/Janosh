@@ -50,7 +50,7 @@ namespace janosh {
 
   Janosh::Janosh() :
 		settings_(),
-        cm_(makeCommandMap(this)) {
+        cm_(makeCommandMap(this)), open_(false) {
  }
 
   Janosh::~Janosh() {

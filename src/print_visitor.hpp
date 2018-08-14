@@ -11,7 +11,7 @@ class PrintVisitor {
 public:
   std::ostream& out;
 
-  PrintVisitor(std::ostream& out) :
+  explicit PrintVisitor(std::ostream& out) :
       out(out) {
   }
 

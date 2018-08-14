@@ -19,14 +19,14 @@ namespace janosh {
     Value valueObj;
     bool doesExist;
 
-    void init(const Path path);
+    void init(const Path& path);
   public:
     static kc::TreeDB db;
 
     //exact copy referring to the same Cursor*
     Record(const Record& other);
-    Record clone();
     Record(const Path& path);
+    Record clone();
     Record();
 
 

@@ -5,7 +5,7 @@
 using namespace janosh;
 
 Value::Value() :
-    strObj(), type(Null), initalized(false) {
+    strObj(), type(Null), initalized(false), size(0) {
 }
 
 Value::Value(Type t) :

@@ -16,7 +16,7 @@ using std::endl;
 
 map<thread::id, Tracker*> Tracker::instances_;
 Tracker::Tracker() :
-    printDirective_(DONTPRINT), revision_(0) {
+    printDirective_(DONTPRINT), revision_(0), doPublish_(false) {
 }
 
 Tracker::~Tracker() {

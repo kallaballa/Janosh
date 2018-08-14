@@ -19,7 +19,7 @@ protected:
 public:
   typedef pair<int32_t, string> Result;
 
-  Command(Janosh* janosh) :
+  explicit Command(Janosh* janosh) :
       janosh(janosh) {
   }
 

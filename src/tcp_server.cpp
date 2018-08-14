@@ -84,7 +84,8 @@ bool TcpServer::run() {
 	try {
 	  TcpWorker* w = NULL;
 	  do {
-	    assert(janosh->beginTransaction());
+	    bool begin = janosh->beginTransaction();
+	    assert(begin);
 	    if(w)
 	      delete w;
 	    w = new TcpWorker(socket);

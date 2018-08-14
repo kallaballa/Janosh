@@ -48,9 +48,11 @@ bool Cache::isValid() {
 void Cache::setData(const char * data, const size_t& len) {
   lock();
   if(len > len_) {
-    data_ = (char*) realloc(data_, len);
-    if(data_ == NULL) {
+    char  * newdata = (char*) realloc(data_, len);
+    if(newdata == NULL) {
       LOG_FATAL_STR("Unable to allocate cache");
+    } else {
+      data_ = newdata;
     }
   }
   len_ = len;

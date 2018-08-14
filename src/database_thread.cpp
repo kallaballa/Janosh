@@ -39,10 +39,10 @@ void DatabaseThread::run() {
         setResult(true);
       } catch(janosh_exception& ex) {
         Record::db.end_transaction(false);
-        throw ex;
+        throw;
       } catch(std::exception& ex) {
         Record::db.end_transaction(false);
-        throw ex;
+        throw;
       }
 
       LOG_INFO_MSG(r.second, r.first);

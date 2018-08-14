@@ -41,12 +41,12 @@ void XDO::mouseMoveRelative(int xDiff, int yDiff) {
 
   if(loc.first < 0)
     loc.first = 0;
-  else if(loc.first > size.first)
+  else if(loc.first > (signed int)size.first)
     loc.first = size.first - 1;
 
   if(loc.second < 0)
     loc.second = 0;
-  else if(loc.second > size.second)
+  else if(loc.second > (signed int)size.second)
     loc.second = size.second - 1;
 
   xdo_move_mouse(xdo_, loc.first, loc.second,0);

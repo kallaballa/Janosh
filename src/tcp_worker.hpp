@@ -10,7 +10,7 @@ class TcpWorker : public JanoshThread {
   socket_ptr socket_;
 
 public:
-  TcpWorker(socket_ptr socket);
+  explicit TcpWorker(socket_ptr socket);
   void run();
 };
 

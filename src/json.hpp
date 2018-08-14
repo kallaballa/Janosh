@@ -11,7 +11,7 @@ using std::endl;
 class JsonPrintVisitor : public PrintVisitor {
     const string escape(const string& s);
   public:
-    JsonPrintVisitor(std::ostream& out);
+    explicit JsonPrintVisitor(std::ostream& out);
     virtual void beginArray(const Path& p, bool parentIsArray, bool first);
     virtual void endArray(const Path& p);
     virtual void beginObject(const Path& p, bool parentIsArray, bool first);

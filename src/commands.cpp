@@ -5,7 +5,7 @@ namespace janosh {
 
 class RemoveCommand: public Command {
 public:
-  RemoveCommand(Janosh* janosh) :
+  explicit RemoveCommand(Janosh* janosh) :
       Command(janosh) {
   }
 
@@ -31,7 +31,7 @@ public:
 };
 class HashCommand: public Command {
 public:
-  HashCommand(janosh::Janosh* janosh) :
+  explicit HashCommand(janosh::Janosh* janosh) :
       Command(janosh) {
   }
 
@@ -47,7 +47,7 @@ public:
 
 class LoadCommand: public Command {
 public:
-  LoadCommand(janosh::Janosh* janosh) :
+  explicit LoadCommand(janosh::Janosh* janosh) :
       Command(janosh) {
   }
 
@@ -65,7 +65,7 @@ public:
 
 class MakeArrayCommand: public Command {
 public:
-  MakeArrayCommand(janosh::Janosh* janosh) :
+  explicit MakeArrayCommand(janosh::Janosh* janosh) :
       Command(janosh) {
   }
 
@@ -82,7 +82,7 @@ public:
 
 class MakeObjectCommand: public Command {
 public:
-  MakeObjectCommand(janosh::Janosh* janosh) :
+  explicit MakeObjectCommand(janosh::Janosh* janosh) :
       Command(janosh) {
   }
 
@@ -99,7 +99,7 @@ public:
 
 class PublishCommand: public Command {
 public:
-  PublishCommand(janosh::Janosh* janosh) :
+  explicit PublishCommand(janosh::Janosh* janosh) :
       Command(janosh) {
   }
 
@@ -123,7 +123,7 @@ public:
 
 class TruncateCommand: public Command {
 public:
-  TruncateCommand(janosh::Janosh* janosh) :
+  explicit TruncateCommand(janosh::Janosh* janosh) :
       Command(janosh) {
   }
 
@@ -137,7 +137,7 @@ public:
 
 class AddCommand: public Command {
 public:
-  AddCommand(janosh::Janosh* janosh) :
+  explicit AddCommand(janosh::Janosh* janosh) :
       Command(janosh) {
   }
 
@@ -159,7 +159,7 @@ public:
 
 class ReplaceCommand: public Command {
 public:
-  ReplaceCommand(janosh::Janosh* janosh) :
+  explicit ReplaceCommand(janosh::Janosh* janosh) :
       Command(janosh) {
   }
 
@@ -180,7 +180,7 @@ public:
 
 class SetCommand: public Command {
 public:
-  SetCommand(janosh::Janosh* janosh) :
+  explicit SetCommand(janosh::Janosh* janosh) :
       Command(janosh) {
   }
 
@@ -204,7 +204,7 @@ public:
 
 class ShiftCommand: public Command {
 public:
-  ShiftCommand(janosh::Janosh* janosh) :
+  explicit ShiftCommand(janosh::Janosh* janosh) :
       Command(janosh) {
   }
 
@@ -230,7 +230,7 @@ public:
 
 class CopyCommand: public Command {
 public:
-  CopyCommand(janosh::Janosh* janosh) :
+  explicit CopyCommand(janosh::Janosh* janosh) :
       Command(janosh) {
   }
 
@@ -256,7 +256,7 @@ public:
 
 class MoveCommand: public Command {
 public:
-  MoveCommand(janosh::Janosh* janosh) :
+  explicit MoveCommand(janosh::Janosh* janosh) :
       Command(janosh) {
   }
 
@@ -282,7 +282,7 @@ public:
 
 class AppendCommand: public Command {
 public:
-  AppendCommand(janosh::Janosh* janosh) :
+  explicit AppendCommand(janosh::Janosh* janosh) :
       Command(janosh) {
   }
 
@@ -299,7 +299,7 @@ public:
 
 class DumpCommand: public Command {
 public:
-  DumpCommand(janosh::Janosh* janosh) :
+  explicit DumpCommand(janosh::Janosh* janosh) :
       Command(janosh) {
   }
 
@@ -315,7 +315,7 @@ public:
 
 class SizeCommand: public Command {
 public:
-  SizeCommand(janosh::Janosh* janosh) :
+  explicit SizeCommand(janosh::Janosh* janosh) :
       Command(janosh) {
   }
 
@@ -332,7 +332,7 @@ public:
 
 class GetCommand: public Command {
 public:
-  GetCommand(janosh::Janosh* janosh) :
+  explicit GetCommand(janosh::Janosh* janosh) :
       Command(janosh) {
   }
 

@@ -226,7 +226,7 @@ namespace plog
             {
             }
 
-            File(const nchar* fileName) : m_file(-1)
+            explicit File(const nchar* fileName) : m_file(-1)
             {
                 open(fileName);
             }
@@ -360,7 +360,7 @@ namespace plog
         class MutexLock : NonCopyable
         {
         public:
-            MutexLock(Mutex& mutex) : m_mutex(mutex)
+            explicit MutexLock(Mutex& mutex) : m_mutex(mutex)
             {
                 m_mutex.lock();
             }
