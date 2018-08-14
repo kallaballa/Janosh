@@ -119,21 +119,21 @@ using std::vector;
 
 LuaScript* LuaScript::instance_ = NULL;
 
-static inline std::string &ltrim(std::string &s) {
-        s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
-        return s;
-}
-
-// trim from end
-static inline std::string &rtrim(std::string &s) {
-        s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
-        return s;
-}
-
-// trim from both ends
-static inline std::string &trim(std::string &s) {
-        return ltrim(rtrim(s));
-}
+//static inline std::string &ltrim(std::string &s) {
+//        s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
+//        return s;
+//}
+//
+//// trim from end
+//static inline std::string &rtrim(std::string &s) {
+//        s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
+//        return s;
+//}
+//
+//// trim from both ends
+//static inline std::string &trim(std::string &s) {
+//        return ltrim(rtrim(s));
+//}
 
 static janosh::Request make_request(lua_State* L, bool trigger = false) {
   std::vector< string > args;
@@ -154,19 +154,19 @@ static janosh::Request make_request(lua_State* L, bool trigger = false) {
   return Request(janosh::Format::Json, command, args, trigger, false, get_parent_info());
 }
 
-static janosh::Request make_request(string command, lua_State* L, bool trigger = false) {
-  std::vector< string > args;
-
-  const int len = lua_objlen( L, -1 );
-  for ( int i = 1; i <= len; ++i ) {
-      lua_pushinteger( L, i );
-      lua_gettable( L, -2 );
-      args.push_back( lua_tostring( L, -1 ) );
-      lua_pop( L, 1 );
-  }
-
-  return Request(janosh::Format::Json, command, args, trigger, false, get_parent_info());
-}
+//static janosh::Request make_request(string command, lua_State* L, bool trigger = false) {
+//  std::vector< string > args;
+//
+//  const int len = lua_objlen( L, -1 );
+//  for ( int i = 1; i <= len; ++i ) {
+//      lua_pushinteger( L, i );
+//      lua_gettable( L, -2 );
+//      args.push_back( lua_tostring( L, -1 ) );
+//      lua_pop( L, 1 );
+//  }
+//
+//  return Request(janosh::Format::Json, command, args, trigger, false, get_parent_info());
+//}
 
 static int l_register_thread(lua_State* L) {
   string name = lua_tostring(L, -1);

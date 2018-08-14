@@ -19,7 +19,7 @@ ifeq ($(UNAME), Linux)
 #  CXXFLAGS += -mfloat-abi=hard -mfpu=neon
 #endif
 
-CXXFLAGS += -Isrc/ -DWEBSOCKETPP_STRICT_MASKING -std=c++0x -pedantic -Wall -I./ -rdynamic -I/opt/local/include -D_XOPEN_SOURCE 
+CXXFLAGS += -Isrc/ -DWEBSOCKETPP_STRICT_MASKING -std=c++0x -pedantic -Wall -I./ -I/opt/local/include -D_XOPEN_SOURCE 
 LDFLAGS += -Lluajit-rocks/build/luajit-2.0/ -L/opt/local/lib -Wl,--export-dynamic
 LIBS    += -lboost_program_options -lboost_serialization -lboost_system -lboost_filesystem -lpthread -lboost_thread -lkyotocabinet -lluajit-5.1 -ldl -lzmq -lX11 -lxdo
 endif
@@ -32,6 +32,12 @@ EXTRA_BUILDFLAGS = -pagezero_size 10000 -image_base 100000000
 CXX := clang++
 HEADERS := 
 GCH :=
+endif
+
+ifeq ($(CXX), clang++)
+CXXFLAGS+=-Wgnu-zero-variadic-macro-arguments -Wthread-safety
+else
+CXXFLAGS+=-rdynamic
 endif
 
 .PHONY: all release static clean distclean 

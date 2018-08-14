@@ -946,7 +946,13 @@ namespace janosh {
       this->set(tmp, src.value());
     }
 
-    for(int i=0; i < abs(destIndex - srcIndex); ++i) {
+
+    //Clang workaround for abs ambiguity
+    long signed int sz = (long signed int)destIndex - (long signed int)srcIndex;
+    if(sz < 0)
+      sz *= -1;
+
+    for(int i=0; i < sz; ++i) {
       replace(forwardRec, backRec);
       if(back) {
         backRec.previous();

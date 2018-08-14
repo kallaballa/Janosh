@@ -19,7 +19,7 @@ namespace janosh {
     Value valueObj;
     bool doesExist;
 
-    void init(const Path& path);
+    void init(Path path);
   public:
     static kc::TreeDB db;
 

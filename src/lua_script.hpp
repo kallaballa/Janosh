@@ -44,7 +44,6 @@ public:
     std::function<void()> closeCallback_;
     lua_State* L;
 private:
-    int level_ = 0;
     static LuaScript* instance_;
     std::mutex open_lock_;
     std::condition_variable open_lock_cond_;

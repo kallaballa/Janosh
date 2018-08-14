@@ -99,7 +99,15 @@ namespace janosh {
   #define LOG_ERR(x) LOG(plog::error) << x
   #define LOG_FATAL(x) LOG(plog::fatal) << x
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
+#endif
   #define JANOSH_TRACE(...) if(Logger::isTracing()) Logger::trace(string(__FUNCTION__), ##__VA_ARGS__);
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+
 }
 
 #endif /* LOGGER_H_ */

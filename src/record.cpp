@@ -6,7 +6,7 @@
 namespace janosh {
   typedef  boost::shared_ptr<kc::DB::Cursor> Base;
 
-  void Record::init(const Path path) {
+  void Record::init(Path path) {
     if(path.isWildcard()) {
       if(this->jump(path.asDirectory())) {
         this->doesExist = true;
