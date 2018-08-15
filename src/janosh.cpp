@@ -1227,8 +1227,8 @@ int main(int argc, char** argv) {
           client.connect("localhost", s.port);
         },[&](Request& req){
           std::stringstream ss;
-          client.run(req, ss);
-          return std::make_pair("0", ss.str());
+          int rc = client.run(req, ss);
+          return std::make_pair(rc, ss.str());
         },[&](){
           client.close();
         });

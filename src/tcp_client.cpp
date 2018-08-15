@@ -18,7 +18,11 @@ TcpClient::TcpClient() :
 }
 
 TcpClient::~TcpClient() {
-  this->close();
+  try {
+    this->close();
+  } catch(...) {
+    //ignore
+  }
 }
 
 void TcpClient::connect(string host, int port) {

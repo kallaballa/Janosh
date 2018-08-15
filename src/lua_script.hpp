@@ -17,7 +17,7 @@ namespace lua {
 class LuaScript {
 public:
   LuaScript(std::function<void()> openCallback,
-        std::function<std::pair<string,string>(janosh::Request&)> requestCallback,
+        std::function<std::pair<int,string>(janosh::Request&)> requestCallback,
         std::function<void()> closeCallback, lua_State* l = NULL);
     ~LuaScript();
 
@@ -27,10 +27,10 @@ public:
     void clean();
     void performOpen(bool lockRequest = true);
     void performClose(bool lockRequest = true);
-    string performRequest(janosh::Request req);
+    std::pair<int, string>  performRequest(janosh::Request req);
 
     static void init(std::function<void()> openCallback,
-        std::function<std::pair<string,string>(janosh::Request&)> requestCallback,
+        std::function<std::pair<int,string>(janosh::Request&)> requestCallback,
         std::function<void()> closeCallback) {
       instance_ = new LuaScript(openCallback,requestCallback,closeCallback);
     }
@@ -40,7 +40,7 @@ public:
       return instance_;
     }
     std::function<void()> openCallback_;
-    std::function<std::pair<string,string>(janosh::Request&)> requestCallback_;
+    std::function<std::pair<int,string>(janosh::Request&)> requestCallback_;
     std::function<void()> closeCallback_;
     lua_State* L;
 private:

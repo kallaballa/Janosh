@@ -246,12 +246,20 @@ static int l_wssend(lua_State* L) {
 }
 
 static int l_request(lua_State* L) {
-  lua_pushstring(L, (LuaScript::getInstance()->performRequest(make_request(L))).c_str());
+  auto result = LuaScript::getInstance()->performRequest(make_request(L));
+  lua_pushstring(L, result.second.c_str());
+
+  if(result.first != 0)
+    lua_error(L);
   return 1;
 }
 
 static int l_request_trigger(lua_State* L) {
-  lua_pushstring(L, (LuaScript::getInstance()->performRequest(make_request(L,true))).c_str());
+  auto result = LuaScript::getInstance()->performRequest(make_request(L, true));
+  lua_pushstring(L, result.second.c_str());
+
+  if(result.first != 0)
+    lua_error(L);
   return 1;
 }
 
@@ -436,7 +444,7 @@ static void install_janosh_functions(lua_State* L, bool first) {
 }
 
 LuaScript::LuaScript(std::function<void()> openCallback,
-    std::function<std::pair<string,string>(janosh::Request&)> requestCallback,
+    std::function<std::pair<int,string>(janosh::Request&)> requestCallback,
     std::function<void()> closeCallback, lua_State* l) : openCallback_(openCallback), requestCallback_(requestCallback), closeCallback_(closeCallback) {
   if(l == NULL) {
     L = luaL_newstate();
@@ -561,7 +569,7 @@ void LuaScript::performClose(bool lockRequest) {
 
 }
 
-string LuaScript::performRequest(janosh::Request req) {
+std::pair<int, string> LuaScript::performRequest(janosh::Request req) {
   std::unique_lock<std::mutex> lock(open_lock_);
 #ifdef __JANOSH_DEBUG_QUEUE__
   std::cerr << " ### req: " << std::this_thread::get_id() << std::endl;
@@ -573,13 +581,13 @@ string LuaScript::performRequest(janosh::Request req) {
 #ifdef __JANOSH_DEBUG_QUEUE__
     std::cerr << " ### reqend: " << std::this_thread::get_id() << std::endl;
 #endif
-    return result.second;
+    return result;
   } else {
     auto result = requestCallback_(req);
 #ifdef __JANOSH_DEBUG_QUEUE__
     std::cerr << " ### reqend: " << std::this_thread::get_id() << std::endl;
 #endif
-    return result.second;
+    return result;
   }
 }
 }

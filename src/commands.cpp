@@ -71,7 +71,7 @@ public:
 
   virtual Result operator()(const vector<string>& params, std::ostream& out) {
     if (params.size() != 1)
-      return {0, "Expected one path"};
+      return {-1, "Expected one path"};
 
     if (janosh->makeArray(Record(params.front())))
       return {1, "Successful"};
@@ -88,7 +88,7 @@ public:
 
   virtual Result operator()(const vector<string>& params, std::ostream& out) {
     if (params.size() != 1)
-      return {0, "Expected one path"};
+      return {-1, "Expected one path"};
 
     if (janosh->makeObject(Record(params.front())))
       return {1, "Successful"};
@@ -106,7 +106,7 @@ public:
   virtual Result operator()(const vector<string>& params, std::ostream& out) {
     size_t s = params.size();
     if (s > 3 || s < 1)
-      return {0, "Expected one, two or three parameters (key, operation, value)"};
+      return {-1, "Expected one, two or three parameters (key, operation, value)"};
 
     if(s == 3)
       janosh->publish(params[0], params[1], params[2]);
@@ -129,7 +129,7 @@ public:
 
   virtual Result operator()(const vector<string>& params, std::ostream& out) {
     if (!params.empty())
-      return {0, "Truncate doesn't take any arguments"};
+      return {-1, "Truncate doesn't take any arguments"};
 
     return {janosh->truncate(), "Successful"};
   }
@@ -243,7 +243,7 @@ public:
       src.fetch();
 
       if (!src.exists())
-        return {0, "Source path doesn't exist"};
+        return {-1, "Source path doesn't exist"};
 
       size_t n = janosh->copy(src, dest);
       if (n > 0)
@@ -269,7 +269,7 @@ public:
       src.fetch();
 
       if (!src.exists())
-        return {0, "Source path doesn't exist"};
+        return {-1, "Source path doesn't exist"};
 
       size_t n = janosh->move(src, dest);
       if (n > 0)

@@ -130,6 +130,7 @@ void TcpWorker::run() {
 
         JanoshThreadPtr dt(new DatabaseThread(req, out_stream));
         dt->runSynchron();
+
         bool result = dt->result();
 
         // report return code
