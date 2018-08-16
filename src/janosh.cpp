@@ -1230,7 +1230,11 @@ int main(int argc, char** argv) {
           int rc = client.run(req, ss);
           return std::make_pair(rc, ss.str());
         },[&](){
+          //try {
           client.close();
+//          } catch (std::exception& ex) {
+//            LOG_DEBUG_MSG("client.close() threw: ",ex.what());
+//          }
         });
 
         lua::LuaScript* script = lua::LuaScript::getInstance();

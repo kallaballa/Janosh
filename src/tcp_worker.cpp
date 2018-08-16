@@ -137,19 +137,18 @@ void TcpWorker::run() {
         writeResponseHeader(socket_, result ? 0 : 1);
 
         if (!result) {
-          shutdown(socket_);
+          //shutdown(socket_);
           setResult(false);
-          return;
         }
       } else {
         writeResponseHeader(socket_, 0);
       }
 
-      (*out_stream) << "__JANOSH_EOF\n";
+      (*out_stream) << "\n__JANOSH_EOF\n";
       out_stream->flush();
       JanoshThreadPtr flusher(new FlusherThread(socket_, out_buf, cacheable));
       flusher->runSynchron();
-//      shutdown(socket_);
+//     shutdown(socket_);
     } else {
       JanoshThreadPtr cacheWriter(new CacheThread(socket_));
       cacheWriter->runSynchron();
@@ -159,7 +158,12 @@ void TcpWorker::run() {
   } catch (std::exception& ex) {
     janosh::printException(ex);
     setResult(false);
-    shutdown(socket_);
+    socket_->close();
+  //  shutdown(socket_);
   }
+}
+
+bool TcpWorker::connected() {
+  return socket_->is_open();
 }
 } /* namespace janosh */

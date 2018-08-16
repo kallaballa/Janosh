@@ -12,6 +12,7 @@ class TcpWorker : public JanoshThread {
 public:
   explicit TcpWorker(socket_ptr socket);
   void run();
+  bool connected();
 };
 
 

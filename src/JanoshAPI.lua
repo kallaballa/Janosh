@@ -254,34 +254,58 @@ function JanoshClass.replace_all(self, argv)
 end
 
 function JanoshClass.append(self, key, value)
-  if type(value) == "table" then
+	if type(value) == "table" then
     table.insert(value, 1, key)
 		table.insert(value, 1, "append")
-    janosh_request(value);
+	   janosh_request(value);
 	else
 		janosh_request({"append",key,value})
 	end
 end
 
 function JanoshClass.dump(self)
-   return janosh_request({"dump"})
+    local err, value = pcall(janosh_request, {"dump"})
+    if not err then
+      return nil
+    end
+
+   return value
 end
 
 function JanoshClass.size(self, keys)
   if type(keys) == "table" then
     table.insert(keys, 1, "size")
-    return tonumber(janosh_request(keys))
+     local err, value = pcall(janosh_request, keys)
+    if not err then
+      return nil
+    end
+
+		return tonumber(janosh_request(value))
   else
-    return tonumber(janosh_request({"size", keys}))
+    local err, value = pcall(janosh_request, {"size", keys})
+    if not err then
+      return nil
+    end
+
+    return tonumber(value)
   end
 end
 
 function JanoshClass.get(self, keys)
   if type(keys) == "table" then
     table.insert(keys, 1, "get")
-    return JSON:decode(janosh_request(keys));
+		local err, value = pcall(janosh_request, keys)
+		if not err then
+			return nil
+		end
+    return JSON:decode(value)
   else
-    return JSON:decode(janosh_request({"get", keys}))
+    local err, value = pcall(janosh_request, {"get", keys})
+    if not err then
+      return nil
+    end
+
+    return JSON:decode(value)
   end
 end
   
@@ -408,28 +432,6 @@ function JanoshClass.append_t(self, key, value)
 	end
 end
 
-function JanoshClass.dump_t(self)
-   return janosh_request_t({"dump"})
-end
-
-function JanoshClass.size_t(self, keys)
-  if type(keys) == "table" then
-    table.insert(keys, 1, "size")
-    return janosh_request_t(keys);
-  else
-    return janosh_request_t({"size", keys})
-  end
-end
-
-function JanoshClass.get_t(self, keys)
-  if type(keys) == "table" then
-    table.insert(keys, 1, "get")
-    return JSON:decode(janosh_request_t(keys));
-  else
-    return JSON:decode(janosh_request_t({"get", keys}))
-  end
-end
-  
 function JanoshClass.copy_t(self, from, to)
   janosh_request_t({"copy",from,to})
 end
@@ -536,6 +538,28 @@ end
 
 function JanoshClass.keyType(self, keySym)
   janosh_key_type(keySym)
+end
+
+function JanoshClass.bind(self, f, ...)
+   return function() return f1(a) end
+end
+
+function JanoshClass.test(self, ...)
+  local arg={...}
+  mfunc = table.remove(arg,1);
+--  JanoshClass.tprint(self,arg)
+	if not pcall(mfunc, Janosh, unpack(arg)) then
+    error("Test failed:" .. debug.traceback());
+  end
+
+end
+
+function JanoshClass.ntest(self, ...)
+  local arg={...}
+  mfunc = table.remove(arg,1);
+	if pcall(mfunc, Janosh, unpack(arg)) then
+		error("Test failed:" .. debug.traceback());
+	end
 end
 
 function setfield (f, v)

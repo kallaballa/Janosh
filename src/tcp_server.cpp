@@ -92,7 +92,7 @@ bool TcpServer::run() {
 
 	    w->runSynchron();
       janosh->endTransaction(true);
-  } while(w->result());
+  } while(w->connected());
 
 	  if(w)
       delete w;
