@@ -974,7 +974,6 @@ namespace janosh {
 
   void Janosh::setContainerSize(Record container, const size_t s) {
     JANOSH_TRACE({container}, s);
-    std::cerr << "size: " << s << std::endl;
     string containerValue;
     string strContainer;
     const Value::Type& containerType = container.getType();
@@ -1230,11 +1229,11 @@ int main(int argc, char** argv) {
           int rc = client.run(req, ss);
           return std::make_pair(rc, ss.str());
         },[&](){
-          //try {
+          try {
           client.close();
-//          } catch (std::exception& ex) {
-//            LOG_DEBUG_MSG("client.close() threw: ",ex.what());
-//          }
+          } catch (std::exception& ex) {
+            LOG_DEBUG_MSG("client.close() threw: ",ex.what());
+          }
         });
 
         lua::LuaScript* script = lua::LuaScript::getInstance();
