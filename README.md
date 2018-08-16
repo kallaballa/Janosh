@@ -39,4 +39,9 @@ Copy janosh binary and default configuration:
   cp -r .janosh ~/
 </pre>
 
+##Note
+
+Setting /proc/sys/net/ipv4/tcp_tw_recycle and /proc/sys/net/ipv4/tcp_tw_reuse to 1 is recommended.
+
+
 Please have a look at the [documentation](https://github.com/kallaballa/Janosh/wiki/Home)!
