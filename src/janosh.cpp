@@ -680,7 +680,8 @@ namespace janosh {
         if(child.parent().path() != parent.path()) {
           throw db_exception() << record_info({"corrupted array detected", parent});
         }
-        if(child.getIndex() > i) {
+        size_t idx = child.getIndex();
+        if(idx > i) {
           Record indexPos;
 
           if(child.isDirectory()) {
@@ -694,7 +695,10 @@ namespace janosh {
             child.remove();
           }
         } else {
-          child.next();
+          try {
+            child.next();
+          } catch (std::exception& e) {
+          }
         }
       }
       setContainerSize(parent, left);
