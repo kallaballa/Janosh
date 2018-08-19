@@ -161,48 +161,47 @@ function test_shift()
 		Janosh:publish("count");
 	end)
 end
---[===[
 
-function test_shift_dir() {
- Janosh:test(Janosh.mkarr /array/.                 || return 1
- Janosh:test(Janosh.mkobj /array/#0/.              || return 1
- Janosh:test(Janosh.set /array/#0/label 0          || return 1
- Janosh:test(Janosh.set /array/#0/balast 0          || return 1
+function test_shift_dir()
+		Janosh:truncate() 
+		Janosh:test(Janosh.mkarr,"/array/.")
+		Janosh:test(Janosh.mkobj,"/array/#0/.")
+		Janosh:test(Janosh.set,"/array/#0/label","0")
+		Janosh:test(Janosh.set,"/array/#0/balast","0")
 
- Janosh:test(Janosh.mkobj /array/#1/.              || return 1
- Janosh:test(Janosh.set /array/#1/label 1          || return 1
- Janosh:test(Janosh.set /array/#1/balast 1          || return 1
+		Janosh:test(Janosh.mkobj,"/array/#1/.")
+ 		Janosh:test(Janosh.set,"/array/#1/label","1")
+		Janosh:test(Janosh.set,"/array/#1/balast","1")
 
- Janosh:test(Janosh.mkobj /array/#2/.              || return 1
- Janosh:test(Janosh.set /array/#2/label 2          || return 1
- Janosh:test(Janosh.set /array/#2/balast 2          || return 1
+		Janosh:test(Janosh.mkobj,"/array/#2/.")
+		Janosh:test(Janosh.set,"/array/#2/label","2")
+		Janosh:test(Janosh.set,"/array/#2/balast","2")
 
- Janosh:test(Janosh.mkobj /array/#3/.              || return 1
- Janosh:test(Janosh.set /array/#3/label 3          || return 1
- Janosh:test(Janosh.set /array/#3/balast 3          || return 
+		Janosh:test(Janosh.mkobj,"/array/#3/.")
+		Janosh:test(Janosh.set,"/array/#3/label","3")
+		Janosh:test(Janosh.set,"/array/#3/balast","3")
 
- Janosh:test(Janosh.shift /array/#2/. /array/#0/.  || return 1
-  [ `test(Janosh.-r get /array/#0/label` -eq 2  ] || return 1
-  [ `test(Janosh.-r get /array/#1/label` -eq 0  ] || return 1
-  [ `test(Janosh.-r get /array/#2/label` -eq 1  ] || return 1
+		Janosh:test(Janosh.shift,"/array/#2/.","/array/#0/.")
+--  [ `test(Janosh.-r get /array/#0/label` -eq 2  ] || return 1
+--  [ `test(Janosh.-r get /array/#1/label` -eq 0  ] || return 1
+--  [ `test(Janosh.-r get /array/#2/label` -eq 1  ] || return 1
 
- Janosh:test(Janosh.shift /array/#1/. /array/#0/.  || return 1
-  [ `test(Janosh.-r get /array/#0/label` -eq 0  ] || return 1
-  [ `test(Janosh.-r get /array/#1/label` -eq 2  ] || return 1
-  [ `test(Janosh.-r get /array/#2/label` -eq 1  ] || return 1
+		Janosh:test(Janosh.shift,"/array/#1/.","/array/#0/.")
+--  [ `test(Janosh.-r get /array/#0/label` -eq 0  ] || return 1
+--  [ `test(Janosh.-r get /array/#1/label` -eq 2  ] || return 1
+--  [ `test(Janosh.-r get /array/#2/label` -eq 1  ] || return 1
 
- Janosh:test(Janosh.shift /array/#1/. /array/#2/.  || return 1
-  [ `test(Janosh.-r get /array/#0/label` -eq 0  ] || return 1
-  [ `test(Janosh.-r get /array/#1/label` -eq 1  ] || return 1
-  [ `test(Janosh.-r get /array/#2/label` -eq 2  ] || return 1
+		Janosh:test(Janosh.shift,"/array/#1/.","/array/#2/.")
+--  [ `test(Janosh.-r get /array/#0/label` -eq 0  ] || return 1
+--  [ `test(Janosh.-r get /array/#1/label` -eq 1  ] || return 1
+--  [ `test(Janosh.-r get /array/#2/label` -eq 2  ] || return 1
 
- Janosh:test(Janosh.shift /array/#0/. /array/#3/.  || return 1
-  [ `test(Janosh.-r get /array/#0/label` -eq 1  ] || return 1
-  [ `test(Janosh.-r get /array/#1/label` -eq 2  ] || return 1
-  [ `test(Janosh.-r get /array/#2/label` -eq 3  ] || return 1
-  [ `test(Janosh.-r get /array/#3/label` -eq 0  ] || return 1
-}
---]===]
+		Janosh:test(Janosh.shift,"/array/#0/.","/array/#3/.")
+--  [ `test(Janosh.-r get /array/#0/label` -eq 1  ] || return 1
+--  [ `test(Janosh.-r get /array/#1/label` -eq 2  ] || return 1
+--  [ `test(Janosh.-r get /array/#2/label` -eq 3  ] || return 1
+--  [ `test(Janosh.-r get /array/#3/label` -eq 0  ] || return 1
+end
 
 test_mkarray()
 test_mkobject()
@@ -213,19 +212,25 @@ test_remove()
 test_replace()
 test_copy()
 test_shift()
+test_shift_dir()
 
 print("SUCCESS")
 
+if false then
 local FIRST=Janosh:epoch()
 local CNT=0
 
 function count(key)
 	Janosh:transaction(function()
 		now=Janosh:epoch()
-		diff=now - FIRST
+		diff=now - FIRST + 1
 
 		CNT=CNT+1
-		print(CNT/diff)	
+		print(CNT/diff)
+		if CNT % 100 == 0	then
+			CNT=CNT/diff
+			FIRST=Janosh:epoch()
+		end
 	end)
 end 
 
@@ -259,4 +264,4 @@ publishInThread("test_copy",test_copy)
 while true do
 	Janosh:publish("test_shift");
 end
-
+end
