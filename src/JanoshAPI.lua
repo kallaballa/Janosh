@@ -19,7 +19,7 @@ function JanoshClass.basename(self, path)
   return name
 end
 
-function JanoshClass.epoch(self,key,value)
+function JanoshClass.epoch(self)
   return posix.time()
 end
 
