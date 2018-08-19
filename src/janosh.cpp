@@ -1115,6 +1115,8 @@ int main(int argc, char** argv) {
     string command;
     string luafile;
     vector<string> arguments;
+    vector<string> defines;
+
     int trackingLevel = 0;
 
     po::options_description genericDesc("Options");
@@ -1122,6 +1124,7 @@ int main(int argc, char** argv) {
       ("help,h", "Produce help message")
       ("daemon,d", "Run in daemon mode")
       ("luafile,f", po::value<string>(&luafile), "Run the lua script file")
+      ("define,D", po::value<vector<string>>(&defines), "Define a macro for use in lua scripts. The format of the argument is key=value")
       ("json,j", "Produce json output")
       ("raw,r", "Produce raw output")
       ("bash,b", "Produce bash output")
@@ -1182,7 +1185,7 @@ int main(int argc, char** argv) {
     else if(vm.count("raw"))
       f = janosh::Raw;
 
-    if(vm.count("daemon") && (vm.count("bash") || vm.count("raw") || vm.count("json") || execTriggers)) {
+    if(vm.count("daemon") && (vm.count("define") || vm.count("bash") || vm.count("raw") || vm.count("json") || execTriggers)) {
       LOG_FATAL_STR("Incompatible option(s) conflicting with daemon mode detected");
     }
 
@@ -1241,6 +1244,23 @@ int main(int argc, char** argv) {
         });
 
         lua::LuaScript* script = lua::LuaScript::getInstance();
+        std::vector<std::pair<string,string>> macros;
+
+        for(auto& s : defines) {
+          char_separator<char> ssep("=", 0, boost::keep_empty_tokens);
+          tokenizer<char_separator<char> > tok(s, ssep);
+          size_t cnt = 0;
+          for(const auto& t : tok) {
+            ++cnt;
+          }
+
+          if(cnt != 2) {
+            LOG_FATAL_MSG("Malformed define", s);
+          }
+
+          macros.push_back(std::make_pair(*tok.begin(), *(++tok.begin())));
+        }
+        script->defineMacros(macros);
         script->load(luafile);
         script->run();
       }

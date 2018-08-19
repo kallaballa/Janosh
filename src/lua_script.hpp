@@ -21,6 +21,8 @@ public:
         std::function<void()> closeCallback, lua_State* l = NULL);
     ~LuaScript();
 
+    void defineMacros(const std::vector<std::pair<string,string>>& macros);
+    void makeGlobalVariable(const string& key, const string& value);
     void load(const string& path);
     void loadString(const string& luaCode);
     void run();
@@ -32,8 +34,10 @@ public:
     static void init(std::function<void()> openCallback,
         std::function<std::pair<int,string>(janosh::Request&)> requestCallback,
         std::function<void()> closeCallback) {
+      assert(instance_ == NULL);
       instance_ = new LuaScript(openCallback,requestCallback,closeCallback);
     }
+
 
     static LuaScript* getInstance() {
       assert(instance_ != NULL);

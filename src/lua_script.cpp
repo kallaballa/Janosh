@@ -460,6 +460,17 @@ LuaScript::~LuaScript() {
 	if(L) lua_close(L);
 }
 
+void LuaScript::defineMacros(const std::vector<std::pair<string,string>>& macros) {
+  for(auto& p : macros) {
+    this->makeGlobalVariable(p.first, p.second);
+  }
+}
+
+void LuaScript::makeGlobalVariable(const string& key, const string& value) {
+  lua_pushstring(L, value.c_str());
+  lua_setglobal(L, key.c_str());
+}
+
 void LuaScript::load(const std::string& path) {
   if (luaL_loadfile(L, path.c_str())) {
     LOG_ERR_MSG("Failed to load script", lua_tostring(L, -1));
