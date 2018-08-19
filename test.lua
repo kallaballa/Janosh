@@ -81,61 +81,82 @@ function test_add()
 end
 
 function test_remove()
-	Janosh:truncate()
-	Janosh:test(Janosh.mkarr,"/array/.")
-	Janosh:test(Janosh.add,"/array/#0","1")
-	Janosh:ntest(Janosh.add,"/array/#0","0")
-	Janosh:test(Janosh.append,"/array/.",{"2","3","4"})
-	Janosh:test(Janosh.remove,"/array/#1")
-  if Janosh:get("/array/#1")[1] ~= "3" then
-    error()
-  end
+  Janosh:transaction(function()
+		Janosh:truncate()
+		Janosh:test(Janosh.mkarr,"/array/.")
+		Janosh:test(Janosh.add,"/array/#0","1")
+		Janosh:ntest(Janosh.add,"/array/#0","0")
+		Janosh:test(Janosh.append,"/array/.",{"2","3","4"})
+		Janosh:test(Janosh.remove,"/array/#1")
+		if Janosh:get("/array/#1")[1] ~= "3" then
+			error()
+		end
 
-	Janosh:ntest(Janosh.add,"/array/#5","0")
-	Janosh:test(Janosh.remove,"/array/*")
-	Janosh:ntest(Janosh.mkarr,"/array/#1/.")
-  if Janosh:size("/array/.") ~= 0 then
-    error()
-  end
+		Janosh:ntest(Janosh.add,"/array/#5","0")
+		Janosh:test(Janosh.remove,"/array/*")
+		Janosh:ntest(Janosh.mkarr,"/array/#1/.")
+		if Janosh:size("/array/.") ~= 0 then
+			error()
+		end
 
-	Janosh:test(Janosh.mkobj,"/object/.")
-	Janosh:test(Janosh.add,"/object/0","1")
-	Janosh:ntest(Janosh.add,"/object/0","0")
-	Janosh:test(Janosh.add,"/object/5","0")
-	Janosh:test(Janosh.mkarr,"/object/subarr/.")
-	Janosh:test(Janosh.remove,"/object/.")
-	Janosh:test(Janosh.size,"/object/.")
+		Janosh:test(Janosh.mkobj,"/object/.")
+		Janosh:test(Janosh.add,"/object/0","1")
+		Janosh:ntest(Janosh.add,"/object/0","0")
+		Janosh:test(Janosh.add,"/object/5","0")
+		Janosh:test(Janosh.mkarr,"/object/subarr/.")
+		Janosh:test(Janosh.remove,"/object/.")
+		Janosh:test(Janosh.size,"/object/.")
+	end)
 end
+
+function test_replace()
+  Janosh:transaction(function()
+		Janosh:truncate()
+		Janosh:test(Janosh.mkarr,"/array/.")
+		Janosh:test(Janosh.append,"/array/.","0")
+		Janosh:test(Janosh.replace,"/array/#0","2")
+		Janosh:ntest(Janosh.replace,"/array/#6","0")
+    if Janosh:size("/array/.") ~= 1 then
+      error()
+    end
+ 
+		Janosh:test(Janosh.mkobj,"/object/.")
+		Janosh:test(Janosh.set,"/object/bla","1")
+		Janosh:test(Janosh.replace,"/object/bla","2")
+		Janosh:ntest(Janosh.replace,"/object/blu","0")
+    if Janosh:size("/object/.") ~= 1 then
+      error()
+    end
+	end)
+end
+
+function test_copy()
+  Janosh:transaction(function()
+		Janosh:truncate()
+		Janosh:test(Janosh.mkobj,"/object/.")
+		Janosh:test(Janosh.mkobj,"/target/.")
+		Janosh:test(Janosh.mkarr,"/object/array/.")
+		Janosh:test(Janosh.append,"/object/array/.",{"0","1","2","3"})
+		Janosh:test(Janosh.copy,"/object/array/.","/target/array/.")
+		Janosh:ntest(Janosh.copy,"/object/array/.","/target/.")
+		Janosh:ntest(Janosh.copy,"/object/.","/object/array/.")
+		Janosh:ntest(Janosh.copy,"/target/.","/object/array/.")
+   if Janosh:size("/target/array/.") ~= 4 then
+      error()
+    end
+    if Janosh:size("/object/array/.") ~= 4 then
+      error()
+    end
+		if Janosh:get("/target/array/#0").array[1] ~= "0" then
+      error()
+    end
+    if Janosh:get("/object/array/#0").array[1] ~= "0" then
+      error()
+    end
+	end)
+end
+
 --[===[
-
-function test_replace() {
- Janosh:test(Janosh.mkarr /array/.             || return 1
- Janosh:test(Janosh.append /array/. 0 		      || return 1
- Janosh:test(Janosh.replace /array/#0 2 		    || return 1
- Janosh:test(Janosh.replace /array/#6 0		      && return 1
-  [ `test(Janosh.size /array/.` -eq 1 ] 	|| return 1
- Janosh:test(Janosh.mkobj /object/. 	 	        || return 1
- Janosh:test(Janosh.set /object/bla 1		      || return 1
- Janosh:test(Janosh.replace /object/bla 2		  || return 1
- Janosh:test(Janosh.replace /object/blu 0		  && return 1
-  [ `test(Janosh.size /object/.` -eq 1 ] || return 1
-}
-
-
-function test_copy() {
- Janosh:test(Janosh.mkobj /object/.                      || return 1
- Janosh:test(Janosh.mkobj /target/.                      || return 1
- Janosh:test(Janosh.mkarr /object/array/.                || return 1
- Janosh:test(Janosh.append /object/array/. 0 1 2 3       || return 1
- Janosh:test(Janosh.copy /object/array/. /target/array/. || return 1
- Janosh:test(Janosh.copy /object/array/. /target/.       && return 1  
- Janosh:test(Janosh.copy /object/. /object/array/.       && return 1
- Janosh:test(Janosh.copy /target/. /object/array/.       && return 1
-  [ `test(Janosh.size /target/array/.` -eq 4 ] 	  || return 1
-  [ `test(Janosh.size /object/array/.` -eq 4 ]     || return 1
-  [ `test(Janosh.-r get /target/array/#0` -eq 0 ]  || return 1
-  [ `test(Janosh.-r get /object/array/#0` -eq 0 ]  || return 1
-}
 
 function test_shift() {
  Janosh:test(Janosh.mkarr /array/.                 || return 1
@@ -204,6 +225,9 @@ test_append()
 test_set()
 test_add()
 test_remove()
+test_replace()
+test_copy()
+
 print("SUCCESS")
 --[===[
 
