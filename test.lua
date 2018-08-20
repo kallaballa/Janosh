@@ -203,65 +203,64 @@ function test_shift_dir()
 --  [ `test(Janosh.-r get /array/#3/label` -eq 0  ] || return 1
 end
 
-test_mkarray()
-test_mkobject()
-test_append()
-test_set()
-test_add()
-test_remove()
-test_replace()
-test_copy()
-test_shift()
-test_shift_dir()
+if not _MT_ then
+	test_mkarray()
+	test_mkobject()
+	test_append()
+	test_set()
+	test_add()
+	test_remove()
+	test_replace()
+	test_copy()
+	test_shift()
+	test_shift_dir()
 
-print("SUCCESS")
+	print("SUCCESS")
+else
+	local FIRST=Janosh:epoch()
+	local CNT=0
 
-if false then
-local FIRST=Janosh:epoch()
-local CNT=0
+	function count(key)
+		Janosh:transaction(function()
+			now=Janosh:epoch()
+			diff=now - FIRST + 1
 
-function count(key)
-	Janosh:transaction(function()
-		now=Janosh:epoch()
-		diff=now - FIRST + 1
+			CNT=CNT+1
+			print(CNT/diff)
+			if CNT % 100 == 0	then
+				CNT=CNT/diff
+				FIRST=Janosh:epoch()
+			end
+		end)
+	end 
 
-		CNT=CNT+1
-		print(CNT/diff)
-		if CNT % 100 == 0	then
-			CNT=CNT/diff
-			FIRST=Janosh:epoch()
-		end
-	end)
-end 
+	function publishInThread(key) 
+		Janosh:thread(function()
+	  	while true do
+	    	Janosh:publish(key)
+		  end
+		end)()
+	end
+	Janosh:subscribe("test_mkarray", test_mkarray)
+	Janosh:subscribe("test_mkobject", test_mkobject)
+	Janosh:subscribe("test_append", test_append)
+	Janosh:subscribe("test_set", test_set)
+	Janosh:subscribe("test_add", test_add)
+	Janosh:subscribe("test_remove",test_remove)
+	Janosh:subscribe("test_replace",test_replace)
+	Janosh:subscribe("test_copy",test_copy)
+	Janosh:subscribe("test_shift",test_shift)
+	Janosh:subscribe("count",count)
+	publishInThread("test_mkarray", test_mkarray)
+	publishInThread("test_mkobject", test_mkobject)
+	publishInThread("test_append", test_append)
+	publishInThread("test_set", test_set)
+	publishInThread("test_add",test_add)
+	publishInThread("test_remove",test_remove)
+	publishInThread("test_replace",test_replace)
+	publishInThread("test_copy",test_copy)
 
-function publishInThread(key) 
-	Janosh:thread(function()
-  	while true do
-    	Janosh:publish(key)
-	  end
-	end)()
-end
-Janosh:subscribe("test_mkarray", test_mkarray)
-Janosh:subscribe("test_mkobject", test_mkobject)
-Janosh:subscribe("test_append", test_append)
-Janosh:subscribe("test_set", test_set)
-Janosh:subscribe("test_add", test_add)
-Janosh:subscribe("test_remove",test_remove)
-Janosh:subscribe("test_replace",test_replace)
-Janosh:subscribe("test_copy",test_copy)
-Janosh:subscribe("test_shift",test_shift)
-Janosh:subscribe("count",count)
-publishInThread("test_mkarray", test_mkarray)
-publishInThread("test_mkobject", test_mkobject)
-publishInThread("test_append", test_append)
-publishInThread("test_set", test_set)
-publishInThread("test_add",test_add)
-publishInThread("test_remove",test_remove)
-publishInThread("test_replace",test_replace)
-publishInThread("test_copy",test_copy)
-
-
-while true do
-	Janosh:publish("test_shift");
-end
+	while true do
+		Janosh:publish("test_shift");
+	end
 end
