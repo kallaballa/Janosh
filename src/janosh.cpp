@@ -1254,11 +1254,13 @@ int main(int argc, char** argv) {
             ++cnt;
           }
 
-          if(cnt != 2) {
+          if(cnt == 1) {
+            macros.push_back(std::make_pair(*tok.begin(), "1"));
+          } else if (cnt == 2) {
+            macros.push_back(std::make_pair(*tok.begin(), *(++tok.begin())));
+          } else {
             LOG_FATAL_MSG("Malformed define", s);
           }
-
-          macros.push_back(std::make_pair(*tok.begin(), *(++tok.begin())));
         }
         script->defineMacros(macros);
         script->load(luafile);
