@@ -291,6 +291,28 @@ function JanoshClass.size(self, keys)
   end
 end
 
+function countNonTable(tbl)
+	local cnt = 0
+	for k, v in pairs(tbl) do
+		if type(v) ~= "table" then
+			cnt = cnt + 1
+		else
+			cnt = cnt + countNonTable(v)
+		end
+	end
+	return cnt
+end
+
+function getFirstLeaf(tbl)
+  for k, v in pairs(tbl) do
+    if type(v) ~= "table" then
+			return v;
+    else
+			return getFirstLeaf(v)
+    end
+  end
+end
+
 function JanoshClass.get(self, keys)
   if type(keys) == "table" then
     table.insert(keys, 1, "get")
@@ -298,14 +320,24 @@ function JanoshClass.get(self, keys)
 		if not err then
 			return nil
 		end
-    return JSON:decode(value)
-  else
+    local table = JSON:decode(value)
+		if countNonTable(table) == 1 then
+			return getFirstLeaf(table)
+		else
+			return table;
+		end
+	else
     local err, value = pcall(janosh_request, {"get", keys})
     if not err then
       return nil
     end
 
-    return JSON:decode(value)
+    local table = JSON:decode(value)
+		if countNonTable(table) == 1 then
+      return getFirstLeaf(table)
+    else
+      return table;
+    end
   end
 end
   
@@ -578,6 +610,16 @@ function JanoshClass.shorthand(self)
 for key,value in pairs(getmetatable(self)) do
   setfield("J" .. key, function(...) return value(self,...) end)
 end
+end
+
+function JanoshClass.forever()
+	while true do
+  	Janosh:sleep(100000)
+	end
+end
+
+function JanoshClass.error()
+	error(debug.traceback())
 end
 
 return JanoshClass:new()
