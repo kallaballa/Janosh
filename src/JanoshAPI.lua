@@ -303,6 +303,10 @@ function countNonTable(tbl)
 	return cnt
 end
 
+function ends(String,End)
+   return End=='' or string.sub(String,-string.len(End))==End
+end
+
 function getFirstLeaf(tbl)
   for k, v in pairs(tbl) do
     if type(v) ~= "table" then
@@ -321,23 +325,39 @@ function JanoshClass.get(self, keys)
 			return nil
 		end
     local table = JSON:decode(value)
-		if countNonTable(table) == 1 then
-			return getFirstLeaf(table)
+		local hasDir = false;
+		for k, v in pairs(keys) do
+			hasDir = ends(k,"/.")
+			if hasDir then
+				break;
+			end
+		end
+
+		if not hasDir then
+			if countNonTable(table) == 1 then
+				return getFirstLeaf(table)
+			else
+				return table;
+			end
 		else
 			return table;
-		end
+		end	
 	else
     local err, value = pcall(janosh_request, {"get", keys})
     if not err then
       return nil
     end
-
     local table = JSON:decode(value)
-		if countNonTable(table) == 1 then
-      return getFirstLeaf(table)
-    else
-      return table;
-    end
+
+		if ends(keys, "/.") then
+			return table
+		else
+			if countNonTable(table) == 1 then
+      	return getFirstLeaf(table)
+    	else
+  	    return table;
+	    end
+		end
   end
 end
   

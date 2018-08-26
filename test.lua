@@ -182,25 +182,25 @@ function test_shift_dir()
 		Janosh:test(Janosh.set,"/array/#3/balast","3")
 
 		Janosh:test(Janosh.shift,"/array/#2/.","/array/#0/.")
---  [ `test(Janosh.-r get /array/#0/label` -eq 2  ] || return 1
---  [ `test(Janosh.-r get /array/#1/label` -eq 0  ] || return 1
---  [ `test(Janosh.-r get /array/#2/label` -eq 1  ] || return 1
+    if Janosh:get("/array/#0/label") ~= "2" then Janosh:error() end
+    if Janosh:get("/array/#1/label") ~= "0" then Janosh:error() end
+    if Janosh:get("/array/#2/label") ~= "1" then Janosh:error() end
 
 		Janosh:test(Janosh.shift,"/array/#1/.","/array/#0/.")
---  [ `test(Janosh.-r get /array/#0/label` -eq 0  ] || return 1
---  [ `test(Janosh.-r get /array/#1/label` -eq 2  ] || return 1
---  [ `test(Janosh.-r get /array/#2/label` -eq 1  ] || return 1
+    if Janosh:get("/array/#0/label") ~= "0" then Janosh:error() end
+    if Janosh:get("/array/#1/label") ~= "2" then Janosh:error() end
+    if Janosh:get("/array/#2/label") ~= "1" then Janosh:error() end
 
 		Janosh:test(Janosh.shift,"/array/#1/.","/array/#2/.")
---  [ `test(Janosh.-r get /array/#0/label` -eq 0  ] || return 1
---  [ `test(Janosh.-r get /array/#1/label` -eq 1  ] || return 1
---  [ `test(Janosh.-r get /array/#2/label` -eq 2  ] || return 1
+    if Janosh:get("/array/#0/label") ~= "0" then Janosh:error() end
+    if Janosh:get("/array/#1/label") ~= "1" then Janosh:error() end
+    if Janosh:get("/array/#2/label") ~= "2" then Janosh:error() end
 
 		Janosh:test(Janosh.shift,"/array/#0/.","/array/#3/.")
---  [ `test(Janosh.-r get /array/#0/label` -eq 1  ] || return 1
---  [ `test(Janosh.-r get /array/#1/label` -eq 2  ] || return 1
---  [ `test(Janosh.-r get /array/#2/label` -eq 3  ] || return 1
---  [ `test(Janosh.-r get /array/#3/label` -eq 0  ] || return 1
+    if Janosh:get("/array/#0/label") ~= "1" then Janosh:error() end
+    if Janosh:get("/array/#1/label") ~= "2" then Janosh:error() end
+    if Janosh:get("/array/#2/label") ~= "3" then Janosh:error() end
+    if Janosh:get("/array/#3/label") ~= "0" then Janosh:error() end
 end
 
 if not _MT_ then
