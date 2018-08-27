@@ -5,6 +5,7 @@
 #include "websocketpp/server.hpp"
 #include <iostream>
 #include <set>
+#include <deque>
 
 namespace janosh {
 namespace lua {
@@ -79,7 +80,7 @@ private:
 
     mutex m_receive_lock;
     condition_variable m_receive_cond;
-    lua_message m_receive;
+    std::deque<lua_message> m_receive;
 };
 
 }
