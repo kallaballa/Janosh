@@ -416,9 +416,15 @@ function JanoshClass.close(self)
   janosh_close()
 end
 
-function JanoshClass.transaction(self, fn) 
-  self:open()
+function count(base, pattern)
+	return select(2, string.gsub(base, pattern, ""))
+end
 
+function JanoshClass.transaction(self, fn) 
+	if count(debug.traceback(), "%[string \"JanoshAPI\"%]: in function 'transaction'") > 1 then
+		error("Nested transaction detected: " .. debug.traceback());
+	end
+  self:open()
   status, msg = pcall(fn)
   if not status then
     print("Transaction failed: " .. msg)

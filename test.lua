@@ -1,5 +1,14 @@
 #!/usr/local/bin/janosh -f
 
+function test_nested_transaction()
+  Janosh:transaction(function()
+			local err, value = pcall(Janosh.transaction, function() print("hi") end)
+			if err then
+				error("Nested exception not caught")
+			end
+	end)
+end
+
 function test_mkarray()
 	Janosh:transaction(function() 
 		Janosh:truncate()
@@ -204,6 +213,7 @@ function test_shift_dir()
 end
 
 if not _MT_ then
+	test_nested_transaction()
 	test_mkarray()
 	test_mkobject()
 	test_append()
