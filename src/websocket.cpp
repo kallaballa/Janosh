@@ -93,7 +93,7 @@ void WebsocketServer::on_message(connection_hdl hdl, server::message_ptr msg) {
   unique_lock<mutex> lock(m_receive_lock);
   LOG_DEBUG_STR("Websocket: On message lock");
   if(m_luahandles_rev.find(hdl) != m_luahandles_rev.end())
-    m_receive = std::make_pair(m_luahandles_rev[hdl], msg->get_payload());
+    m_receive.push_back(std::make_pair(m_luahandles_rev[hdl], msg->get_payload()));
   lock.unlock();
   m_receive_cond.notify_one();
   LOG_DEBUG_STR("Websocket: On message end");
@@ -167,9 +167,17 @@ std::pair<size_t, std::string> WebsocketServer::receive() {
   LOG_DEBUG_STR("Websocket: Receive");
   unique_lock<mutex> lock(m_receive_lock);
   LOG_DEBUG_STR("Websocket: Receive lock");
-  m_receive_cond.wait(lock);
+  lua_message msg;
+  if(!m_receive.empty()) {
+    msg = m_receive.front();
+    m_receive.pop_front();
+  } else {
+    m_receive_cond.wait(lock);
+    msg = m_receive.front();
+    m_receive.pop_front();
+  }
   LOG_DEBUG_STR("Websocket: Receive end");
-  return m_receive;
+  return msg;
 }
 
 void WebsocketServer::send(size_t handle, const std::string& message) {
