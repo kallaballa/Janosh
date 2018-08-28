@@ -21,7 +21,7 @@ using websocketpp::lib::condition_variable;
 WebsocketServer::WebsocketServer() {
   LOG_DEBUG_STR("Websocket: Init");
 
-  m_server.set_access_channels(websocketpp::log::alevel::all);
+  m_server.set_access_channels(websocketpp::log::alevel::none);
   m_server.set_error_channels(websocketpp::log::elevel::all);
   // Initialize Asio Transport
   m_server.init_asio();
