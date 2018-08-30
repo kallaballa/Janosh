@@ -2,6 +2,7 @@
 
 function test_nested_transaction()
   Janosh:transaction(function()
+		Janosh:truncate()
 		local err, value = pcall(Janosh.transaction, function() print("hi") end)
 		if err then
 			error("Nested exception not caught")
@@ -215,19 +216,23 @@ function test_shift_dir()
 end
 
 if not _MT_ then
-	test_nested_transaction()
-	test_mkarray()
-	test_mkobject()
-	test_append()
-	test_set()
-	test_add()
-	test_remove()
-	test_replace()
-	test_copy()
-	test_shift()
-	test_shift_dir()
+	function runAndHash(fname) 
+		_G["test_" .. fname]()
+		print(fname .. ":" .. Janosh:hash())
+	end
+	runAndHash("nested_transaction")
+	runAndHash("mkarray")
+	runAndHash("mkobject")
+	runAndHash("append")
+	runAndHash("set")
+	runAndHash("add")
+	runAndHash("remove")
+	runAndHash("replace")
+	runAndHash("copy")
+	runAndHash("shift")
+	runAndHash("shift_dir")
 
-	print("SUCCESS")
+	io.stderr:write("SUCCESS\n")
 else
 	local FIRST=Janosh:epoch()
 	local CNT=0

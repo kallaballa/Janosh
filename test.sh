@@ -21,6 +21,11 @@ function test_truncate() {
   true
 }
 
+function test_nested_transaction() {
+	#no nested transaction with shell
+	janosh truncate
+}
+
 function test_mkarray() { 
   janosh mkarr /array/.        || return 1
   janosh mkarr /array/.        && return 1 
@@ -75,10 +80,10 @@ function test_remove() {
   janosh append /array/. 2 3 4      || return 1
   janosh remove /array/#1           || return 1
   [ `janosh -r get /array/#1` -eq 3 ]  || return 1
+
   janosh add /array/#5 0            && return 1
-  return 0
-  janosh remove /array/*            || return 1
-  janosh mkarr /array/#1/.          || return 1
+  janosh remove "/array/*"            || return 1
+  janosh mkarr /array/#1/.          && return 1
   [ `janosh size /array/.` -eq 0 ]  || return 1
   janosh mkobj /object/.            || return 1
   janosh add /object/0 1            || return 1
@@ -206,7 +211,7 @@ done
 shift
 
 if [ -z "$1" ]; then
-  run truncate
+  run nested_transaction
   run mkarray
   run mkobject
   run append
