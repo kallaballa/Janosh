@@ -742,7 +742,7 @@ namespace janosh {
       h = hasher(lexical_cast<string>(h) + key + value);
       ++cnt;
     }
-    out << h << std::endl;
+    out << h;
     delete cur;
     return cnt;
   }
