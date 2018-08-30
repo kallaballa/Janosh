@@ -144,7 +144,7 @@ void TcpWorker::run() {
         writeResponseHeader(socket_, 0);
       }
 
-      (*out_stream) << "\n__JANOSH_EOF\n";
+      (*out_stream) << "__JANOSH_EOF\n";
       out_stream->flush();
       JanoshThreadPtr flusher(new FlusherThread(socket_, out_buf, cacheable));
       flusher->runSynchron();

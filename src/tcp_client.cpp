@@ -33,6 +33,15 @@ void TcpClient::connect(string host, int port) {
   socket.set_option(boost::asio::ip::tcp::no_delay(true));
 }
 
+bool endsWith(const std::string &mainStr, const std::string &toMatch)
+{
+  if(mainStr.size() >= toMatch.size() &&
+      mainStr.compare(mainStr.size() - toMatch.size(), toMatch.size(), toMatch) == 0)
+      return true;
+    else
+      return false;
+}
+
 int TcpClient::run(Request& req, std::ostream& out) {
   int returnCode = -1;
   try {
@@ -60,7 +69,7 @@ int TcpClient::run(Request& req, std::ostream& out) {
     while (response_stream) {
       boost::asio::read_until(socket, response, "\n");
       std::getline(response_stream, line);
-      if(line == "__JANOSH_EOF")
+      if(endsWith(line,"__JANOSH_EOF"))
         break;
       out << line << std::endl;
     }
