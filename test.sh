@@ -4,6 +4,7 @@
 
 HASH=
 DEBUG=
+VERBOSE=
 
 function prepare() {
   [ -z "$HASH" ] && echo
@@ -198,7 +199,7 @@ do
     d) DEBUG=YES;;
     v) VERBOSE=YES;;
     h) HASH=YES;;
-    \?) echo "Unkown switch"; exit 1;;
+    \?) echo "Unknown switch"; exit 1;;
   esac
 done
 
