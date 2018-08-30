@@ -405,7 +405,7 @@ function JanoshClass.mkobj(self, keys)
 end
 
 function JanoshClass.hash(self)
-  janosh_request({"hash"})
+  return janosh_request({"hash"})
 end
 
 function JanoshClass.open(self)
