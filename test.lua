@@ -2,10 +2,10 @@
 
 function test_nested_transaction()
   Janosh:transaction(function()
-			local err, value = pcall(Janosh.transaction, function() print("hi") end)
-			if err then
-				error("Nested exception not caught")
-			end
+		local err, value = pcall(Janosh.transaction, function() print("hi") end)
+		if err then
+			error("Nested exception not caught")
+		end
 	end)
 end
 
@@ -16,32 +16,32 @@ function test_mkarray()
 		Janosh:ntest(Janosh.mkarr, "/array/.")
  		Janosh:test(Janosh.set,"/bla", "blu")
 		Janosh:ntest(Janosh.mkarr,"/bla/.")
-    Janosh:publish("count");
+    	Janosh:publish("count");
 	end)
 end
 
 function test_mkobject()
 	Janosh:transaction(function()
-    Janosh:truncate()
+    	Janosh:truncate()
 		Janosh:test(Janosh.mkobj, "/object/.")
 		Janosh:ntest(Janosh.mkobj, "/object/.")
 		Janosh:test(Janosh.set, "/bla", "blu")
 		Janosh:ntest(Janosh.mkobj, "/bla/.")
-    Janosh:publish("count");
+		Janosh:publish("count");
 	end)
 end
 
 
 function test_append()
-  Janosh:transaction(function()
-    Janosh:truncate()
+	Janosh:transaction(function()
+		Janosh:truncate()
 		Janosh:test(Janosh.mkarr,"/array/.")
-  	Janosh:test(Janosh.append,"/array/.",{"0","1","2","3"})
-  	if Janosh:size("/array/.")  ~= 4 then Janosh:error() end
-  	Janosh:test(Janosh.mkobj, "/object/.")
-  	Janosh:ntest(Janosh.append, "/object/.", "0", "1", "2", "3")
-  	if Janosh:size("/object/.") ~= 0 then Janosh:error() end
-    Janosh:publish("count");
+  		Janosh:test(Janosh.append,"/array/.",{"0","1","2","3"})
+  		if Janosh:size("/array/.")  ~= 4 then Janosh:error() end
+  		Janosh:test(Janosh.mkobj, "/object/.")
+  		Janosh:ntest(Janosh.append, "/object/.", "0", "1", "2", "3")
+  		if Janosh:size("/object/.") ~= 0 then Janosh:error() end
+    	Janosh:publish("count");
 	end)
 end
 
@@ -172,6 +172,7 @@ function test_shift()
 end
 
 function test_shift_dir()
+	Janosh:transaction(function()
 		Janosh:truncate() 
 		Janosh:test(Janosh.mkarr,"/array/.")
 		Janosh:test(Janosh.mkobj,"/array/#0/.")
@@ -191,25 +192,26 @@ function test_shift_dir()
 		Janosh:test(Janosh.set,"/array/#3/balast","3")
 
 		Janosh:test(Janosh.shift,"/array/#2/.","/array/#0/.")
-    if Janosh:get("/array/#0/label") ~= "2" then Janosh:error() end
-    if Janosh:get("/array/#1/label") ~= "0" then Janosh:error() end
-    if Janosh:get("/array/#2/label") ~= "1" then Janosh:error() end
+    	if Janosh:get("/array/#0/label") ~= "2" then Janosh:error() end
+	    if Janosh:get("/array/#1/label") ~= "0" then Janosh:error() end
+    	if Janosh:get("/array/#2/label") ~= "1" then Janosh:error() end
 
 		Janosh:test(Janosh.shift,"/array/#1/.","/array/#0/.")
-    if Janosh:get("/array/#0/label") ~= "0" then Janosh:error() end
-    if Janosh:get("/array/#1/label") ~= "2" then Janosh:error() end
-    if Janosh:get("/array/#2/label") ~= "1" then Janosh:error() end
+	    if Janosh:get("/array/#0/label") ~= "0" then Janosh:error() end
+	    if Janosh:get("/array/#1/label") ~= "2" then Janosh:error() end
+	    if Janosh:get("/array/#2/label") ~= "1" then Janosh:error() end
 
 		Janosh:test(Janosh.shift,"/array/#1/.","/array/#2/.")
-    if Janosh:get("/array/#0/label") ~= "0" then Janosh:error() end
-    if Janosh:get("/array/#1/label") ~= "1" then Janosh:error() end
-    if Janosh:get("/array/#2/label") ~= "2" then Janosh:error() end
+	    if Janosh:get("/array/#0/label") ~= "0" then Janosh:error() end
+	    if Janosh:get("/array/#1/label") ~= "1" then Janosh:error() end
+	    if Janosh:get("/array/#2/label") ~= "2" then Janosh:error() end
 
 		Janosh:test(Janosh.shift,"/array/#0/.","/array/#3/.")
-    if Janosh:get("/array/#0/label") ~= "1" then Janosh:error() end
-    if Janosh:get("/array/#1/label") ~= "2" then Janosh:error() end
-    if Janosh:get("/array/#2/label") ~= "3" then Janosh:error() end
-    if Janosh:get("/array/#3/label") ~= "0" then Janosh:error() end
+	    if Janosh:get("/array/#0/label") ~= "1" then Janosh:error() end
+	    if Janosh:get("/array/#1/label") ~= "2" then Janosh:error() end
+	    if Janosh:get("/array/#2/label") ~= "3" then Janosh:error() end
+	    if Janosh:get("/array/#3/label") ~= "0" then Janosh:error() end
+	end)
 end
 
 if not _MT_ then
