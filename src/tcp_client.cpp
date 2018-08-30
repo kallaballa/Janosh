@@ -69,8 +69,10 @@ int TcpClient::run(Request& req, std::ostream& out) {
     while (response_stream) {
       boost::asio::read_until(socket, response, "\n");
       std::getline(response_stream, line);
-      if(endsWith(line,"__JANOSH_EOF"))
+      if(endsWith(line,"__JANOSH_EOF")) {
+        out << line.substr(0, line.size() - string("__JANOSH_EOF").size());
         break;
+      }
       out << line << std::endl;
     }
   } catch (std::exception& ex) {
