@@ -9,7 +9,7 @@ using std::string;
 using std::endl;
 
 class JsonPrintVisitor : public PrintVisitor {
-    const string escape(const string& s);
+    string escape(const string& s) const;
   public:
     explicit JsonPrintVisitor(std::ostream& out);
     virtual void beginArray(const Path& p, bool parentIsArray, bool first);

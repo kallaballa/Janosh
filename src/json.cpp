@@ -6,19 +6,28 @@ namespace janosh {
 JsonPrintVisitor::JsonPrintVisitor(std::ostream& out) : PrintVisitor(out) {
 }
 
-const string JsonPrintVisitor::escape(const string& s) {
-  size_t index = 0;
-  string ns = s;
-  while (true) {
-    index = ns.find("\"", index);
-    if (index == string::npos)
-      break;
-    ns.replace(index, 1, "\\\"");
-    index += 2;
-  }
-  return ns;
+const string JsonPrintVisitor::escape(const std::string &s) {
+    std::ostringstream o;
+    for (auto c = s.cbegin(); c != s.cend(); c++) {
+        switch (*c) {
+        case '"': o << "\\\""; break;
+        case '\\': o << "\\\\"; break;
+        case '\b': o << "\\b"; break;
+        case '\f': o << "\\f"; break;
+        case '\n': o << "\\n"; break;
+        case '\r': o << "\\r"; break;
+        case '\t': o << "\\t"; break;
+        default:
+            if ('\x00' <= *c && *c <= '\x1f') {
+                o << "\\u"
+                  << std::hex << std::setw(4) << std::setfill('0') << (int)*c;
+            } else {
+                o << *c;
+            }
+        }
+    }
+    return o.str();
 }
-
 void JsonPrintVisitor::beginArray(const Path& p, bool parentIsArray, bool first) {
   string name = p.name().pretty();
   if (!first) {
