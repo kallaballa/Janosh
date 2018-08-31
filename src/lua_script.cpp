@@ -421,6 +421,14 @@ static void install_janosh_functions(lua_State* L, bool first) {
   lua_pushcfunction(L, l_request_trigger);
   lua_setglobal(L, "janosh_request_t");
 
+  // Load the Web.lua, set it to the Web table
+  lua_getglobal(L, "require");
+  lua_pushliteral(L, "Web");
+  if(lua_pcall(L, 1, 1, 0)) {
+    LOG_ERR_MSG("Preloading JSON library failed", lua_tostring(L, -1));
+  }
+  lua_setglobal(L, "Web");
+
   // Load the JSONLib, set it to the JSON table
   lua_getglobal(L, "require");
   lua_pushliteral(L, "JSONLib");
