@@ -6,7 +6,7 @@ namespace janosh {
 JsonPrintVisitor::JsonPrintVisitor(std::ostream& out) : PrintVisitor(out) {
 }
 
-const string JsonPrintVisitor::escape(const std::string &s) {
+string JsonPrintVisitor::escape(const std::string &s) const {
     std::ostringstream o;
     for (auto c = s.cbegin(); c != s.cend(); c++) {
         switch (*c) {
