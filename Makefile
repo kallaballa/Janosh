@@ -81,8 +81,11 @@ src/JanoshAPI.o:	src/JanoshAPI.lua
 	luajit -b src/JanoshAPI.lua src/JanoshAPI.o
 src/JSONLib.o:	src/JSONLib.lua
 	luajit -b src/JSONLib.lua src/JSONLib.o
+src/Web.o:  src/Web.lua
+	luajit -b src/Web.lua src/Web.o
 
-${TARGET}: ${OBJS} src/JSONLib.o src/JanoshAPI.o 
+
+${TARGET}: ${OBJS} src/JSONLib.o src/JanoshAPI.o src/Web.o
 	${CXX} ${LDFLAGS} -o $@ $^ ${LIBS} ${EXTRA_BUILDFLAGS}
 
 ${OBJS}: %.o: %.cpp %.dep ${GCH}
