@@ -28,6 +28,7 @@ string JsonPrintVisitor::escape(const std::string &s) const {
     }
     return o.str();
 }
+
 void JsonPrintVisitor::beginArray(const Path& p, bool parentIsArray, bool first) {
   string name = p.name().pretty();
   if (!first) {
