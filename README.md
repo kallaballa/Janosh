@@ -1,4 +1,4 @@
-![ducktiger](http://asset-2.soup.io/asset/11244/5869_2544_500.png)
+![ducktiger](/logo.png?raw=true "logo")
 Janosh
 ======
 
