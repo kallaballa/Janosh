@@ -37,7 +37,8 @@ namespace janosh {
   struct value_exception : virtual janosh_exception
   {};
 
-  void printException(janosh::janosh_exception& ex, std::ostream& os = std::cerr);
+  void printException(janosh::janosh_exception& ex, std::ostream& os);
+  void printException(janosh::janosh_exception& ex);
   void printException(std::exception& ex);
 }
 

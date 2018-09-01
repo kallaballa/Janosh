@@ -1,5 +1,6 @@
 #include <iostream>
 #include <ucontext.h>
+#include <sstream>
 #include "exception.hpp"
 
 #ifdef _JANOSH_DEBUG
@@ -22,7 +23,13 @@ janosh_exception::janosh_exception() {
 }
 
 void printException(std::exception& ex) {
-  std::cerr << "Exception: " << ex.what() << std::endl;
+  LOG_DEBUG_MSG("Exception", ex.what());
+}
+
+void printException(janosh::janosh_exception& ex) {
+  std::stringstream ss;
+  printException(ex, ss);
+  LOG_DEBUG_STR(ss.str());
 }
 
 void printException(janosh::janosh_exception& ex, std::ostream& os) {
