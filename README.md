@@ -1,6 +1,7 @@
-![ducktiger](/logo.png?raw=true "logo")
 Janosh
 ======
+
+![ducktiger](/logo.png?raw=true "logo")
 
 A json document database with a shell interface and lua scripting support.
 
@@ -41,7 +42,7 @@ Copy janosh binary and default configuration:
 
 ## Note
 
-Setting /proc/sys/net/ipv4/tcp_tw_recycle and /proc/sys/net/ipv4/tcp_tw_reuse to 1 is recommended.
+Setting /proc/sys/net/ipv4/tcp_tw_reuse to 1 is recommended if you are generating a lot of connections.
 
 
 Please have a look at the [documentation](https://github.com/kallaballa/Janosh/wiki/Home)!
