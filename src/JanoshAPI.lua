@@ -4,6 +4,7 @@ if __JanoshFirstStart then
   lanes = require "lanes".configure{ on_state_create = janosh_install; verbose_errors = true; protect_allocator = true; with_timers = false; }
 end
 local posix = require "posix"
+local bit = require "bit"
 
 io = require "io"
 
