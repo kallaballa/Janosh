@@ -1019,8 +1019,12 @@ namespace janosh {
       cnt+=load(v.get_obj(), path);
     } else if (v.type() == js::array_type) {
       cnt+=load(v.get_array(), path);
-    } else {
-      cnt+=this->load(path, v.get_str());
+    } else if (v.type() == js::str_type) {
+      cnt+=this->load(path, "s" + v.get_str());
+    } else if (v.type() == js::int_type || v.type() == js::int_type) {
+      cnt+=this->load(path, "n" + v.get_str());
+    } else if (v.type() == js::bool_type) {
+      cnt+=this->load(path, "b" + v.get_str());
     }
     return cnt;
   }
