@@ -1021,10 +1021,12 @@ namespace janosh {
       cnt+=load(v.get_array(), path);
     } else if (v.type() == js::str_type) {
       cnt+=this->load(path, "s" + v.get_str());
-    } else if (v.type() == js::int_type || v.type() == js::int_type) {
-      cnt+=this->load(path, "n" + v.get_str());
+    } else if (v.type() == js::int_type) {
+      cnt+=this->load(path, "n" + std::to_string(v.get_int()));
     } else if (v.type() == js::bool_type) {
-      cnt+=this->load(path, "b" + v.get_str());
+      cnt+=this->load(path, "b" + std::to_string(v.get_bool()));
+    } else if (v.type() == js::real_type) {
+      cnt+=this->load(path, "n" + std::to_string(v.get_real()));
     }
     return cnt;
   }
