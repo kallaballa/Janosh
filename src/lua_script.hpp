@@ -8,7 +8,7 @@
 #include "request.hpp"
 #include <mutex>
 #include <condition_variable>
-#include  <lua.hpp>
+#include <lua.hpp>
 #include <thread>
 
 namespace janosh {

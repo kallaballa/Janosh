@@ -1,5 +1,7 @@
 #include "commands.hpp"
 #include "exception.hpp"
+#include <sys/stat.h>
+#include <sstream>
 
 namespace janosh {
 
@@ -45,6 +47,11 @@ public:
   }
 };
 
+inline bool file_exists (const std::string& name) {
+  struct stat buffer;
+  return (stat (name.c_str(), &buffer) == 0);
+}
+
 class LoadCommand: public Command {
 public:
   explicit LoadCommand(janosh::Janosh* janosh) :
@@ -56,7 +63,12 @@ public:
       janosh->loadJson(std::cin);
     } else {
       for(const string& p : params) {
-        janosh->loadJson(p);
+        if(file_exists(p)) {
+          janosh->loadJson(p);
+        } else  {
+          std::stringstream ss(p);
+          janosh->loadJson(ss);
+        }
       }
     }
     return {0, "Successful"};
