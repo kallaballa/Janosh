@@ -17,20 +17,21 @@
 #include <iostream>
 #include "format.hpp"
 #include "util.hpp"
-
+#include "value.hpp"
 namespace janosh {
 
 using std::string;
 using std::vector;
 using std::istream;
 using std::ostream;
+
 class Request {
 private:
   friend class boost::serialization::access;
 public:
   Format format_ = janosh::Bash;
   string command_;
-  vector<string> vecArgs_;
+  vector<Value> vecArgs_;
   bool runTriggers_ = false;
   bool verbose_ = false;
   ProcessInfo pinfo_;
@@ -38,7 +39,7 @@ public:
   Request() {
   }
 
-  Request(const Format& format, const string& command, const vector<string>& vecArgs, const bool& triggers, const bool& verbose, ProcessInfo pinfo_) :
+  Request(const Format& format, const string& command, const vector<Value>& vecArgs, const bool& triggers, const bool& verbose, ProcessInfo pinfo_) :
    format_(format),
    command_(command),
    vecArgs_(vecArgs),

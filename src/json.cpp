@@ -1,5 +1,6 @@
 #include <iostream>
 #include "json.hpp"
+#include "value.hpp"
 
 namespace janosh {
 
@@ -61,22 +62,27 @@ void JsonPrintVisitor::endObject(const Path& p) {
   this->out << " } " << endl;
 }
 
-void JsonPrintVisitor::record(const Path& p, const string& value, bool parentIsArray, bool first) {
+void JsonPrintVisitor::record(const Path& p, const Value& value, bool parentIsArray, bool first) {
   string name = p.name().pretty();
-  string jsonValue = escape(value);
+  string jsonValue = escape(value.str());
 
   if (parentIsArray) {
     if (!first) {
       this->out << ',' << endl;
     }
+    if(value.getType() == Value::Number || value.getType() == Value::Boolean)
+      this->out << jsonValue;
+    else
+      this->out << '\"' << jsonValue << '\"';
 
-    this->out << '\"' << jsonValue << '\"';
   } else {
     if (!first) {
       this->out << ',' << endl;
     }
-
-    this->out << '"' << name << "\":\"" << jsonValue << "\"";
+    if(value.getType() == Value::Number || value.getType() == Value::Boolean)
+      this->out << '"' << name << "\":" << jsonValue;
+    else
+      this->out << '"' << name << "\":\"" << jsonValue << "\"";
   }
 }
 }

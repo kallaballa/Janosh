@@ -290,7 +290,12 @@ namespace janosh {
     } else if(path().isWildcard()) {
       valueObj = Value(v, Value::Range);
     } else {
-      valueObj = Value(v, false);
+      if(v.at(0) == 'n')
+        valueObj = Value(v.substr(1), Value::Number);
+      if(v.at(0) == 'b')
+        valueObj = Value(v.substr(1), Value::Boolean);
+      if(v.at(0) == 's')
+        valueObj = Value(v.substr(1), Value::String);
     }
 
     return s;

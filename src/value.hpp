@@ -10,7 +10,7 @@ namespace janosh {
   class Value {
   public:
     enum Type {
-      Null, String, Array, Object, Range
+      Null, String, Array, Object, Range, Number, Boolean
     };
 
     Value();
@@ -21,24 +21,26 @@ namespace janosh {
     bool isInitialized() const;
     bool isEmpty() const;
     void reset();
-    const string& str() const;
-
-    operator string() const {
-      return this->str();
-    }
-
-    operator string() {
-      return this->str();
-    }
+    string str() const;
     const Type getType()  const;
     const size_t getSize() const;
-    void init(const string& v, bool value);
+    void init(string v, bool value);
+    string makeDBString() const;
 
+    template<class Archive>
+    void serialize(Archive & ar, const unsigned int version) {
+         ar & strObj;
+         ar & type;
+         ar & size;
+         ar & initalized;
+     }
   private:
     string strObj;
     Type type;
     size_t size;
     bool initalized;
+
+
   };
 }
 #endif /* VALUE_HPP_ */

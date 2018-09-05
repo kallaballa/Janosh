@@ -89,7 +89,7 @@ function test_remove()
 		Janosh:ntest(Janosh.add,"/array/#0","0")
 		Janosh:test(Janosh.append,"/array/.",{"2","3","4"})
 		Janosh:test(Janosh.remove,"/array/#1")
-		if Janosh:get("/array/#1") ~= "3" then	Janosh:error()	end
+		if Janosh:get("/array/#1") ~= 3 then	Janosh:error()	end
 
 		Janosh:ntest(Janosh.add,"/array/#5","0")
 		Janosh:test(Janosh.remove,"/array/*")
@@ -137,9 +137,9 @@ function test_copy()
 		Janosh:ntest(Janosh.copy,"/object/.","/object/array/.")
 		Janosh:ntest(Janosh.copy,"/target/.","/object/array/.")
 		if Janosh:size("/target/array/.") ~= 4 then Janosh:error() end
-    if Janosh:size("/object/array/.") ~= 4 then Janosh:error() end
-		if Janosh:get("/target/array/#0") ~= "0" then Janosh:error() end
-    if Janosh:get("/object/array/#0") ~= "0" then Janosh:error()  end
+		if Janosh:size("/object/array/.") ~= 4 then Janosh:error() end
+		if Janosh:get("/target/array/#0") ~= 0 then Janosh:error() end
+		if Janosh:get("/object/array/#0") ~= 0 then Janosh:error()  end
     Janosh:publish("count");
 	end)
 end
@@ -149,25 +149,24 @@ function test_shift()
   Janosh:transaction(function()
 		Janosh:truncate()
 		Janosh:test(Janosh.mkarr,"/array/.")
-		Janosh:test(Janosh.append,"/array/.", { "0","1","2","3" })
+		Janosh:test(Janosh.append,"/array/.", { 0,1,2,3 })
 		Janosh:test(Janosh.shift,"/array/#0","/array/#3")
-    if Janosh:size("/array/.") ~= 4 then Janosh:error() end
-    if Janosh:get("/array/#0") ~= "1" then Janosh:error() end
-		if Janosh:get("/array/#3") ~= "0" then Janosh:error() end
+    		if Janosh:size("/array/.") ~= 4 then Janosh:error() end
+    		if Janosh:get("/array/#0") ~= 1 then Janosh:error() end
+		if Janosh:get("/array/#3") ~= 0 then Janosh:error() end
 
 		Janosh:test(Janosh.mkarr,"/array/#4/.")
 		Janosh:test(Janosh.append,"/array/#4/.",{"3","2","1","0"})
 		Janosh:test(Janosh.shift,"/array/#4/#3","/array/#4/#0")
-		if Janosh:get("/array/#4/#0") ~= "0" then Janosh:error() end
-    if Janosh:get("/array/#4/#3") ~= "1" then Janosh:error() end
-
+		if Janosh:get("/array/#4/#0") ~= 0 then Janosh:error() end
+    		if Janosh:get("/array/#4/#3") ~= 1 then Janosh:error() end
 		Janosh:test(Janosh.append,"/array/.",{"4","5","6","7"})
 		Janosh:test(Janosh.mkarr,"/array/#9/.")
 		Janosh:test(Janosh.append,"/array/#9/.",{"7","6","5","4"})
 		Janosh:test(Janosh.shift,"/array/#4/.","/array/#9/.")
-    if Janosh:size("/array/#8/.") ~= 4 then Janosh:error() end
-    if Janosh:size("/array/#9/.") ~= 4 then Janosh:error() end
-    if Janosh:get("/array/#8/#0") ~= "7" then Janosh:error() end
+		if Janosh:size("/array/#8/.") ~= 4 then Janosh:error() end
+		if Janosh:size("/array/#9/.") ~= 4 then Janosh:error() end
+		if Janosh:get("/array/#8/#0") ~= 7 then Janosh:error() end
 		Janosh:publish("count");
 	end)
 end
@@ -177,41 +176,41 @@ function test_shift_dir()
 		Janosh:truncate() 
 		Janosh:test(Janosh.mkarr,"/array/.")
 		Janosh:test(Janosh.mkobj,"/array/#0/.")
-		Janosh:test(Janosh.set,"/array/#0/label","0")
-		Janosh:test(Janosh.set,"/array/#0/balast","0")
+		Janosh:test(Janosh.set,"/array/#0/label",0)
+		Janosh:test(Janosh.set,"/array/#0/balast",0)
 
 		Janosh:test(Janosh.mkobj,"/array/#1/.")
- 		Janosh:test(Janosh.set,"/array/#1/label","1")
-		Janosh:test(Janosh.set,"/array/#1/balast","1")
+ 		Janosh:test(Janosh.set,"/array/#1/label",1)
+		Janosh:test(Janosh.set,"/array/#1/balast",1)
 
 		Janosh:test(Janosh.mkobj,"/array/#2/.")
-		Janosh:test(Janosh.set,"/array/#2/label","2")
-		Janosh:test(Janosh.set,"/array/#2/balast","2")
+		Janosh:test(Janosh.set,"/array/#2/label",2)
+		Janosh:test(Janosh.set,"/array/#2/balast",2)
 
 		Janosh:test(Janosh.mkobj,"/array/#3/.")
-		Janosh:test(Janosh.set,"/array/#3/label","3")
-		Janosh:test(Janosh.set,"/array/#3/balast","3")
+		Janosh:test(Janosh.set,"/array/#3/label",3)
+		Janosh:test(Janosh.set,"/array/#3/balast",3)
 
 		Janosh:test(Janosh.shift,"/array/#2/.","/array/#0/.")
-    	if Janosh:get("/array/#0/label") ~= "2" then Janosh:error() end
-	    if Janosh:get("/array/#1/label") ~= "0" then Janosh:error() end
-    	if Janosh:get("/array/#2/label") ~= "1" then Janosh:error() end
+    		if Janosh:get("/array/#0/label") ~= 2 then Janosh:error() end
+	    	if Janosh:get("/array/#1/label") ~= 0 then Janosh:error() end
+		if Janosh:get("/array/#2/label") ~= 1 then Janosh:error() end
 
 		Janosh:test(Janosh.shift,"/array/#1/.","/array/#0/.")
-	    if Janosh:get("/array/#0/label") ~= "0" then Janosh:error() end
-	    if Janosh:get("/array/#1/label") ~= "2" then Janosh:error() end
-	    if Janosh:get("/array/#2/label") ~= "1" then Janosh:error() end
+	    if Janosh:get("/array/#0/label") ~= 0 then Janosh:error() end
+	    if Janosh:get("/array/#1/label") ~= 2 then Janosh:error() end
+	    if Janosh:get("/array/#2/label") ~= 1 then Janosh:error() end
 
 		Janosh:test(Janosh.shift,"/array/#1/.","/array/#2/.")
-	    if Janosh:get("/array/#0/label") ~= "0" then Janosh:error() end
-	    if Janosh:get("/array/#1/label") ~= "1" then Janosh:error() end
-	    if Janosh:get("/array/#2/label") ~= "2" then Janosh:error() end
+	    if Janosh:get("/array/#0/label") ~= 0 then Janosh:error() end
+	    if Janosh:get("/array/#1/label") ~= 1 then Janosh:error() end
+	    if Janosh:get("/array/#2/label") ~= 2 then Janosh:error() end
 
 		Janosh:test(Janosh.shift,"/array/#0/.","/array/#3/.")
-	    if Janosh:get("/array/#0/label") ~= "1" then Janosh:error() end
-	    if Janosh:get("/array/#1/label") ~= "2" then Janosh:error() end
-	    if Janosh:get("/array/#2/label") ~= "3" then Janosh:error() end
-	    if Janosh:get("/array/#3/label") ~= "0" then Janosh:error() end
+	    if Janosh:get("/array/#0/label") ~= 1 then Janosh:error() end
+	    if Janosh:get("/array/#1/label") ~= 2 then Janosh:error() end
+	    if Janosh:get("/array/#2/label") ~= 3 then Janosh:error() end
+	    if Janosh:get("/array/#3/label") ~= 0 then Janosh:error() end
 	end)
 end
 

@@ -4,6 +4,7 @@
 #include <string>
 #include <iostream>
 #include "path.hpp"
+#include "value.hpp"
 
 namespace janosh {
 
@@ -36,7 +37,7 @@ public:
   virtual void close() {
   }
 
-  virtual void record(const Path& p, const string& value, bool array, bool first) {
+  virtual void record(const Path& p, const Value& value, bool array, bool first) {
   }
 };
 } /* namespace janosh */

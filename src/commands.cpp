@@ -1,5 +1,6 @@
 #include "commands.hpp"
 #include "exception.hpp"
+#include "request.hpp"
 #include <sys/stat.h>
 #include <sstream>
 
@@ -11,13 +12,13 @@ public:
       Command(janosh) {
   }
 
-  virtual Result operator()(const std::vector<string>& params, std::ostream& out) {
+  virtual Result operator()(const std::vector<Value>& params, std::ostream& out) {
     if (!params.empty()) {
       int cnt = 0;
-      for(const string& p : params) {
-        LOG_DEBUG_MSG("Removing", p);
+      for(const Value& p : params) {
+        LOG_DEBUG_MSG("Removing", p.str());
 //FIXME use cursors for batch operations
-        Record path(p);
+        Record path(p.str());
         cnt += janosh->remove(path);
         LOG_DEBUG(cnt);
       }
@@ -37,7 +38,7 @@ public:
       Command(janosh) {
   }
 
-  virtual Result operator()(const vector<string>& params, std::ostream& out) {
+  virtual Result operator()(const vector<Value>& params, std::ostream& out) {
     if (!params.empty()) {
       LOG_DEBUG_STR("hash doesn't take any parameters");
       return {-1, "Failed"};
@@ -58,15 +59,15 @@ public:
       Command(janosh) {
   }
 
-  virtual Result operator()(const vector<string>& params, std::ostream& out) {
+  virtual Result operator()(const vector<Value>& params, std::ostream& out) {
     if (params.empty()) {
       janosh->loadJson(std::cin);
     } else {
-      for(const string& p : params) {
-        if(file_exists(p)) {
-          janosh->loadJson(p);
+      for(const Value& p : params) {
+        if(file_exists(p.str())) {
+          janosh->loadJson(p.str());
         } else  {
-          std::stringstream ss(p);
+          std::stringstream ss(p.str());
           janosh->loadJson(ss);
         }
       }
@@ -81,11 +82,11 @@ public:
       Command(janosh) {
   }
 
-  virtual Result operator()(const vector<string>& params, std::ostream& out) {
+  virtual Result operator()(const vector<Value>& params, std::ostream& out) {
     if (params.size() != 1)
       return {-1, "Expected one path"};
 
-    if (janosh->makeArray(Record(params.front())))
+    if (janosh->makeArray(Record(params.front().str())))
       return {1, "Successful"};
     else
       return {-1, "Failed"};
@@ -98,11 +99,11 @@ public:
       Command(janosh) {
   }
 
-  virtual Result operator()(const vector<string>& params, std::ostream& out) {
+  virtual Result operator()(const vector<Value>& params, std::ostream& out) {
     if (params.size() != 1)
       return {-1, "Expected one path"};
 
-    if (janosh->makeObject(Record(params.front())))
+    if (janosh->makeObject(Record(params.front().str())))
       return {1, "Successful"};
     else
       return {-1, "Failed"};
@@ -115,17 +116,17 @@ public:
       Command(janosh) {
   }
 
-  virtual Result operator()(const vector<string>& params, std::ostream& out) {
+  virtual Result operator()(const vector<Value>& params, std::ostream& out) {
     size_t s = params.size();
     if (s > 3 || s < 1)
       return {-1, "Expected one, two or three parameters (key, operation, value)"};
 
     if(s == 3)
-      janosh->publish(params[0], params[1], params[2]);
+      janosh->publish(params[0].str(), params[1].str(), params[2].str());
     else if(s == 2)
-      janosh->publish(params[0], "W", params[1]);
+      janosh->publish(params[0].str(), "W", params[1].str());
     else if(s == 1)
-      janosh->publish(params[0], "W", "");
+      janosh->publish(params[0].str(), "W", "");
     else
       assert(false);
     return {1, "Successful"};
@@ -139,7 +140,7 @@ public:
       Command(janosh) {
   }
 
-  virtual Result operator()(const vector<string>& params, std::ostream& out) {
+  virtual Result operator()(const vector<Value>& params, std::ostream& out) {
     if (!params.empty())
       return {-1, "Truncate doesn't take any arguments"};
 
@@ -153,14 +154,14 @@ public:
       Command(janosh) {
   }
 
-  virtual Result operator()(const vector<string>& params, std::ostream& out) {
+  virtual Result operator()(const vector<Value>& params, std::ostream& out) {
     if (params.size() % 2 != 0) {
       return {-1, "Expected a list of path/value pairs"};
     } else {
-      const string path = params.front();
+      const string path = params.front().str();
 
       for (auto it = params.begin(); it != params.end(); it += 2) {
-        if (!janosh->add(Record(*it), *(it + 1)))
+        if (!janosh->add(Record((*it).str()), (*(it + 1))))
           return {-1, "Failed"};
       }
 
@@ -175,13 +176,13 @@ public:
       Command(janosh) {
   }
 
-  virtual Result operator()(const vector<string>& params, std::ostream& out) {
+  virtual Result operator()(const vector<Value>& params, std::ostream& out) {
     if (params.empty() || params.size() % 2 != 0) {
       return {-1, "Expected a list of path/value pairs"};
     } else {
 
       for (auto it = params.begin(); it != params.end(); it += 2) {
-        if (!janosh->replace(Record(*it), *(it + 1)))
+        if (!janosh->replace(Record((*it).str()), (*(it + 1))))
           return {-1, "Failed"};
       }
 
@@ -196,14 +197,14 @@ public:
       Command(janosh) {
   }
 
-  virtual Result operator()(const vector<string>& params, std::ostream& out) {
+  virtual Result operator()(const vector<Value>& params, std::ostream& out) {
     if (params.empty() || params.size() % 2 != 0) {
       return {-1, "Expected a list of path/value pairs"};
     } else {
 
       size_t cnt = 0;
       for (auto it = params.begin(); it != params.end(); it += 2) {
-        cnt += janosh->set(Record(*it), *(it + 1));
+        cnt += janosh->set(Record((*it).str()), (*(it + 1)));
       }
 
       if (cnt == 0)
@@ -220,12 +221,12 @@ public:
       Command(janosh) {
   }
 
-  virtual Result operator()(const vector<string>& params, std::ostream& out) {
+  virtual Result operator()(const vector<Value>& params, std::ostream& out) {
     if (params.size() != 2) {
       return {-1, "Expected two paths"};
     } else {
-      Record src(params.front());
-      Record dest(params.back());
+      Record src(params.front().str());
+      Record dest(params.back().str());
       src.fetch();
 
       if (!src.exists())
@@ -246,12 +247,12 @@ public:
       Command(janosh) {
   }
 
-  virtual Result operator()(const vector<string>& params, std::ostream& out) {
+  virtual Result operator()(const vector<Value>& params, std::ostream& out) {
     if (params.size() != 2) {
       return {-1, "Expected two paths"};
     } else {
-      Record src(params.front());
-      Record dest(params.back());
+      Record src(params.front().str());
+      Record dest(params.back().str());
       src.fetch();
 
       if (!src.exists())
@@ -272,12 +273,12 @@ public:
       Command(janosh) {
   }
 
-  virtual Result operator()(const vector<string>& params, std::ostream& out) {
+  virtual Result operator()(const vector<Value>& params, std::ostream& out) {
     if (params.size() != 2) {
       return {-1, "Expected two paths"};
     } else {
-      Record src(params.front());
-      Record dest(params.back());
+      Record src(params.front().str());
+      Record dest(params.back().str());
       src.fetch();
 
       if (!src.exists())
@@ -298,11 +299,11 @@ public:
       Command(janosh) {
   }
 
-  virtual Result operator()(const vector<string>& params, std::ostream& out) {
+  virtual Result operator()(const vector<Value>& params, std::ostream& out) {
     if (params.size() < 2) {
       return {-1, "Expected a path and a list of values"};
     } else {
-      Record target(params.front());
+      Record target(params.front().str());
       size_t cnt = janosh->append(params.begin() + 1, params.end(), target);
       return {cnt, "Successful"};
     }
@@ -315,7 +316,7 @@ public:
       Command(janosh) {
   }
 
-  virtual Result operator()(const vector<string>& params, std::ostream& out) {
+  virtual Result operator()(const vector<Value>& params, std::ostream& out) {
     if (!params.empty()) {
       return {-1, "Dump doesn't take any parameters"};
     } else {
@@ -331,11 +332,11 @@ public:
       Command(janosh) {
   }
 
-  virtual Result operator()(const vector<string>& params, std::ostream& out) {
+  virtual Result operator()(const vector<Value>& params, std::ostream& out) {
     if (params.size() != 1) {
       return {-1, "Expected a path"};
     } else {
-      Record p(params.front());
+      Record p(params.front().str());
       out << janosh->size(p) << std::endl;
     }
     return {0, "Successful"};
@@ -348,13 +349,13 @@ public:
       Command(janosh) {
   }
 
-  Result operator()(const vector<string>& params, std::ostream& out) {
+  Result operator()(const vector<Value>& params, std::ostream& out) {
     if (params.empty()) {
       return {-1, "Expected a list of keys"};
     } else {
       std::vector<Record> recs;
-      for(const string& p : params) {
-        recs.push_back(Record(p));
+      for(const Value& p : params) {
+        recs.push_back(Record(p.str()));
       }
 
       if (!janosh->get(recs, out))

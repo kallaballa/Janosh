@@ -15,7 +15,7 @@ namespace janosh {
 class RawPrintVisitor : public PrintVisitor {
 public:
   explicit RawPrintVisitor(std::ostream& out);
-  virtual void record(const Path& p, const string& value, bool array, bool first);
+  virtual void record(const Path& p, const Value& value, bool array, bool first);
 };
 } /* namespace janosh */
 

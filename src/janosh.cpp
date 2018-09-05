@@ -47,6 +47,11 @@ namespace janosh {
   using std::ifstream;
   using std::exception;
   using boost::lexical_cast;
+  bool is_number(const std::string& s)
+  {
+      return !s.empty() && std::find_if(s.begin(),
+          s.end(), [](char c) { return !std::isdigit(c); }) == s.end();
+  }
 
   Janosh::Janosh() :
 		settings_(),
@@ -360,7 +365,7 @@ namespace janosh {
 
     if(t == Value::String) {
       tmp = tmp.path().withChild(tmp.getSize());
-      this->add(tmp, "");
+      this->add(tmp, Value("", Value::String));
     } else {
       tmp = tmp.path().withChild(tmp.getSize()).asDirectory();
       this->makeDirectory(tmp, t, 0);
@@ -444,8 +449,8 @@ namespace janosh {
    * @param dest destination record
    * @return 1 if successful, 0 if not
    */
-  size_t Janosh::add(Record dest, const string& value) {
-    JANOSH_TRACE({dest}, value);
+  size_t Janosh::add(Record dest, const Value& value) {
+    JANOSH_TRACE({dest}, value.str());
 
     if(!dest.isValue() || dest.exists()) {
       throw janosh_exception() << record_info({"Invalid target", dest});
@@ -455,8 +460,8 @@ namespace janosh {
       throw janosh_exception() << record_info({"Out of array bounds",dest});
     }
 
-    announceOperation(dest.path().pretty(), value, Tracker::WRITE);
-    if(Record::db.add(dest.path(), value)) {
+    announceOperation(dest.path().pretty(), value.str(), Tracker::WRITE);
+    if(Record::db.add(dest.path(), value.makeDBString())) {
 //      if(!dest.path().isRoot())
         changeContainerSize(dest.parent(), 1);
       return 1;
@@ -471,8 +476,8 @@ namespace janosh {
    * @param dest destination record
    * @return 1 if successful, 0 if not
    */
-  size_t Janosh::replace(Record dest, const string& value) {
-    JANOSH_TRACE({dest}, value);
+  size_t Janosh::replace(Record dest, const Value& value) {
+    JANOSH_TRACE({dest}, value.makeDBString());
     dest.fetch();
 
     if(!dest.isValue() || !dest.exists()) {
@@ -483,8 +488,8 @@ namespace janosh {
       throw janosh_exception() << record_info({"Out of array bounds", dest});
     }
 
-    announceOperation(dest.path().pretty(),value, Tracker::WRITE);
-    return Record::db.replace(dest.path(), value);
+    announceOperation(dest.path().pretty(),value.makeDBString(), Tracker::WRITE);
+    return Record::db.replace(dest.path(), value.makeDBString());
   }
 
 
@@ -534,8 +539,8 @@ namespace janosh {
         dest = target;
 
       } else {
-        announceOperation(dest.path().pretty(), src.value(), Tracker::WRITE);
-        r = Record::db.replace(dest.path(), src.value());
+        announceOperation(dest.path().pretty(), src.value().str(), Tracker::WRITE);
+        r = Record::db.replace(dest.path(), src.value().makeDBString());
       }
     }
 
@@ -592,8 +597,8 @@ namespace janosh {
         r = this->copy(src, target);
         dest = target;
       } else {
-        announceOperation(dest.path().pretty(), src.value(), Tracker::WRITE);
-        r = Record::db.replace(dest.path(), src.value());
+        announceOperation(dest.path().pretty(), src.value().str(), Tracker::WRITE);
+        r = Record::db.replace(dest.path(), src.value().makeDBString());
       }
     }
     remove(src);
@@ -603,13 +608,14 @@ namespace janosh {
   }
 
 
+
   /**
    * Sets/replaces the value of a record. If no record exists, creates the record with corresponding value.
    * @param rec The record to manipulate
    * @return 1 if successful, 0 if not
    */
-  size_t Janosh::set(Record rec, const string& value) {
-    JANOSH_TRACE({rec}, value);
+  size_t Janosh::set(Record rec, const Value& value) {
+    JANOSH_TRACE({rec}, value.makeDBString());
 
     if(!rec.isValue()) {
       throw janosh_exception() << record_info({"Invalid target", rec});
@@ -778,7 +784,7 @@ namespace janosh {
    * @param rec the array record
    * @return number of values appended
    */
-  size_t Janosh::append(vector<string>::const_iterator begin, vector<string>::const_iterator end, Record dest) {
+  size_t Janosh::append(vector<Value>::const_iterator begin, vector<Value>::const_iterator end, Record dest) {
     JANOSH_TRACE({dest});
     dest.fetch();
 
@@ -790,8 +796,8 @@ namespace janosh {
     size_t cnt = 0;
 
     for(; begin != end; ++begin) {
-      announceOperation(dest.path().withChild(s + cnt).pretty(), *begin, Tracker::WRITE);
-      if(!Record::db.add(dest.path().withChild(s + cnt), *begin)) {
+      announceOperation(dest.path().withChild(s + cnt).pretty(), (*begin).str(), Tracker::WRITE);
+      if(!Record::db.add(dest.path().withChild(s + cnt), (*begin).makeDBString())) {
         throw janosh_exception() << record_info({"Failed to add target", dest});
       }
       ++cnt;
@@ -853,20 +859,20 @@ namespace janosh {
       } else {
         if(dest.isArray()) {
           Path target = dest.path().withChild(s + cnt);
-          announceOperation(target.pretty(), src.value(), Tracker::WRITE);
+          announceOperation(target.pretty(), src.value().str(), Tracker::WRITE);
 
           if(!Record::db.add(
               target,
-              src.value()
+              src.value().makeDBString()
           )) {
             throw janosh_exception() << record_info({"add failed", target});
           }
         } else if(dest.isObject()) {
           Path target = dest.path().withChild(src.path().name());
-          announceOperation(target.pretty(), src.value(), Tracker::WRITE);
+          announceOperation(target.pretty(), src.value().str(), Tracker::WRITE);
           if(!Record::db.add(
               target,
-              src.value()
+              src.value().makeDBString()
           )) {
             throw janosh_exception() << record_info({"add failed",target});
           }
@@ -1220,7 +1226,23 @@ int main(int argc, char** argv) {
 
       if(luafile.empty()) {
         Settings s;
-        Request req(f, command, arguments, execTriggers, verbose, get_parent_info());
+        std::vector<Value> typedArgs;
+        for(auto& arg :arguments) {
+          if(arg.empty() || arg.at(0) == '"')  {
+            if(!arg.empty())
+              arg = arg.substr(1, arg.size() -2);
+            typedArgs.push_back(Value{arg, Value::String});
+          } else {
+            if(is_number(arg)) {
+              typedArgs.push_back(Value{arg, Value::Number});
+            } else if(arg == "true" || arg == "false") {
+              typedArgs.push_back(Value{arg, Value::Boolean});
+            } else {
+              typedArgs.push_back(Value{arg, Value::String});
+            }
+          }
+        }
+        Request req(f, command, typedArgs, execTriggers, verbose, get_parent_info());
         TcpClient client;
         client.connect("localhost", s.port);
 

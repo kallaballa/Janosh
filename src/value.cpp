@@ -9,13 +9,13 @@ Value::Value() :
 }
 
 Value::Value(Type t) :
-    initalized(true) {
-  init("", t == String);
+    type(t), initalized(true){
+  init("", t == String || t == Number || t == Boolean);
 }
 
 Value::Value(const string& v, Type t) :
-    initalized(true) {
-  init(v, t == String);
+    type(t), initalized(true) {
+  init(v, t == String || t == Number || t == Boolean);
 }
 
 Value::Value(const string v, bool dir) :
@@ -43,11 +43,13 @@ void Value::reset() {
   this->initalized = false;
 }
 
-const string& Value::str() const {
+string Value::str() const {
   if(!isInitialized())
     throw value_exception() << value_info({"uinitialized value", "null"});
-
-  return this->strObj;
+//    if(type == Boolean || type == String || type == Number)
+//      return this->strObj;
+//    else
+      return this->strObj;
 }
 
 const Value::Type Value::getType() const {
@@ -64,8 +66,9 @@ const size_t Value::getSize() const {
   return this->size;
 }
 
-void Value::init(const string& v, bool value) {
+void Value::init(string v, bool value) {
   if (!value) {
+    assert(!v.empty());
     char c = v.at(0);
     if (c == 'A') {
       this->type = Array;
@@ -77,9 +80,20 @@ void Value::init(const string& v, bool value) {
 
     this->size = boost::lexical_cast<size_t>(v.substr(1));
   } else {
-    this->type = Type::String;
-    this->size = 1;
+    this->size = 1;;
   }
 
   this->strObj = v;
 }
+
+string Value::makeDBString() const{
+    if(type == String)
+      return "s" + str();
+    else if(type == Number)
+      return "n" + str();
+    else if(type == Boolean)
+      return "b" + str();
+    assert(false);
+    return "";
+}
+

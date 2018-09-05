@@ -271,7 +271,6 @@ function makeAllMembersStrings(tbl)
 end
 
 function JanoshClass.load(self, value)
-  print(JSON:encode(makeAllMembersStrings(value)))
   janosh_request({"load",JSON:encode(makeAllMembersStrings(value))});
 end
 

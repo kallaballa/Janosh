@@ -11,7 +11,7 @@ public:
   explicit BashPrintVisitor(std::ostream& out);
   virtual void begin();
   virtual void close();
-  virtual void record(const Path& p, const string& value, bool array, bool first);
+  virtual void record(const Path& p, const Value& value, bool array, bool first);
 };
 }
 #endif

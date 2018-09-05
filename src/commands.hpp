@@ -26,7 +26,7 @@ public:
   virtual ~Command() {
   }
 
-  virtual Result operator()(const vector<string>& params, ostream& out) {
+  virtual Result operator()(const vector<Value>& params, ostream& out) {
     return {-1, "Not implemented"};
   }
   ;

@@ -10,6 +10,7 @@
 #include "record.hpp"
 #include "format.hpp"
 #include "print_visitor.hpp"
+#include "request.hpp"
 
 namespace janosh {
 
@@ -55,11 +56,11 @@ public:
   size_t size(Record target);
   size_t remove(Record& target, bool pack = true);
 
-  size_t add(Record target, const string& value);
-  size_t replace(Record target, const string& value);
-  size_t set(Record target, const string& value);
-  size_t append(Record target, const string& value);
-  size_t append(vector<string>::const_iterator begin, vector<string>::const_iterator end, Record dest);
+  size_t add(Record target, const Value& value);
+  size_t replace(Record target, const Value& value);
+  size_t set(Record target, const Value& value);
+  size_t append(Record target, const Value& value);
+  size_t append(vector<Value>::const_iterator begin, vector<Value>::const_iterator end, Record dest);
 
   size_t move(Record& src, Record& dest);
   size_t replace(Record& src, Record& dest);

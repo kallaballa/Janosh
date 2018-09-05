@@ -135,6 +135,10 @@ LuaScript* LuaScript::instance_ = NULL;
 //        return ltrim(rtrim(s));
 //}
 
+bool is_number(const std::string& s) {
+  return !s.empty() && std::find_if(s.begin(), s.end(), [](char c) {return !std::isdigit(c);}) == s.end();
+}
+
 static janosh::Request make_request(lua_State* L, bool trigger = false) {
   std::vector< string > args;
 
@@ -150,8 +154,24 @@ static janosh::Request make_request(lua_State* L, bool trigger = false) {
       args.push_back( lua_tostring( L, -1 ) );
       lua_pop( L, 1 );
   }
+  std::vector<Value> typedArgs;
+  for(auto& arg :args) {
+    if(arg.empty() || arg.at(0) == '"')  {
+      if(!arg.empty())
+        arg = arg.substr(1, arg.size() -2);
+      typedArgs.push_back(Value{arg, Value::String});
+    } else {
+      if(is_number(arg)) {
+        typedArgs.push_back(Value{arg, Value::Number});
+      } else if(arg == "true" || arg == "false") {
+        typedArgs.push_back(Value{arg, Value::Boolean});
+      } else {
+        typedArgs.push_back(Value{arg, Value::String});
+      }
+    }
+  }
 
-  return Request(janosh::Format::Json, command, args, trigger, false, get_parent_info());
+  return Request(janosh::Format::Json, command, typedArgs, trigger, false, get_parent_info());
 }
 
 //static janosh::Request make_request(string command, lua_State* L, bool trigger = false) {

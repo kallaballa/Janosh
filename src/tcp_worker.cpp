@@ -57,10 +57,10 @@ string reconstructCommandLine(Request& req) {
 
    if(!req.vecArgs_.empty()) {
      bool first = true;
-     for(const string& arg : req.vecArgs_) {
+     for(const Value& arg : req.vecArgs_) {
        if(!first)
          cmdline+=" ";
-       cmdline+= ("\"" + arg + "\"");
+       cmdline+= ("\"" + arg.str() + "\"");
 
        first = false;
      }
@@ -98,7 +98,7 @@ void TcpWorker::run() {
 
     // only "-j get /." is cached
     cacheable = req.command_ == "get" && req.format_ == janosh::Json && !req.runTriggers_ && req.vecArgs_.size() == 1
-        && req.vecArgs_[0] == "/.";
+        && req.vecArgs_[0].str() == "/.";
 
     Cache* cache = Cache::getInstance();
     if (!cacheable && (!req.command_.empty() && (req.command_ != "get" && req.command_ != "dump" && req.command_ != "hash" && req.command_ != "size"))) {
