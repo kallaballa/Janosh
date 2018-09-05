@@ -5,6 +5,7 @@
 #include <chrono>
 #include <thread>
 #include <mutex>
+#include <string>
 #include "exception.hpp"
 #include "cppzmq/zmq.hpp"
 #include "websocket.hpp"
@@ -151,7 +152,15 @@ static janosh::Request make_request(lua_State* L, bool trigger = false) {
   for ( int i = 2; i <= len; ++i ) {
       lua_pushinteger( L, i );
       lua_gettable( L, -2 );
-      args.push_back( lua_tostring( L, -1 ) );
+      std::cerr << "lua tostring start" << std::endl;
+      if(lua_type(L, -1) == LUA_TSTRING)
+        args.push_back( lua_tostring( L, -1 ) );
+      if(lua_type(L, -1) == LUA_TBOOLEAN)
+        args.push_back( lua_toboolean( L, -1 ) > 0 ? "true" : "false" );
+      else if(lua_type(L, -1) == LUA_TNUMBER)
+        args.push_back( std::to_string(lua_tonumber( L, -1 )) );
+
+      std::cerr << "lua tostring end" << std::endl;
       lua_pop( L, 1 );
   }
   std::vector<Value> typedArgs;
