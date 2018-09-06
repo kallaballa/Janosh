@@ -10,8 +10,9 @@
 namespace janosh {
 namespace lua {
 
-typedef websocketpp::server<websocketpp::config::asio> server;
-
+typedef websocketpp::server<websocketpp::config::asio_tls> server;
+typedef websocketpp::config::asio::message_type::ptr message_ptr;
+typedef websocketpp::lib::shared_ptr<websocketpp::lib::asio::ssl::context> context_ptr;
 using websocketpp::connection_hdl;
 using websocketpp::lib::placeholders::_1;
 using websocketpp::lib::placeholders::_2;
