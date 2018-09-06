@@ -1,7 +1,7 @@
 #ifndef JANOSH_WEBSOCKET_HPP_
 #define JANOSH_WEBSOCKET_HPP_
 
-#include "websocketpp/config/asio_no_tls.hpp"
+#include "websocketpp/config/asio.hpp"
 #include "websocketpp/server.hpp"
 #include <iostream>
 #include <set>

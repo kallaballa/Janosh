@@ -21,12 +21,12 @@ ifeq ($(UNAME), Linux)
 
 CXXFLAGS += -Isrc/ -DWEBSOCKETPP_STRICT_MASKING -std=c++0x -pedantic -Wall -I./ -I/opt/local/include -D_XOPEN_SOURCE 
 LDFLAGS += -Lluajit-rocks/build/luajit-2.0/ -L/opt/local/lib -Wl,--export-dynamic
-LIBS    += -lboost_program_options -lboost_serialization -lboost_system -lboost_filesystem -lpthread -lboost_thread -lkyotocabinet -lluajit-5.1 -ldl -lzmq -lX11 -lxdo
+LIBS    += -lboost_program_options -lboost_serialization -lboost_system -lboost_filesystem -lpthread -lboost_thread -lkyotocabinet -lluajit-5.1 -ldl -lzmq -lX11 -lxdo -lssl -lcrypto
 endif
 
 ifeq ($(UNAME), Darwin)
 CXXFLAGS = -DJANOSH_NO_XDO -Isrc/ -DWEBSOCKETPP_STRICT_MASKING -Wall -I./luajit-rocks/luajit-2.0/src/ -I./ -I/opt/local/include -D_XOPEN_SOURCE -std=c++11 -stdlib=libc++ -pthread  -Wall -Wextra -pedantic
-LIBS    := -lboost_program_options -lboost_serialization -lboost_system -lboost_filesystem -lpthread -lboost_thread-mt -lkyotocabinet -lluajit-5.1 -ldl -lzmq
+LIBS    := -lboost_program_options -lboost_serialization -lboost_system -lboost_filesystem -lpthread -lboost_thread-mt -lkyotocabinet -lluajit-5.1 -ldl -lzmq -lssl -lcrypto
 EXTRA_BUILDFLAGS = -pagezero_size 10000 -image_base 100000000
 #Darwin - we use clang
 CXX := clang++
@@ -54,17 +54,17 @@ reduce: ${TARGET}
 
 static: LDFLAGS += -s
 static: CXXFLAGS += -g0 -O3
-static: LIBS = -Wl,-Bstatic -lboost_serialization -lboost_program_options -lboost_system -lboost_filesystem -lkyotocabinet  -llzma -llzo2 -Wl,-Bdynamic -lz -lpthread -lrt -ldl -lluajit-5.1 -lzmq -lX11 -lxdo
+static: LIBS = -Wl,-Bstatic -lboost_serialization -lboost_program_options -lboost_system -lboost_filesystem -lkyotocabinet  -llzma -llzo2 -Wl,-Bdynamic -lz -lpthread -lrt -ldl -lluajit-5.1 -lzmq -lX11 -lxdo -lssl -lcrypto
 static: ${TARGET}
 
 screeninvader: LDFLAGS += -s
 screeninvader: CXXFLAGS += -D_JANOSH_DEBUG -g0 -O3 
-screeninvader: LIBS = -lboost_program_options -Wl,-Bstatic -lboost_serialization -lboost_system -lboost_filesystem -lkyotocabinet  -llzma -llzo2 -Wl,-Bdynamic -lz -lpthread -lrt -ldl -lluajit-5.1 -lzmq -lX11 -lxdo -ldw
+screeninvader: LIBS = -lboost_program_options -Wl,-Bstatic -lboost_serialization -lboost_system -lboost_filesystem -lkyotocabinet  -llzma -llzo2 -Wl,-Bdynamic -lz -lpthread -lrt -ldl -lluajit-5.1 -lzmq -lX11 -lxdo -ldw -lssl -lcrypto
 screeninvader: ${TARGET}
 
 screeninvader_debug: LDFLAGS += -Wl,--export-dynamic
 screeninvader_debug: CXXFLAGS += -D_JANOSH_DEBUG -g3 -O0 -rdynamic
-screeninvader_debug: LIBS = -lboost_program_options -Wl,-Bstatic -lboost_serialization -lboost_system -lboost_filesystem -lkyotocabinet  -llzma -llzo2 -Wl,-Bdynamic -lz -lpthread -lrt -ldl -lbfd -lluajit-5.1 -lzmq -lX11 -lxdo -ldw
+screeninvader_debug: LIBS = -lboost_program_options -Wl,-Bstatic -lboost_serialization -lboost_system -lboost_filesystem -lkyotocabinet  -llzma -llzo2 -Wl,-Bdynamic -lz -lpthread -lrt -ldl -lbfd -lluajit-5.1 -lzmq -lX11 -lxdo -ldw -lssl -lcrypto
 screeninvader_debug: ${TARGET}
 
 debug: CXXFLAGS += -g3 -O0 -rdynamic -D_JANOSH_DEBUG
