@@ -93,7 +93,7 @@ string Value::makeDBString() const{
       return "n" + str();
     else if(type == Boolean)
       return "b" + str();
-    assert(false);
-    return "";
+
+    return str();
 }
 

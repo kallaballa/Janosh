@@ -258,20 +258,8 @@ function JanoshClass.request_t(self, req)
   return janosh_request_t(req);
 end
 
-function makeAllMembersStrings(tbl) 
-  local newTbl = {};
-  for k, v in pairs(tbl) do
-    if type(v) == "table" then
-      newTbl[k] = makeAllMembersStrings(v)
-    else
-      newTbl[k] = tostring(v);
-    end
-  end
-  return newTbl;
-end
-
 function JanoshClass.load(self, value)
-  janosh_request({"load",JSON:encode(makeAllMembersStrings(value))});
+  janosh_request({"load",JSON:encode(value)});
 end
 
 
@@ -595,7 +583,7 @@ function JanoshClass.wsOnReceive(self, callback)
     janosh_register_thread("WsReceiver")
     while true do
       key, op, value = janosh_wsreceive(keyprefix)
-      status, msg = pcall(function() callback(key, op, value) end)
+      status, msg = pcall(callback,key, op, value)
       if not status then
         print("Receiver " .. keyprefix .. " failed: ", msg)
       end
