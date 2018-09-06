@@ -137,7 +137,7 @@ LuaScript* LuaScript::instance_ = NULL;
 //}
 
 bool is_number(const std::string& s) {
-  return !s.empty() && std::find_if(s.begin(), s.end(), [](char c) {return !std::isdigit(c);}) == s.end();
+  return !s.empty() && std::find_if(s.begin(), s.end(), [](char c) {return c != '.' && !std::isdigit(c);}) == s.end();
 }
 
 static janosh::Request make_request(lua_State* L, bool trigger = false) {
@@ -152,7 +152,6 @@ static janosh::Request make_request(lua_State* L, bool trigger = false) {
   for ( int i = 2; i <= len; ++i ) {
       lua_pushinteger( L, i );
       lua_gettable( L, -2 );
-      std::cerr << "lua tostring start" << std::endl;
       if(lua_type(L, -1) == LUA_TSTRING)
         args.push_back( lua_tostring( L, -1 ) );
       if(lua_type(L, -1) == LUA_TBOOLEAN)
@@ -160,7 +159,6 @@ static janosh::Request make_request(lua_State* L, bool trigger = false) {
       else if(lua_type(L, -1) == LUA_TNUMBER)
         args.push_back( std::to_string(lua_tonumber( L, -1 )) );
 
-      std::cerr << "lua tostring end" << std::endl;
       lua_pop( L, 1 );
   }
   std::vector<Value> typedArgs;

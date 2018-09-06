@@ -460,7 +460,7 @@ namespace janosh {
       throw janosh_exception() << record_info({"Out of array bounds",dest});
     }
 
-    announceOperation(dest.path().pretty(), value.str(), Tracker::WRITE);
+    announceOperation(dest.path().pretty(), value.makeDBString(), Tracker::WRITE);
     if(Record::db.add(dest.path(), value.makeDBString())) {
 //      if(!dest.path().isRoot())
         changeContainerSize(dest.parent(), 1);
@@ -539,7 +539,7 @@ namespace janosh {
         dest = target;
 
       } else {
-        announceOperation(dest.path().pretty(), src.value().str(), Tracker::WRITE);
+        announceOperation(dest.path().pretty(), src.value().makeDBString(), Tracker::WRITE);
         r = Record::db.replace(dest.path(), src.value().makeDBString());
       }
     }
@@ -597,7 +597,7 @@ namespace janosh {
         r = this->copy(src, target);
         dest = target;
       } else {
-        announceOperation(dest.path().pretty(), src.value().str(), Tracker::WRITE);
+        announceOperation(dest.path().pretty(), src.value().makeDBString(), Tracker::WRITE);
         r = Record::db.replace(dest.path(), src.value().makeDBString());
       }
     }
@@ -796,7 +796,7 @@ namespace janosh {
     size_t cnt = 0;
 
     for(; begin != end; ++begin) {
-      announceOperation(dest.path().withChild(s + cnt).pretty(), (*begin).str(), Tracker::WRITE);
+      announceOperation(dest.path().withChild(s + cnt).pretty(), (*begin).makeDBString(), Tracker::WRITE);
       if(!Record::db.add(dest.path().withChild(s + cnt), (*begin).makeDBString())) {
         throw janosh_exception() << record_info({"Failed to add target", dest});
       }
@@ -859,7 +859,7 @@ namespace janosh {
       } else {
         if(dest.isArray()) {
           Path target = dest.path().withChild(s + cnt);
-          announceOperation(target.pretty(), src.value().str(), Tracker::WRITE);
+          announceOperation(target.pretty(), src.value().makeDBString(), Tracker::WRITE);
 
           if(!Record::db.add(
               target,
@@ -869,7 +869,7 @@ namespace janosh {
           }
         } else if(dest.isObject()) {
           Path target = dest.path().withChild(src.path().name());
-          announceOperation(target.pretty(), src.value().str(), Tracker::WRITE);
+          announceOperation(target.pretty(), src.value().makeDBString(), Tracker::WRITE);
           if(!Record::db.add(
               target,
               src.value().makeDBString()
@@ -1008,9 +1008,9 @@ namespace janosh {
     setContainerSize(container, container.getSize() + by);
   }
 
-  size_t Janosh::load(const Path& path, const string& value) {
-    announceOperation(path.pretty(), value, Tracker::WRITE);
-    return Record::db.set(path, value) ? 1 : 0;
+  size_t Janosh::load(const Path& path, const Value& value) {
+    announceOperation(path.pretty(), value.makeDBString(), Tracker::WRITE);
+    return Record::db.set(path, value.makeDBString()) ? 1 : 0;
   }
 
   size_t Janosh::load(js::Value& v, Path& path) {
@@ -1020,21 +1020,22 @@ namespace janosh {
     } else if (v.type() == js::array_type) {
       cnt+=load(v.get_array(), path);
     } else if (v.type() == js::str_type) {
-      cnt+=this->load(path, "s" + v.get_str());
+      cnt+=this->load(path, Value(v.get_str(), Value::String));
     } else if (v.type() == js::int_type) {
-      cnt+=this->load(path, "n" + std::to_string(v.get_int()));
+      cnt+=this->load(path, Value(std::to_string(v.get_int()), Value::Number));
     } else if (v.type() == js::bool_type) {
-      cnt+=this->load(path, "b" + std::to_string(v.get_bool()));
+      cnt+=this->load(path, Value(std::to_string(v.get_bool()), Value::Boolean));
     } else if (v.type() == js::real_type) {
-      cnt+=this->load(path, "n" + std::to_string(v.get_real()));
+      cnt+=this->load(path, Value(std::to_string(v.get_real()), Value::Number));
     }
+
     return cnt;
   }
 
   size_t Janosh::load(js::Object& obj, Path& path) {
     size_t cnt = 0;
     path.pushMember(".");
-    cnt+=this->load(path, (boost::format("O%d") % obj.size()).str());
+    cnt+=this->load(path, Value((boost::format("O%d") % obj.size()).str(), Value::Object));
     path.pop();
 
     for(js::Pair& p : obj) {
@@ -1051,7 +1052,7 @@ namespace janosh {
     size_t cnt = 0;
     int index = 0;
     path.pushMember(".");
-    cnt+=this->load(path, (boost::format("A%d") % array.size()).str());
+    cnt+=this->load(path, Value((boost::format("A%d") % array.size()).str(), Value::Array));
     path.pop();
 
     for(js::Value& v : array){

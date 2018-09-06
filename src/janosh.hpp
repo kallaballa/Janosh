@@ -82,7 +82,7 @@ private:
   Format getFormat();
   void setContainerSize(Record rec, const size_t s);
   void changeContainerSize(Record rec, const size_t by);
-  size_t load(const Path& path, const string& value);
+  size_t load(const Path& path, const Value& value);
   size_t load(js::Value& v, Path& path);
   size_t load(js::Object& obj, Path& path);
   size_t load(js::Array& array, Path& path);
