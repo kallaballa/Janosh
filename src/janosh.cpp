@@ -1249,7 +1249,7 @@ int main(int argc, char** argv) {
             }
           }
         }
-        Request req(f, command, typedArgs, execTriggers, verbose, get_parent_info());
+        Request req(f, command, typedArgs, execTriggers, verbose, get_parent_info(), "");
         TcpClient client;
         client.connect("localhost", s.port);
 

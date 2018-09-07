@@ -10,6 +10,7 @@
 #include <condition_variable>
 #include <lua.hpp>
 #include <thread>
+#include <deque>
 
 namespace janosh {
 namespace lua {
@@ -27,8 +28,9 @@ public:
     void loadString(const string& luaCode);
     void run();
     void clean();
-    void performOpen(bool lockRequest = true);
+    void performOpen(const string& strID, bool lockRequest = true);
     void performClose(bool lockRequest = true);
+    void printTransactions(std::ostream& os);
     std::pair<int, string>  performRequest(janosh::Request req);
 
     static void init(std::function<void()> openCallback,
@@ -51,7 +53,7 @@ private:
     static LuaScript* instance_;
     std::mutex open_lock_;
     std::condition_variable open_lock_cond_;
-    std::queue<std::thread::id> open_queue_;
+    std::deque<std::pair<std::thread::id, string>> open_queue_;
     std::thread::id open_current_id;
     bool isOpen = false;
 

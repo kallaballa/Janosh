@@ -7,6 +7,8 @@
 #include <mutex>
 #include <string>
 #include "exception.hpp"
+#include <signal.h>
+#include <stdio.h>
 #include "cppzmq/zmq.hpp"
 #include "websocket.hpp"
 #include "exception.hpp"
@@ -145,11 +147,16 @@ static janosh::Request make_request(lua_State* L, bool trigger = false) {
 
   lua_pushinteger( L, 1 );
   lua_gettable( L, -2 );
+  string info = lua_tostring( L, -1 );
+  lua_pop( L, 1 );
+
+  lua_pushinteger( L, 2 );
+  lua_gettable( L, -2 );
   string command = lua_tostring( L, -1 );
   lua_pop( L, 1 );
 
   const int len = lua_objlen( L, -1 );
-  for ( int i = 2; i <= len; ++i ) {
+  for ( int i = 3; i <= len; ++i ) {
       lua_pushinteger( L, i );
       lua_gettable( L, -2 );
       if(lua_type(L, -1) == LUA_TSTRING)
@@ -178,7 +185,7 @@ static janosh::Request make_request(lua_State* L, bool trigger = false) {
     }
   }
 
-  return Request(janosh::Format::Json, command, typedArgs, trigger, false, get_parent_info());
+  return Request(janosh::Format::Json, command, typedArgs, trigger, false, get_parent_info(), info);
 }
 
 //static janosh::Request make_request(string command, lua_State* L, bool trigger = false) {
@@ -291,7 +298,8 @@ static int l_request_trigger(lua_State* L) {
 }
 
 static int l_open(lua_State* L) {
-  LuaScript::getInstance()->performOpen();
+  string id = lua_tostring(L, -1);
+  LuaScript::getInstance()->performOpen(id);
   return 0;
 }
 
@@ -478,6 +486,10 @@ static void install_janosh_functions(lua_State* L, bool first) {
 
 }
 
+void printTransactionsHandler(int signum) {
+  LuaScript::getInstance()->printTransactions(std::cerr);
+}
+
 LuaScript::LuaScript(std::function<void()> openCallback,
     std::function<std::pair<int,string>(janosh::Request&)> requestCallback,
     std::function<void()> closeCallback, lua_State* l) : openCallback_(openCallback), requestCallback_(requestCallback), closeCallback_(closeCallback) {
@@ -489,6 +501,7 @@ LuaScript::LuaScript(std::function<void()> openCallback,
     L = l;
   }
   clean();
+  assert(signal(SIGUSR1, printTransactionsHandler) != SIG_ERR);
 }
 
 LuaScript::~LuaScript() {
@@ -538,7 +551,7 @@ void LuaScript::clean() {
 }
 
 //#define __JANOSH_DEBUG_QUEUE__
-void LuaScript::performOpen(bool lockRequest) {
+void LuaScript::performOpen(const string& strID, bool lockRequest) {
   if(lockRequest) {
     std::unique_lock<std::mutex> lock(open_lock_);
     bool wait = false;
@@ -551,12 +564,12 @@ void LuaScript::performOpen(bool lockRequest) {
 #ifdef __JANOSH_DEBUG_QUEUE__
         std::cerr << " ### queued: " << std::this_thread::get_id() << std::endl;
 #endif
-        open_queue_.push(std::this_thread::get_id());
+        open_queue_.push_back({std::this_thread::get_id(), strID});
       }
       if(isOpen || wait)
         open_lock_cond_.wait(lock);
 
-      if(std::this_thread::get_id() == open_queue_.front() && !isOpen) {
+      if(std::this_thread::get_id() == open_queue_.front().first && !isOpen) {
 #ifdef __JANOSH_DEBUG_QUEUE__
         std::cerr << " ### released: " << std::this_thread::get_id() << std::endl;
 #endif
@@ -569,7 +582,7 @@ void LuaScript::performOpen(bool lockRequest) {
       }
     }
     if(open_queue_.empty())
-      open_queue_.push(std::this_thread::get_id());
+      open_queue_.push_back({std::this_thread::get_id(),strID});
     openCallback_();
     isOpen = true;
     open_current_id = std::this_thread::get_id();
@@ -601,7 +614,7 @@ void LuaScript::performClose(bool lockRequest) {
     closeCallback_();
     isOpen = false;
     if(!open_queue_.empty())
-      open_queue_.pop();
+      open_queue_.pop_front();
 
 #ifdef __JANOSH_DEBUG_QUEUE__
     std::cerr << "### closelockend: " << std::this_thread::get_id() << std::endl;
@@ -630,7 +643,7 @@ std::pair<int, string> LuaScript::performRequest(janosh::Request req) {
   std::cerr << " ### req: " << std::this_thread::get_id() << std::endl;
 #endif
    if(!isOpen) {
-    performOpen(false);
+    performOpen(req.info_, false);
     auto result = requestCallback_(req);
     performClose(false);
 #ifdef __JANOSH_DEBUG_QUEUE__
@@ -643,6 +656,13 @@ std::pair<int, string> LuaScript::performRequest(janosh::Request req) {
     std::cerr << " ### reqend: " << std::this_thread::get_id() << std::endl;
 #endif
     return result;
+  }
+}
+
+void LuaScript::printTransactions(std::ostream& os) {
+  std::unique_lock<std::mutex> lock(open_lock_);
+  for(auto& p : open_queue_) {
+    os << "Thread(" << p.first << "):" << p.second << std::endl;
   }
 }
 }

@@ -251,57 +251,59 @@ function JanoshClass.tjoin(self, t)
 end
 
 function JanoshClass.request(self, req) 
+  table.insert(req,1,debug.traceback())
   return janosh_request(req);
 end
 
 function JanoshClass.request_t(self, req)
+  table.insert(req,1,debug.traceback())
   return janosh_request_t(req);
 end
 
 function JanoshClass.load(self, value)
-  janosh_request({"load",JSON:encode(value)});
+  self:request({"load",JSON:encode(value)});
 end
 
 
 function JanoshClass.set(self, key, value)
-  janosh_request({"set",key,value});
+  self:request({"set",key,value});
 end
 
 function JanoshClass.set_all(self, argv)
   table.insert(argv,1,"set")
-  janosh_request(argv);
+  self:request(argv);
 end
 
 function JanoshClass.add(self, key, value)
-  janosh_request({"add",key,value});
+  self:request({"add",key,value});
 end
 
 function JanoshClass.add_all(self, argv)
   table.insert(argv,1,"add")
-  janosh_request(argv);
+  self:request(argv);
 end
 
 function JanoshClass.replace(self, key, value)
-  janosh_request({"replace",key,value});
+  self:request({"replace",key,value});
 end
 
 function JanoshClass.replace_all(self, argv)
   table.insert(argv,1,"replace")
-  janosh_request(argv);
+  self:request(argv);
 end
 
 function JanoshClass.append(self, key, value)
 	if type(value) == "table" then
     table.insert(value, 1, key)
 		table.insert(value, 1, "append")
-	   janosh_request(value);
+	   self:request(value);
 	else
-		janosh_request({"append",key,value})
+	   self:request({"append",key,value})
 	end
 end
 
 function JanoshClass.dump(self)
-    local err, value = pcall(janosh_request, {"dump"})
+    local err, value = pcall(JanoshClass.request, self, {"dump"})
     if not err then
       return nil
     end
@@ -312,14 +314,14 @@ end
 function JanoshClass.size(self, keys)
   if type(keys) == "table" then
     table.insert(keys, 1, "size")
-     local err, value = pcall(janosh_request, keys)
+     local err, value = pcall(JanoshClass.request, self, keys)
     if not err then
       return nil
     end
 
-		return tonumber(janosh_request(value))
+		return tonumber(self:request(value))
   else
-    local err, value = pcall(janosh_request, {"size", keys})
+    local err, value = pcall(JanoshClass.request, self, {"size", keys})
     if not err then
       return nil
     end
@@ -357,7 +359,7 @@ end
 function JanoshClass.get(self, keys)
   if type(keys) == "table" then
     table.insert(keys, 1, "get")
-		local err, value = pcall(janosh_request, keys)
+		local err, value = pcall(JanoshClass.request, self, keys)
 		if not err then
 			return nil
 		end
@@ -380,7 +382,7 @@ function JanoshClass.get(self, keys)
 			return table;
 		end	
 	else
-    local err, value = pcall(janosh_request, {"get", keys})
+    local err, value = pcall(JanoshClass.request, self, {"get", keys})
     if not err then
       return nil
     end
@@ -399,54 +401,54 @@ function JanoshClass.get(self, keys)
 end
   
 function JanoshClass.copy(self, from, to)
-	janosh_request({"copy",from,to})
+	self:request({"copy",from,to})
 end
 
 function JanoshClass.remove(self, keys)
   if type(keys) == "table" then
     table.insert(keys, 1, "remove")
-    janosh_request(keys);
+    self:request(keys);
   else
-    janosh_request({"remove", keys})
+    self:request({"remove", keys})
   end
 end
 
 function JanoshClass.shift(self, from, to)
-  janosh_request({"shift", from,to})
+  self:request({"shift", from,to})
 end
 
 function JanoshClass.move(self, from, to)
-  janosh_request({"move", from,to})
+  self:request({"move", from,to})
 end
 
 function JanoshClass.truncate(self)
-  janosh_request({"truncate"})
+  self:request({"truncate"})
 end
 
 function JanoshClass.mkarr(self, keys)
   if type(keys) == "table" then
     table.insert(keys, 1, "mkarr")
-    janosh_request(keys);
+    self:request(keys);
   else
-    janosh_request({"mkarr", keys})
+    self:request({"mkarr", keys})
   end
 end
 
 function JanoshClass.mkobj(self, keys)
   if type(keys) == "table" then
    table.insert(keys, 1, "mkobj")
-   janosh_request(keys);
+   self:request(keys);
   else
-    janosh_request({"mkobj", keys})
+    self:request({"mkobj", keys})
   end
 end
 
 function JanoshClass.hash(self)
-  return janosh_request({"hash"})
+  return self:request({"hash"})
 end
 
-function JanoshClass.open(self)
-  janosh_open()
+function JanoshClass.open(self, strID)
+  janosh_open(strID)
 end
 
 function JanoshClass.close(self)
@@ -458,10 +460,10 @@ function count(base, pattern)
 end
 
 function JanoshClass.transaction(self, fn) 
-	if count(debug.traceback(), "%[string \"JanoshAPI\"%]: in function 'transaction'") > 1 then
-		error("Nested transaction detected: " .. debug.traceback());
-	end
-  self:open()
+  if count(debug.traceback(), "%[string \"JanoshAPI\"%]: in function 'transaction'") > 1 then
+    error("Nested transaction detected: " .. debug.traceback());
+  end
+  self:open(debug.traceback())
   status, msg = pcall(fn)
   if not status then
     print("Transaction failed: " .. msg)
@@ -486,87 +488,87 @@ function JanoshClass.subscribe(self, keyprefix, callback)
 end
 
 function JanoshClass.publish(self, key, op, value) 
-  janosh_request({"publish",key,op,value});
+  self:request({"publish",key,op,value});
 end
 
 function JanoshClass.set_t(self, key, value)
-  janosh_request_t({"set",key,value});
+  self:request_t({"set",key,value});
 end
 
 function JanoshClass.set_all_t(self, argv)
   print("SET_ALL_T")
   table.insert(argv,1,"set")
-  janosh_request_t(argv);
+  self:request_t(argv);
 end
 
 function JanoshClass.add_t(self, key, value)
-  janosh_request_t({"add",key,value});
+  self:request_t({"add",key,value});
 end
 
 function JanoshClass.add_all_t(self, argv)
   table.insert(argv,1,"add")
-  janosh_request_t(argv);
+  self:request_t(argv);
 end
 
 function JanoshClass.replace_t(self, key, value)
-  janosh_request_t({"replace",key,value});
+  self:request_t({"replace",key,value});
 end
 
 function JanoshClass.replace_all_t(self, argv)
   table.insert(argv,1,"replace")
-  janosh_request_t(argv);
+  self:request_t(argv);
 end
 
 function JanoshClass.append_t(self, key, value)
   if type(value) == "table" then
     table.insert(value, 1, key)
 		table.insert(value, 1, "append")
-    janosh_request_t(value);
+    self:request_t(value);
 	else
-		janosh_request_t({"append",key,value})
+		self:request_t({"append",key,value})
 	end
 end
 
 function JanoshClass.copy_t(self, from, to)
-  janosh_request_t({"copy",from,to})
+  self:request_t({"copy",from,to})
 end
 
 function JanoshClass.remove_t(self, keys)
   if type(keys) == "table" then
     table.insert(keys, 1, "remove")
-    janosh_request_t(keys);
+    self:request_t(keys);
   else
-    janosh_request_t({"remove", keys})
+    self:request_t({"remove", keys})
   end
 end
 
 function JanoshClass.shift_t(self, from, to)
-  janosh_request_t({"shift", from,to})
+  self:request_t({"shift", from,to})
 end
 
 function JanoshClass.move(self, from, to)
-  janosh_request({"move", from,to})
+  self:request({"move", from,to})
 end
 
 function JanoshClass.move_t(self, from, to)
-  janosh_request_t({"move", from,to})
+  self:request_t({"move", from,to})
 end
 
 function JanoshClass.mkarr_t(self, keys)
   if type(keys) == "table" then
     table.insert(keys, 1, "mkarr")
-    janosh_request_t(keys);
+    self:request_t(keys);
   else
-    janosh_request_t({"mkarr", keys})
+    self:request_t({"mkarr", keys})
   end
 end
 
 function JanoshClass.mkobj_t(self, keys)
   if type(keys) == "table" then
    table.insert(keys, 1, "mkobj")
-   janosh_request_t(keys);
+   self:request_t(keys);
   else
-    janosh_request_t({"mkobj", keys})
+    self:request_t({"mkobj", keys})
   end
 end
 

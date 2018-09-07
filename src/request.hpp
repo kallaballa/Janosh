@@ -35,17 +35,19 @@ public:
   bool runTriggers_ = false;
   bool verbose_ = false;
   ProcessInfo pinfo_;
+  string info_;
 
   Request() {
   }
 
-  Request(const Format& format, const string& command, const vector<Value>& vecArgs, const bool& triggers, const bool& verbose, ProcessInfo pinfo_) :
+  Request(const Format& format, const string& command, const vector<Value>& vecArgs, const bool& triggers, const bool& verbose, ProcessInfo pinfo_, const string& info) :
    format_(format),
    command_(command),
    vecArgs_(vecArgs),
    runTriggers_(triggers),
    verbose_(verbose),
-   pinfo_(pinfo_) {
+   pinfo_(pinfo_),
+   info_() {
   }
 
   Request(const Request& other) {
@@ -55,6 +57,7 @@ public:
     this->runTriggers_ = other.runTriggers_;
     this->verbose_ = other.verbose_;
     this->pinfo_ = other.pinfo_;
+    this->info_ = other.info_;
   }
   virtual ~Request() {}
 
@@ -66,6 +69,7 @@ public:
       ar & runTriggers_;
       ar & verbose_;
       ar & pinfo_;
+      ar & info_;
   }
 };
 
