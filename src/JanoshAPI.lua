@@ -365,32 +365,41 @@ function getFirstLeaf(tbl)
   end
 end
 
+function JanoshClass.raw(self, key)
+	local ret, val = janosh_raw(key)
+	if not ret then
+		return nil
+	else
+		return val
+	end
+
+end
 function JanoshClass.get(self, keys)
   if type(keys) == "table" then
-    table.insert(keys, 1, "get")
-		local err, value = self:request(keys)
-		if not err then
-			return nil
+    	table.insert(keys, 1, "get")
+	local err, value = self:request(keys)
+	if not err then
+		return nil
+	end
+	local table = JSON:decode(value)
+	local hasDir = false;
+	for k, v in pairs(keys) do
+		hasDir = ends(k,"/.")
+		if hasDir then
+			break;
 		end
-    local table = JSON:decode(value)
-		local hasDir = false;
-		for k, v in pairs(keys) do
-			hasDir = ends(k,"/.")
-			if hasDir then
-				break;
-			end
-		end
+	end
 
-		if not hasDir then
-			if countNonTable(table) == 1 then
-				return getFirstLeaf(table)
-			else
-				return table;
-			end
+	if not hasDir then
+		if countNonTable(table) == 1 then
+			return getFirstLeaf(table)
 		else
 			return table;
-		end	
+		end
 	else
+		return table;
+	end	
+  else
     local err, value = self:request({"get", keys})
     if not err then
       return nil

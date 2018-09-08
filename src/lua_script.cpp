@@ -297,6 +297,15 @@ static int l_request_trigger(lua_State* L) {
   return 2;
 }
 
+static int l_raw(lua_State* L) {
+  string key = lua_tostring(L, -1);
+  Request req(janosh::Format::Raw, "get", {{key, Value::String}}, false, false, get_parent_info(), "");
+  auto result = LuaScript::getInstance()->performRequest(req);
+  lua_pushnumber(L, result.first);
+  lua_pushstring(L, result.second.c_str());
+  return 2;
+}
+
 static int l_open(lua_State* L) {
   string id = lua_tostring(L, -1);
   LuaScript::getInstance()->performOpen(id);
@@ -430,6 +439,8 @@ static void install_janosh_functions(lua_State* L, bool first) {
 
   lua_pushcfunction(L, l_open);
   lua_setglobal(L, "janosh_open");
+  lua_pushcfunction(L, l_raw);
+  lua_setglobal(L, "janosh_raw");
   lua_pushcfunction(L, l_close);
   lua_setglobal(L, "janosh_close");
 
