@@ -281,21 +281,20 @@ static int l_wssend(lua_State* L) {
 
 static int l_request(lua_State* L) {
   auto result = LuaScript::getInstance()->performRequest(make_request(L));
-  if(result.first != 0)
-    lua_error(L);
 
+  lua_pushnumber(L, result.first);
   lua_pushstring(L, result.second.c_str());
-  return 1;
+
+  return 2;
 }
 
 static int l_request_trigger(lua_State* L) {
   auto result = LuaScript::getInstance()->performRequest(make_request(L, true));
-  if(result.first != 0)
-     lua_error(L);
 
+  lua_pushnumber(L, result.first);
   lua_pushstring(L, result.second.c_str());
 
-  return 1;
+  return 2;
 }
 
 static int l_open(lua_State* L) {

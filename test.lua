@@ -38,7 +38,7 @@ function test_append()
 		Janosh:truncate()
 		Janosh:test(Janosh.mkarr,"/array/.")
   		Janosh:test(Janosh.append,"/array/.",{"0","1","2","3"})
-  		if Janosh:size("/array/.")  ~= 4 then Janosh:error() end
+		if Janosh:size("/array/.")  ~= 4 then Janosh:error() end
   		Janosh:test(Janosh.mkobj, "/object/.")
   		Janosh:ntest(Janosh.append, "/object/.", "0", "1", "2", "3")
   		if Janosh:size("/object/.") ~= 0 then Janosh:error() end
@@ -102,7 +102,7 @@ function test_remove()
 		Janosh:test(Janosh.add,"/object/5","0")
 		Janosh:test(Janosh.mkarr,"/object/subarr/.")
 		Janosh:test(Janosh.remove,"/object/.")
-		Janosh:test(Janosh.size,"/object/.")
+		if Janosh:size("/object/.") ~= nil then   Janosh:error()  end
     Janosh:publish("count");
 	end)
 end
