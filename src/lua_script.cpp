@@ -36,7 +36,7 @@ static int wrap_exceptions(lua_State *L, lua_CFunction f)
   } catch (std::exception& e) {
     message = e.what();
   } catch (...) {
-    message= lua_tostring(L, -1);
+    message = "...";
   }
 
   LOG_DEBUG_MSG("Caught message in lua call", message);
@@ -281,19 +281,20 @@ static int l_wssend(lua_State* L) {
 
 static int l_request(lua_State* L) {
   auto result = LuaScript::getInstance()->performRequest(make_request(L));
-  lua_pushstring(L, result.second.c_str());
-
   if(result.first != 0)
     lua_error(L);
+
+  lua_pushstring(L, result.second.c_str());
   return 1;
 }
 
 static int l_request_trigger(lua_State* L) {
   auto result = LuaScript::getInstance()->performRequest(make_request(L, true));
+  if(result.first != 0)
+     lua_error(L);
+
   lua_pushstring(L, result.second.c_str());
 
-  if(result.first != 0)
-    lua_error(L);
   return 1;
 }
 
@@ -536,13 +537,13 @@ void LuaScript::run() {
 
     if (error)
     {
-      std::stringstream ss;
-      size_t numMsg =lua_gettop(L);
-      for(size_t i = 0; i < numMsg;++i) {
-        ss << lua_tostring(L, -1) << std::endl;
-        lua_pop(L, 1);
-      }
-      LOG_ERR_MSG("Lua script failed", ss.str());
+//      std::stringstream ss;
+//      size_t numMsg =lua_gettop(L);
+//      for(size_t i = 0; i < numMsg;++i) {
+//        ss << lua_tostring(L, -1) << std::endl;
+//        lua_pop(L, 1);
+//      }
+      LOG_ERR_MSG("Lua script failed", lua_tostring(L, -1));
     }
 }
 

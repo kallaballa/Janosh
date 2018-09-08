@@ -92,27 +92,29 @@ bool TcpServer::run() {
 
 	    w->runSynchron();
       janosh->endTransaction(true);
-  } while(w->connected());
+	  } while(w->connected());
 
 	  if(w)
       delete w;
 
   } catch (janosh_exception& ex) {
     janosh->endTransaction(false);
+    printException(ex);
+
     if (socket != NULL) {
       LOG_DEBUG_MSG("Closing socket", socket);
       socket->shutdown(boost::asio::socket_base::shutdown_both);
       socket->close();
     }
-    printException(ex);
   } catch (std::exception& ex) {
     janosh->endTransaction(false);
+    printException(ex);
+
     if (socket != NULL) {
       LOG_DEBUG_MSG("Closing socket", socket);
       socket->shutdown(boost::asio::socket_base::shutdown_both);
       socket->close();
     }
-    printException(ex);
   }
   
   return true;
