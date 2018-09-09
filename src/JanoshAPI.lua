@@ -516,9 +516,9 @@ function JanoshClass.subscribe(self, keyprefix, callback)
   t()
 end
 
-function JanoshClass.publish(self, key, op, value) 
-  local ret, val = self:request({"publish",key,op,value});
-  return ret
+function JanoshClass.publish(self, handle, key, op, value) 
+  Janosh:wsSend(handle, JSON:encode({"publish",key,op,value}));
+  return 0
 end
 
 function JanoshClass.set_t(self, key, value)
