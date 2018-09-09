@@ -517,7 +517,7 @@ function JanoshClass.subscribe(self, keyprefix, callback)
 end
 
 function JanoshClass.publish(self, handle, key, op, value) 
-  Janosh:wsSend(handle, JSON:encode({"publish",key,op,value}));
+  Janosh:wsSend(handle, JSON:encode({key,op,value}));
   return 0
 end
 
