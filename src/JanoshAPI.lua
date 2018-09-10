@@ -37,7 +37,7 @@ function JanoshClass.mktempDir(self)
 end
 
 function JanoshClass.system(self, cmdstring) 
- os.execute(cmdstring)
+ return os.execute(cmdstring)
 end
 
 function JanoshClass.capture(self, cmd)
