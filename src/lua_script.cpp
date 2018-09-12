@@ -256,7 +256,11 @@ static int l_sleep(lua_State* L) {
 
 static int l_wsopen(lua_State* L) {
   //FIXME race condition
-  WebsocketServer::init(lua_tointeger(L, -1));
+  if (lua_gettop(L) == 1) {
+    WebsocketServer::init(lua_tointeger(L, -1));
+  } else if (lua_gettop(L) > 1) {
+    WebsocketServer::init(lua_tointeger(L, -2), lua_tostring(L, -1));
+  }
   return 0;
 }
 

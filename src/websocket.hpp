@@ -6,10 +6,12 @@
 #include <iostream>
 #include <set>
 #include <deque>
+#include <map>
 
 namespace janosh {
 namespace lua {
 
+using std::string;
 typedef websocketpp::server<websocketpp::config::asio> server;
 
 using websocketpp::connection_hdl;
@@ -45,10 +47,21 @@ struct action {
 
 typedef std::pair<size_t, std::string> lua_message;
 
+struct Credentials {
+  std::string hash;
+  std::string salt;
+  std::string userData;
+};
+
+typedef std::map<std::string, Credentials> AuthData;
+
 class WebsocketServer {
 private:
-    WebsocketServer();
+    WebsocketServer(const std::string passwdFile = "");
     ~WebsocketServer();
+    string loginUser(const connection_hdl hdl, const std::string& username, const std::string& password);
+    string registerUser(const connection_hdl hdl, const std::string& username, const std::string& password, const std::string& userdata);
+    void readAuthData(const std::string& passwdFile);
     void run(uint16_t port);
     void on_open(connection_hdl hdl);
     void on_close(connection_hdl hdl);
@@ -59,7 +72,7 @@ public:
     std::pair<size_t, std::string> receive();
     void send(size_t handle, const std::string& message);
 
-    static void init(int port);
+    static void init(const int port, const string passwdFile = "");
     static WebsocketServer* getInstance();
 private:
     typedef std::set<connection_hdl,std::owner_less<connection_hdl> > con_list;
@@ -81,6 +94,10 @@ private:
     mutex m_receive_lock;
     condition_variable m_receive_cond;
     std::deque<lua_message> m_receive;
+    bool doAuthenticate = false;
+    std::map<connection_hdl, bool, std::owner_less<connection_hdl>> authMap;
+    AuthData authData;
+    string passwdFile;
 };
 
 }

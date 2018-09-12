@@ -2,6 +2,15 @@
 #include "websocketpp/endpoint.hpp"
 #include "exithandler.hpp"
 #include "logger.hpp"
+#include "exception.hpp"
+
+#include <fstream>
+#include <cryptopp/hex.h>
+#include <cryptopp/sha.h>
+#include <cryptopp/base64.h>
+#include <cryptopp/osrng.h>
+#include <cryptopp/pwdbased.h>
+#include <random>
 
 namespace janosh {
 namespace lua {
@@ -18,7 +27,58 @@ using websocketpp::lib::mutex;
 using websocketpp::lib::unique_lock;
 using websocketpp::lib::condition_variable;
 
-WebsocketServer::WebsocketServer() {
+std::pair<string,string> hash_password(const string password, string salthex = "") {
+   using namespace CryptoPP;
+   unsigned int iterations = 1000000;
+
+   SecByteBlock derivedkey(AES::DEFAULT_KEYLENGTH);
+
+   if(salthex.empty()) {
+     SecByteBlock pwsalt(AES::DEFAULT_KEYLENGTH);
+     AutoSeededRandomPool rng;
+
+     rng.GenerateBlock(pwsalt,pwsalt.size());
+     StringSource ss1(pwsalt,pwsalt.size(),true,
+            new HexEncoder(
+               new StringSink(salthex)
+            )
+     );
+
+     PKCS5_PBKDF2_HMAC<CryptoPP::SHA256> p;
+     p.DeriveKey(
+        derivedkey, derivedkey.size(),
+        0x00,
+        (byte *) password.data(), password.size(),
+        (byte *) salthex.data(), salthex.size(),
+        iterations
+     );
+   } else {
+     PKCS5_PBKDF2_HMAC<CryptoPP::SHA256> p;
+     p.DeriveKey(
+        derivedkey, derivedkey.size(),
+        0x00,
+        (byte *) password.data(), password.size(),
+        (byte *) salthex.data(), salthex.size(),
+        iterations
+     );
+   }
+
+   std::string derivedhex;
+   StringSource ss2(derivedkey,derivedkey.size(),true,
+          new HexEncoder(
+             new StringSink(derivedhex)
+          )
+        );
+   return {derivedhex, salthex};
+}
+
+WebsocketServer::WebsocketServer(const std::string passwdFile) : passwdFile(passwdFile) {
+  if(passwdFile.empty()) {
+    this->doAuthenticate = false;
+  } else {
+    this->doAuthenticate = true;
+    readAuthData(passwdFile);
+  }
   LOG_DEBUG_STR("Websocket: Init");
 
   m_server.set_access_channels(websocketpp::log::alevel::none);
@@ -70,6 +130,60 @@ void WebsocketServer::run(uint16_t port) {
   LOG_DEBUG_STR("Websocket: End");
 }
 
+string WebsocketServer::loginUser(const connection_hdl hdl, const std::string& username, const std::string& password) {
+  if(username.find(' ') < username.size() || password.find(' ') < password.size())
+    return "invalid";
+
+  if(authData.find(username) == authData.end()) {
+    return "notfound";
+  } else {
+    Credentials& c = authData[username];
+    std::pair<string,string> hashed = hash_password(password, c.salt);
+    std::cerr << c.hash << ":" << hashed.first << std::endl;
+    if(c.hash == hashed.first) {
+      authMap[hdl] = true;
+      return "success";
+    } else {
+      return "nomatch";
+    }
+  }
+}
+
+string WebsocketServer::registerUser(const connection_hdl hdl, const std::string& username, const std::string& password, const std::string& userdata) {
+  if(username.find(' ') < username.size() || password.find(' ') < password.size())
+    return "invalid";
+
+  if(authData.find(username) == authData.end()) {
+    std::pair<string,string> hashed = hash_password(password);
+    authData[username] = {hashed.first, hashed.second, userdata};
+    authMap[hdl] = true;
+    std::ofstream outfile;
+    outfile.open(this->passwdFile, std::ios_base::app);
+    outfile << username << " " << hashed.first << " " << hashed.second << " " << userdata << std::endl;
+    return "success";
+  } else {
+    return "duplicate";
+  }
+}
+
+void WebsocketServer::readAuthData(const std::string& passwdFile) {
+  std::ifstream ifs(passwdFile);
+  std::string line;
+  std::string token;
+  std::vector<std::string> tokens;
+  std::stringstream ss;
+  while(std::getline(ifs, line)) {
+    ss.str(line);
+    while(std::getline(ss, token, ' ')) {
+      tokens.push_back(token);
+    }
+    if(tokens.size() != 4)
+      throw janosh_exception() << string_info({"Corrupt passwd file", passwdFile});
+
+    authData[tokens[0]] = {tokens[1], tokens[2], tokens[3]};
+  }
+}
+
 void WebsocketServer::on_open(connection_hdl hdl) {
   LOG_DEBUG_STR("Websocket: Open");
   unique_lock<mutex> lock(m_action_lock);
@@ -89,13 +203,36 @@ void WebsocketServer::on_close(connection_hdl hdl) {
 }
 
 void WebsocketServer::on_message(connection_hdl hdl, server::message_ptr msg) {
-  LOG_DEBUG_STR("Websocket: On message");
-  unique_lock<mutex> lock(m_receive_lock);
-  LOG_DEBUG_STR("Websocket: On message lock");
-  if(m_luahandles_rev.find(hdl) != m_luahandles_rev.end())
-    m_receive.push_back(std::make_pair(m_luahandles_rev[hdl], msg->get_payload()));
-  lock.unlock();
-  m_receive_cond.notify_one();
+  if((doAuthenticate && authMap[hdl]) || !doAuthenticate) {
+    LOG_DEBUG_STR("Websocket: On message");
+    unique_lock<mutex> lock(m_receive_lock);
+    LOG_DEBUG_STR("Websocket: On message lock");
+
+    if(m_luahandles_rev.find(hdl) != m_luahandles_rev.end())
+      m_receive.push_back(std::make_pair(m_luahandles_rev[hdl], msg->get_payload()));
+
+    lock.unlock();
+    m_receive_cond.notify_one();
+  } else {
+    const std::string& payload = msg->get_payload();
+    std::stringstream ss(payload);
+    std::vector<string> tokens;
+    string token;
+    while(std::getline(ss, token)) {
+        tokens.push_back(token);
+    }
+
+    if(tokens.size() == 4 && tokens[0] == "register") {
+      string response = registerUser(hdl, tokens[1], tokens[2], tokens[3]);
+      this->send(m_luahandles_rev[hdl], response);
+    } else if(tokens.size() == 3 && tokens[0] == "login") {
+      string response = loginUser(hdl, tokens[1], tokens[2]);
+      this->send(m_luahandles_rev[hdl], response);
+    } else
+      this->send(m_luahandles_rev[hdl], "auth");
+  }
+
+
   LOG_DEBUG_STR("Websocket: On message end");
 }
 
@@ -198,9 +335,9 @@ void WebsocketServer::send(size_t handle, const std::string& message) {
   LOG_DEBUG_STR("Websocket: Send end");
 }
 
-void WebsocketServer::init(int port) {
+void WebsocketServer::init(const int port, const string passwdFile) {
   assert(server_instance == NULL);
-  server_instance = new WebsocketServer();
+  server_instance = new WebsocketServer(passwdFile);
   std::thread maint([=](){
     server_instance->run(port);
   });

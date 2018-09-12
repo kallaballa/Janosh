@@ -516,9 +516,8 @@ function JanoshClass.subscribe(self, keyprefix, callback)
   t()
 end
 
-function JanoshClass.publish(self, handle, key, op, value) 
-  Janosh:wsSend(handle, JSON:encode({key,op,value}));
-  return 0
+function JanoshClass.publish(self, key, op, value) 
+  janosh_request({"publish",key,op,value});
 end
 
 function JanoshClass.set_t(self, key, value)
@@ -626,6 +625,11 @@ end
 function JanoshClass.wsOpen(self, port)
  janosh_wsopen(port)
 end
+
+function JanoshClass.wsOpen(self, port, passwdFile)
+ janosh_wsopen(port, passwdFile)
+end
+
 
 function JanoshClass.wsOnReceive(self, callback) 
   lanes.gen("*", function()
