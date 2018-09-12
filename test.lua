@@ -275,8 +275,9 @@ else
 	publishInThread("test_remove",test_remove)
 	publishInThread("test_replace",test_replace)
 	publishInThread("test_copy",test_copy)
+        publishInThread("test_shift",test_copy)
 
 	while true do
-		Janosh:publish("test_shift");
+		Janosh:publish("test_shift_dir");
 	end
 end
