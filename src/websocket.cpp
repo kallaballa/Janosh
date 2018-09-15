@@ -356,15 +356,7 @@ string WebsocketServer::getUserData(size_t luahandle) {
 
 string WebsocketServer::getUserName(size_t luahandle) {
   auto it = m_luahandles.find(luahandle);
-  if (it == m_luahandles.end()) {
-    std::cerr << "#################luahandle not found" << std::endl;
-  } else {
-    if (authMap.find((*it).second) == authMap.end())
-      std::cerr << "##################hdl not found" << std::endl;
-  }
   if (it != m_luahandles.end() && authMap.find((*it).second) != authMap.end()) {
-    std::cerr << "##################found" << std::endl;
-
     return authMap[(*it).second];
   }
   return "invalid";
