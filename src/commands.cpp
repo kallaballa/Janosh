@@ -6,6 +6,46 @@
 
 namespace janosh {
 
+class RandomCommand: public Command {
+public:
+  explicit RandomCommand(Janosh* janosh) :
+      Command(janosh) {
+  }
+
+  virtual Result operator()(const std::vector<Value>& params, std::ostream& out) {
+    if (params.size() == 1) {
+      Record rec(params[0].str());
+      if(rec.isDirectory()) {
+        return {janosh->random(rec, out), "Successful"};
+      }
+      else
+        return {-1, "Expected a directory"};
+    } else {
+      return {-1, "Only one parameter expected"};
+    }
+  }
+};
+
+class ExistsCommand: public Command {
+public:
+  explicit ExistsCommand(Janosh* janosh) :
+      Command(janosh) {
+  }
+
+  virtual Result operator()(const std::vector<Value>& params, std::ostream& out) {
+    if (params.size() == 1) {
+      Record rec(params[0].str());
+      rec.fetch();
+      if(rec.exists())
+        return {1, "Successful"};
+      else
+        return {-1, "Not found"};
+    } else {
+      return {-1, "Only one parameter expected"};
+    }
+  }
+};
+
 class RemoveCommand: public Command {
 public:
   explicit RemoveCommand(Janosh* janosh) :
@@ -384,6 +424,10 @@ CommandMap makeCommandMap(Janosh* janosh) {
   cm.insert( { "mkobj", new MakeObjectCommand(janosh) });
   cm.insert( { "hash", new HashCommand(janosh) });
   cm.insert( { "publish", new PublishCommand(janosh) });
+  cm.insert( { "exists", new ExistsCommand(janosh) });
+  cm.insert( { "random", new RandomCommand(janosh) });
+
+
   return cm;
 }
 }

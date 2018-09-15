@@ -283,6 +283,20 @@ static int l_wssend(lua_State* L) {
   return 0;
 }
 
+static int l_wsgetuserdata(lua_State* L) {
+  size_t handle  = lua_tointeger(L, -1);
+  string userdata = WebsocketServer::getInstance()->getUserData(handle);
+  lua_pushstring(L, userdata.c_str());
+  return 1;
+}
+
+static int l_wsgetusername(lua_State* L) {
+  size_t handle  = lua_tointeger(L, -1);
+  string username = WebsocketServer::getInstance()->getUserName(handle);
+  lua_pushstring(L, username.c_str());
+  return 1;
+}
+
 static int l_request(lua_State* L) {
   auto result = LuaScript::getInstance()->performRequest(make_request(L));
 
@@ -456,6 +470,10 @@ static void install_janosh_functions(lua_State* L, bool first) {
   lua_setglobal(L, "janosh_wsreceive");
   lua_pushcfunction(L, l_wssend);
   lua_setglobal(L, "janosh_wssend");
+  lua_pushcfunction(L, l_wsgetuserdata);
+  lua_setglobal(L, "janosh_wsgetuserdata");
+  lua_pushcfunction(L, l_wsgetusername);
+  lua_setglobal(L, "janosh_wsgetusername");
 
   lua_pushcfunction(L, l_subscribe);
   lua_setglobal(L, "janosh_subscribe");

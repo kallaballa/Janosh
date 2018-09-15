@@ -55,6 +55,7 @@ public:
   size_t get(vector<Record> targets, std::ostream& out);
   size_t size(Record target);
   size_t remove(Record& target, bool pack = true);
+  size_t random(Record rec, std::ostream& out);
 
   size_t add(Record target, const Value& value);
   size_t replace(Record target, const Value& value);

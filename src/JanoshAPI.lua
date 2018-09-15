@@ -261,10 +261,20 @@ function JanoshClass.request_t(self, req)
 end
 
 function JanoshClass.load(self, value)
+	assert(false)
   local ret, value = self:request({"load",JSON:encode(value)})
   return ret
 end
 
+function JanoshClass.exists(self, key)
+  local ret, val = self:request({"exists",key})
+  return ret == 0
+end
+
+function JanoshClass.random(self, key)
+  local ret, val = self:request({"random",key})
+  return JSON:decode(val)
+end
 
 function JanoshClass.set(self, key, value)
   local ret, val = self:request({"set",key,value})
@@ -520,6 +530,10 @@ function JanoshClass.publish(self, key, op, value)
   janosh_request({"publish",key,op,value});
 end
 
+function JanoshClass.publish(self, handle, key, op, value)
+  self:wsSend(handle, JSON:encode({key,op,value}));
+end
+
 function JanoshClass.set_t(self, key, value)
   local ret, val = self:request_t({"set",key,value});
   return ret
@@ -646,6 +660,14 @@ end
 
 function JanoshClass.wsSend(self, handle, msg) 
  janosh_wssend(handle,msg)
+end
+
+function JanoshClass.wsGetUserData(self, handle)
+ return janosh_wsgetuserdata(handle)
+end
+
+function JanoshClass.wsGetUserName(self, handle)
+  return janosh_wsgetusername(handle)
 end
 
 function JanoshClass.sleep(self, millis)

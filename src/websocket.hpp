@@ -7,6 +7,7 @@
 #include <set>
 #include <deque>
 #include <map>
+#include <memory>
 
 namespace janosh {
 namespace lua {
@@ -54,11 +55,13 @@ struct Credentials {
 };
 
 typedef std::map<std::string, Credentials> AuthData;
+typedef std::shared_ptr<void> ConnectionHandle;
 
 class WebsocketServer {
 private:
     WebsocketServer(const std::string passwdFile = "");
     ~WebsocketServer();
+    string loginUser(const connection_hdl hdl, const std::string& sessionKey);
     string loginUser(const connection_hdl hdl, const std::string& username, const std::string& password);
     string registerUser(const connection_hdl hdl, const std::string& username, const std::string& password, const std::string& userdata);
     void readAuthData(const std::string& passwdFile);
@@ -68,16 +71,18 @@ private:
     void on_message(connection_hdl hdl, server::message_ptr msg);
     void process_messages();
 public:
+    string getUserData(size_t luahandle);
+    string getUserName(size_t luahandle);
     void broadcast(const std::string& s);
     std::pair<size_t, std::string> receive();
-    void send(size_t handle, const std::string& message);
+    void send(size_t luahandle, const std::string& message);
 
     static void init(const int port, const string passwdFile = "");
     static WebsocketServer* getInstance();
 private:
-    typedef std::set<connection_hdl,std::owner_less<connection_hdl> > con_list;
-    typedef std::map<size_t, connection_hdl > con_lua_handles;
-    typedef std::map<connection_hdl, size_t, std::owner_less<connection_hdl> > con_lua_handles_rev;
+    typedef std::set<ConnectionHandle,std::owner_less<ConnectionHandle> > con_list;
+    typedef std::map<size_t, ConnectionHandle > con_lua_handles;
+    typedef std::map<ConnectionHandle, size_t, std::owner_less<ConnectionHandle> > con_lua_handles_rev;
 
     server m_server;
     con_list m_connections;
@@ -94,8 +99,11 @@ private:
     mutex m_receive_lock;
     condition_variable m_receive_cond;
     std::deque<lua_message> m_receive;
+
     bool doAuthenticate = false;
-    std::map<connection_hdl, bool, std::owner_less<connection_hdl>> authMap;
+    std::map<ConnectionHandle, string, std::owner_less<ConnectionHandle>> authMap;
+    std::map<string, ConnectionHandle> sessionMap;
+
     AuthData authData;
     string passwdFile;
 };

@@ -194,6 +194,30 @@ namespace janosh {
     return cnt;
   }
 
+  /**
+   * Get a directory record and print a random child.
+   * @param rec The record to print out.
+   * @param out The output stream to write to.
+   * @return number of total records affected.
+   */
+  std::random_device rd;
+
+  size_t Janosh::random(Record rec, std::ostream& out) {
+    if(!rec.isDirectory())
+      throw janosh_exception() << record_info( { "Path is not a directory", rec });
+    rec.fetch();
+    rec.read();
+    std::mt19937 mt(rd());
+    std::uniform_real_distribution<double> dist(0, rec.getSize());
+
+    for(size_t i = 0; i < dist(mt); ++i) {
+      rec.fetch();
+      rec.next();
+    }
+
+    return this->get({rec}, out);
+  }
+
   size_t Janosh::recurseValue(Record& travRoot, PrintVisitor* vis, Value::Type rootType, ostream& out) {
     JANOSH_TRACE( { travRoot });
 
