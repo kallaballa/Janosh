@@ -636,14 +636,13 @@ function JanoshClass.wsBroadcast(self, msg)
   janosh_wsbroadcast(msg)
 end
 
-function JanoshClass.wsOpen(self, port)
- janosh_wsopen(port)
-end
-
 function JanoshClass.wsOpen(self, port, passwdFile)
- janosh_wsopen(port, passwdFile)
+  if not passwdFile then
+    janosh_wsopen(port)
+  else	
+    janosh_wsopen(port, passwdFile)
+  end
 end
-
 
 function JanoshClass.wsOnReceive(self, callback) 
   lanes.gen("*", function()
