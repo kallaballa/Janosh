@@ -156,6 +156,9 @@ string WebsocketServer::loginUser(const connection_hdl h, const std::string& ses
     return "session-invalid";
   } else {
     unique_lock<mutex> lock(m_receive_lock);
+    unique_lock<mutex> lock(m_action_lock);
+    unique_lock<mutex> lock(m_connection_lock);
+
     ConnectionHandle old = sessionMap[sessionKey];
     if(std::owner_less<ConnectionHandle>()(old,h.lock()) || std::owner_less<ConnectionHandle>()(h.lock(),old)) {
       string username = authMap[old];
