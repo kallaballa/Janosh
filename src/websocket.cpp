@@ -183,7 +183,6 @@ string WebsocketServer::loginUser(const connection_hdl h, const std::string& use
     std::pair<string,string> hashed = hash_password(password, c.salt);
     if(c.hash == hashed.first) {
       sessionMap[sessionKey] = h.lock();
-      std::cerr << "insert: " << *static_cast<int*>(sessionMap[sessionKey].get()) << std::endl;
       authMap[h.lock()] = username;
       return "login-success:" + sessionKey;
     } else {
@@ -202,7 +201,6 @@ string WebsocketServer::registerUser(const connection_hdl h, const std::string& 
     authData[username] = {hashed.first, hashed.second, userdata};
     authMap[h.lock()] = username;
     sessionMap[sessionKey] = h.lock();
-    std::cerr << "insert: " << *static_cast<int*>(sessionMap[sessionKey].get()) << std::endl;
     std::ofstream outfile;
     outfile.open(this->passwdFile, std::ios_base::app);
     string userData64;
