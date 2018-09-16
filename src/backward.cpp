@@ -23,15 +23,15 @@
 // - g++/clang++ -lbfd ...
 // #define BACKWARD_HAS_BFD 1
 
-#ifdef _JANOSH_DEBUG
+#ifdef _JANOSH_BACKTRACE
 #define BACKWARD_HAS_BFD 1
 #define BACKWARD_HAS_DW 1
+#include "backward.hpp"
 #endif
 
-#include "backward.hpp"
 
 namespace backward {
-
+#ifdef _JANOSH_BACKTRACE
 backward::SignalHandling sh;
-
+#endif
 } // namespace backward

@@ -3,7 +3,7 @@
 #include <sstream>
 #include "exception.hpp"
 
-#ifdef _JANOSH_DEBUG
+#ifdef _JANOSH_BACKTRACE
 #define BACKWARD_HAS_BFD 1
 #define BACKWARD_HAS_DW 1
 #include "backward.hpp"
@@ -11,7 +11,7 @@
 
 namespace janosh {
 janosh_exception::janosh_exception() {
-#ifdef _JANOSH_DEBUG
+#ifdef _JANOSH_BACKTRACE
   using namespace backward;
   StackTrace st; st.load_here(32);
   Printer p;

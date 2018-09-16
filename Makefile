@@ -46,7 +46,7 @@ all: release
 
 release: LDFLAGS += -Wl,--export-dynamic -s
 release: CXXFLAGS += -g0 -O3
-release: LIBS += -ldw 
+#release: LIBS += -ldw 
 release: ${TARGET}
 
 reduce: CXXFLAGS = -DWEBSOCKETPP_STRICT_MASKING -DETLOG -std=c++0x -pedantic -Wall -g0 -Os -fvisibility=hidden -fvisibility-inlines-hidden
@@ -59,22 +59,26 @@ static: ${TARGET}
 
 screeninvader: LDFLAGS += -s
 screeninvader: CXXFLAGS += -D_JANOSH_DEBUG -g0 -O3 
-screeninvader: LIBS = -lboost_program_options -Wl,-Bstatic -lboost_serialization -lboost_system -lboost_filesystem -lkyotocabinet  -llzma -llzo2 -Wl,-Bdynamic -lz -lpthread -lrt -ldl -lluajit-5.1 -lzmq -lX11 -lxdo -ldw -lcryptopp
+screeninvader: LIBS = -lboost_program_options -Wl,-Bstatic -lboost_serialization -lboost_system -lboost_filesystem -lkyotocabinet  -llzma -llzo2 -Wl,-Bdynamic -lz -lpthread -lrt -ldl -lluajit-5.1 -lzmq -lX11 -lxdo -lcryptopp
 screeninvader: ${TARGET}
 
 screeninvader_debug: LDFLAGS += -Wl,--export-dynamic
 screeninvader_debug: CXXFLAGS += -D_JANOSH_DEBUG -g3 -O0 -rdynamic
-screeninvader_debug: LIBS = -lboost_program_options -Wl,-Bstatic -lboost_serialization -lboost_system -lboost_filesystem -lkyotocabinet  -llzma -llzo2 -Wl,-Bdynamic -lz -lpthread -lrt -ldl -lbfd -lluajit-5.1 -lzmq -lX11 -lxdo -ldw -lcryptopp
+screeninvader_debug: LIBS = -lboost_program_options -Wl,-Bstatic -lboost_serialization -lboost_system -lboost_filesystem -lkyotocabinet  -llzma -llzo2 -Wl,-Bdynamic -lz -lpthread -lrt -ldl -lluajit-5.1 -lzmq -lX11 -lxdo -lcryptopp
 screeninvader_debug: ${TARGET}
 
 debug: CXXFLAGS += -g3 -O0 -rdynamic -D_JANOSH_DEBUG
 debug: LDFLAGS += -Wl,--export-dynamic
-debug: LIBS+= -lbfd -ldl -ldw
+debug: LIBS+= -ldl
 debug: ${TARGET}
+
+verbose: CXXFLAGS += -g3 -O0 -rdynamic -D_JANOSH_DEBUG -D_JANOSH_BACKTRACE
+verbose: LDFLAGS += -Wl,--export-dynamic
+verbose: LIBS+= -lbfd -ldl -ldw
+verbose: ${TARGET}
 
 asan: CXXFLAGS += -g3 -O0 -rdynamic -D_JANOSH_DEBUG -fno-omit-frame-pointer -fsanitize=address
 asan: LDFLAGS += -Wl,--export-dynamic -fsanitize=address
-asan: LIBS+= -lbfd -ldw
 asan: ${TARGET}
 
 src/JanoshAPI.o:	src/JanoshAPI.lua
