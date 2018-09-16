@@ -569,13 +569,13 @@ void LuaScript::run() {
 
     if (error)
     {
-//      std::stringstream ss;
-//      size_t numMsg =lua_gettop(L);
-//      for(size_t i = 0; i < numMsg;++i) {
-//        ss << lua_tostring(L, -1) << std::endl;
-//        lua_pop(L, 1);
-//      }
-      LOG_ERR_MSG("Lua script failed", lua_tostring(L, -1));
+      std::stringstream ss;
+      size_t numMsg =lua_gettop(L);
+      for(size_t i = 0; i < numMsg;++i) {
+        ss << lua_tostring(L, -1) << std::endl;
+        lua_pop(L, 1);
+      }
+      LOG_ERR_MSG("Lua script failed", ss.str());
     }
 }
 
