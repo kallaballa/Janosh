@@ -23,6 +23,8 @@
 #include <boost/format.hpp>
 #include <boost/bind.hpp>
 #include "json_spirit/json_spirit.h"
+#include "jsoncons/json.hpp"
+#include "jsoncons_ext/jsonpath/json_query.hpp"
 
 using std::string;
 using std::endl;
@@ -137,7 +139,21 @@ namespace janosh {
     return load(rootValue, path);
   }
 
+  size_t Janosh::filter(vector<Record> recs, const std::string& jsonPathExpr, std::ostream& out) {
+    std::stringstream ss;
+    Format f = this->getFormat();
+    this->setFormat(Format::Json);
+    size_t rc = this->get(recs, ss);
+    this->setFormat(f);
 
+    using namespace jsoncons;
+    json j = json::parse(ss.str());
+    json result = jsonpath::json_query(j, jsonPathExpr);
+    if(result.size() > 0) {
+      out << result[0].as<std::string>() << std::endl;
+    }
+    return rc;
+  }
   /**
    * Recursively traverses a record and prints it out.
    * @param rec The record to print out.

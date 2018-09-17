@@ -6,6 +6,28 @@
 
 namespace janosh {
 
+class FilterCommand: public Command {
+public:
+  explicit FilterCommand(Janosh* janosh) :
+      Command(janosh) {
+  }
+
+  Result operator()(const vector<Value>& params, std::ostream& out) {
+    if (params.size() < 1) {
+      return {-1, "Expected a list of keys and a filter expression"};
+    } else {
+      std::vector<Record> recs;
+      for (size_t i = 0; i < params.size() -1; ++i)  {
+        const Value& p = params[i];
+        recs.push_back(Record(p.str()));
+      }
+
+      if (!janosh->filter(recs, params.back().str(), out))
+        return {-1, "Fetching failed"};
+    }
+    return {params.size(), "Successful"};
+  }
+};
 class RandomCommand: public Command {
 public:
   explicit RandomCommand(Janosh* janosh) :
@@ -426,7 +448,7 @@ CommandMap makeCommandMap(Janosh* janosh) {
   cm.insert( { "publish", new PublishCommand(janosh) });
   cm.insert( { "exists", new ExistsCommand(janosh) });
   cm.insert( { "random", new RandomCommand(janosh) });
-
+  cm.insert( { "filter", new FilterCommand(janosh) });
 
   return cm;
 }
