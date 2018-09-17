@@ -526,12 +526,17 @@ function JanoshClass.subscribe(self, keyprefix, callback)
   t()
 end
 
-function JanoshClass.publish(self, key, op, value) 
-  janosh_request({"publish",key,op,value});
-end
-
-function JanoshClass.publish(self, handle, key, op, value)
-  self:wsSend(handle, JSON:encode({key,op,value}));
+function JanoshClass.publish(self, ...)
+  local arg =  {...} 
+  if #arg == 1 then
+	janosh_request({"publish",arg[1],"W", ""});
+  elseif #arg == 3 then
+	janosh_request({"publish",arg[1],arg[2],arg[3]});
+  elseif #arg == 4 then
+	self:wsSend(arg[1], JSON:encode({arg[2],arg[3],arg[4]}));
+  else
+	assert(false);
+  end
 end
 
 function JanoshClass.set_t(self, key, value)
