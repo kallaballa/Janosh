@@ -45,6 +45,7 @@ namespace janosh {
     bool step();
     bool step_back();
     void next();
+    void nextMember();
     void previous();
     void remove();
 

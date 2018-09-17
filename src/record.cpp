@@ -155,6 +155,34 @@ namespace janosh {
     return r;
   }
 
+  void Record::nextMember() {
+    if(!isInitialized())
+      throw record_exception() << path_info({"uninitialized record", this->pathObj});
+
+    if(this->isDirectory()) {
+      Path parent = this->path();
+      size_t s = this->getSize();
+      if(!this->step())
+        throw record_exception() << path_info({"step failed", this->pathObj});
+
+      for(size_t i = 0; i < s; ++i) {
+        this->fetch();
+        if(this->path().parent() != parent) {
+          while(this->path().parent() != parent) {
+            if(!this->step())
+              throw record_exception() << path_info({"step failed", this->pathObj});
+          }
+        } else {
+          if(!this->step())
+            throw record_exception() << path_info({"step failed", this->pathObj});
+        }
+      }
+    } else {
+      if(!this->step())
+        throw record_exception() << path_info({"step failed", this->pathObj});
+    }
+  }
+
   void Record::next() {
     if(!isInitialized())
       throw record_exception() << path_info({"uninitialized record", this->pathObj});

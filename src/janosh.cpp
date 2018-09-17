@@ -203,6 +203,7 @@ namespace janosh {
   std::random_device rd;
 
   size_t Janosh::random(Record rec, std::ostream& out) {
+    std::cerr << "###### RANDOM #######" << std::endl;
     if(!rec.isDirectory())
       throw janosh_exception() << record_info( { "Path is not a directory", rec });
     rec.fetch();
@@ -212,7 +213,7 @@ namespace janosh {
 
     for(size_t i = 0; i < dist(mt); ++i) {
       rec.fetch();
-      rec.next();
+      rec.nextMember();
     }
 
     return this->get({rec}, out);
