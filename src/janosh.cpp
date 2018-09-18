@@ -142,15 +142,15 @@ namespace janosh {
   size_t Janosh::filter(vector<Record> recs, const std::string& jsonPathExpr, std::ostream& out) {
     std::stringstream ss;
     Format f = this->getFormat();
-    this->setFormat(Format::Json);
+    this->setFormat(Json);
     size_t rc = this->get(recs, ss);
     this->setFormat(f);
 
     using namespace jsoncons;
     json j = json::parse(ss.str());
     json result = jsonpath::json_query(j, jsonPathExpr);
-    if(result.size() > 0) {
-      out << result[0].as<std::string>() << std::endl;
+    for(size_t i = 0; i < result.size(); ++i) {
+      out << result[i].as<std::string>() << std::endl;
     }
     return rc;
   }
@@ -1050,7 +1050,12 @@ namespace janosh {
 
   size_t Janosh::load(const Path& path, const Value& value) {
     announceOperation(path.pretty(), value.makeDBString(), Tracker::WRITE);
-    return Record::db.set(path, value.makeDBString()) ? 1 : 0;
+    if(value.getType() == Value::Object || value.getType() == Value::Array){
+ //     return Record::db.set(path, value.makeDBString()) ? 1 : 0;
+      return 1;
+    }
+    else
+      return this->set(Record(path), value);
   }
 
   size_t Janosh::load(js::Value& v, Path& path) {
@@ -1075,7 +1080,9 @@ namespace janosh {
   size_t Janosh::load(js::Object& obj, Path& path) {
     size_t cnt = 0;
     path.pushMember(".");
-    cnt+=this->load(path, Value((boost::format("O%d") % obj.size()).str(), Value::Object));
+    Record rec(path);
+    if(!rec.fetch().exists())
+      cnt+=this->makeObject(path);
     path.pop();
 
     for(js::Pair& p : obj) {
@@ -1092,7 +1099,9 @@ namespace janosh {
     size_t cnt = 0;
     int index = 0;
     path.pushMember(".");
-    cnt+=this->load(path, Value((boost::format("A%d") % array.size()).str(), Value::Array));
+    Record rec(path);
+    if(!rec.fetch().exists())
+      cnt+=this->makeArray(path);
     path.pop();
 
     for(js::Value& v : array){

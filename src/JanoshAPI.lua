@@ -261,7 +261,6 @@ function JanoshClass.request_t(self, req)
 end
 
 function JanoshClass.load(self, value)
-	assert(false)
   local ret, value = self:request({"load",JSON:encode(value)})
   return ret
 end
