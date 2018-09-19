@@ -5,7 +5,7 @@ if __JanoshFirstStart then
 end
 local posix = require "posix"
 local bit = require "bit"
-
+local template = require "resty.template"
 io = require "io"
 
 local JanoshClass = {} -- the table representing the class, which will double as the metatable for the instances
@@ -46,6 +46,11 @@ function JanoshClass.capture(self, cmd)
   f:close()
 
   return s
+end
+
+function JanoshClass.template(self, templateFile, dataObj) 
+  local func = template.compile(templateFile)
+  return func(dataObj);
 end
 
 --FIXME causes wierd errors
@@ -261,7 +266,7 @@ function JanoshClass.request_t(self, req)
 end
 
 function JanoshClass.load(self, value)
-  local ret, value = self:request({"load",JSON:encode(value)})
+  local ret, value = self:request({"load",value})
   return ret
 end
 
@@ -383,6 +388,24 @@ function JanoshClass.raw(self, key)
 	end
 
 end
+
+function JanoshClass.getJson(self, keys)
+  if type(keys) == "table" then
+        table.insert(keys, 1, "get")
+        local err, value = self:request(keys)
+        if not err then
+                return nil
+        end
+	return value;
+  else
+	local err, value = self:request({"get", keys})
+	if not err then
+		return nil
+	end
+	return value;
+  end
+end
+
 function JanoshClass.get(self, keys)
   if type(keys) == "table" then
     	table.insert(keys, 1, "get")

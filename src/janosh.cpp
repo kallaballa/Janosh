@@ -1067,7 +1067,7 @@ namespace janosh {
     } else if (v.type() == js::str_type) {
       cnt+=this->load(path, Value(v.get_str(), Value::String));
     } else if (v.type() == js::int_type) {
-      cnt+=this->load(path, Value(std::to_string(v.get_int()), Value::Number));
+      cnt+=this->load(path, Value(std::to_string(v.get_int64()), Value::Number));
     } else if (v.type() == js::bool_type) {
       cnt+=this->load(path, Value(std::to_string(v.get_bool()), Value::Boolean));
     } else if (v.type() == js::real_type) {
@@ -1102,6 +1102,8 @@ namespace janosh {
     Record rec(path);
     if(!rec.fetch().exists())
       cnt+=this->makeArray(path);
+    else
+      index = this->size(path);
     path.pop();
 
     for(js::Value& v : array){

@@ -1,4 +1,5 @@
 #include <iostream>
+#include "exception.hpp"
 #include "json.hpp"
 #include "value.hpp"
 
@@ -9,7 +10,7 @@ JsonPrintVisitor::JsonPrintVisitor(std::ostream& out) : PrintVisitor(out) {
 
 string JsonPrintVisitor::escape(const std::string &s) const {
     std::ostringstream o;
-    for (auto c = s.cbegin(); c != s.cend(); c++) {
+    for (auto c = s.cbegin(); c != s.cend(); c++)  {
         switch (*c) {
         case '"': o << "\\\""; break;
         case '\\': o << "\\\\"; break;
@@ -39,7 +40,7 @@ void JsonPrintVisitor::beginArray(const Path& p, bool parentIsArray, bool first)
   if (parentIsArray)
     this->out << "[ " << endl;
   else
-    this->out << '"' << name << "\": [ " << endl;
+    this->out << '"' << escape(name) << "\": [ " << endl;
 }
 
 void JsonPrintVisitor::endArray(const Path& p) {
@@ -55,7 +56,7 @@ void JsonPrintVisitor::beginObject(const Path& p, bool parentIsArray, bool first
   if (parentIsArray)
     this->out << "{ " << endl;
   else
-    this->out << '"' << name << "\": { " << endl;
+    this->out << '"' << escape(name) << "\": { " << endl;
 }
 
 void JsonPrintVisitor::endObject(const Path& p) {
@@ -63,7 +64,7 @@ void JsonPrintVisitor::endObject(const Path& p) {
 }
 
 void JsonPrintVisitor::record(const Path& p, const Value& value, bool parentIsArray, bool first) {
-  string name = p.name().pretty();
+  string name = escape(p.name().pretty());
   string jsonValue = escape(value.str());
 
   if (parentIsArray) {
