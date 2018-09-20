@@ -696,6 +696,11 @@ function JanoshClass.wsGetUserName(self, handle)
   return janosh_wsgetusername(handle)
 end
 
+function JanoshClass.wsGetHandle(self, username)
+  return janosh_wsgethandle(username)
+end
+
+
 function JanoshClass.sleep(self, millis)
  janosh_sleep(millis)
 end

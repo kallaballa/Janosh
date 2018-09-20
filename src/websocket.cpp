@@ -11,6 +11,8 @@
 #include <cryptopp/osrng.h>
 #include <cryptopp/pwdbased.h>
 #include <random>
+#include <algorithm>
+
 
 namespace janosh {
 namespace lua {
@@ -161,14 +163,12 @@ string WebsocketServer::loginUser(const connection_hdl h, const std::string& ses
 
     ConnectionHandle old = sessionMap[sessionKey];
     if(std::owner_less<ConnectionHandle>()(old,h.lock()) || std::owner_less<ConnectionHandle>()(h.lock(),old)) {
-      string username = authMap[old];
-      authMap[h.lock()] = username;
-      authMap.erase(old);
       size_t lh = m_luahandles_rev[old];
       m_luahandles_rev[h.lock()] = lh;
       m_luahandles_rev.erase(old);
       m_luahandles[lh] = h.lock();
       sessionMap[sessionKey] = h.lock();
+      sessionMapRev[h.lock()] = sessionKey;
     }
     return "session-success:" + sessionKey;
   }
@@ -182,11 +182,12 @@ string WebsocketServer::loginUser(const connection_hdl h, const std::string& use
     return "login-notfound";
   } else {
     string sessionKey = make_sessionkey();
+    usernameMap[sessionKey] = username;
     Credentials& c = authData[username];
     std::pair<string,string> hashed = hash_password(password, c.salt);
     if(c.hash == hashed.first) {
       sessionMap[sessionKey] = h.lock();
-      authMap[h.lock()] = username;
+      sessionMapRev[h.lock()] = sessionKey;
       return "login-success:" + sessionKey;
     } else {
       return "login-nomatch";
@@ -201,15 +202,17 @@ string WebsocketServer::registerUser(const connection_hdl h, const std::string& 
   if(authData.find(username) == authData.end()) {
     std::pair<string,string> hashed = hash_password(password);
     string sessionKey = make_sessionkey();
+    usernameMap[sessionKey] = username;
     authData[username] = {hashed.first, hashed.second, userdata};
-    authMap[h.lock()] = username;
     sessionMap[sessionKey] = h.lock();
+    sessionMapRev[h.lock()] = sessionKey;
     std::ofstream outfile;
     outfile.open(this->passwdFile, std::ios_base::app);
     string userData64;
     using namespace CryptoPP;
     StringSource ss1(userdata,true, new Base64Encoder(new StringSink(userData64)));
-    outfile << username << " " << hashed.first << " " << hashed.second << " " << userData64;
+    userData64.erase(std::remove(userData64.begin(), userData64.end(), '\n'), userData64.end());
+    outfile << username << " " << hashed.first << " " << hashed.second << " " << userData64 << std::endl;
     return "register-success:" + sessionKey;
   } else {
     return "register-duplicate";
@@ -221,9 +224,9 @@ void WebsocketServer::readAuthData(const std::string& passwdFile) {
   std::string line;
   std::string token;
   std::vector<std::string> tokens;
-  std::stringstream ss;
+
   while(std::getline(ifs, line)) {
-    ss.str(line);
+    std::istringstream ss(line);
     while(std::getline(ss, token, ' ')) {
       tokens.push_back(token);
     }
@@ -233,7 +236,11 @@ void WebsocketServer::readAuthData(const std::string& passwdFile) {
     string userdata;
     using namespace CryptoPP;
     StringSource ss1(tokens[3], true, new Base64Decoder(new StringSink(userdata)));
+    if(authData.find(tokens[0]) != authData.end())
+      throw janosh_exception() << string_info({"Corrupt passwd file", passwdFile});
+
     authData[tokens[0]] = {tokens[1], tokens[2], userdata};
+    tokens.clear();
   }
 }
 
@@ -256,7 +263,7 @@ void WebsocketServer::on_close(connection_hdl hdl) {
 }
 
 void WebsocketServer::on_message(connection_hdl h, server::message_ptr msg) {
-  if((doAuthenticate && authMap.find(h.lock()) != authMap.end()) || !doAuthenticate) {
+  if((doAuthenticate && sessionMapRev.find(h.lock()) != sessionMapRev.end()) || !doAuthenticate) {
     LOG_DEBUG_STR("Websocket: On message");
     unique_lock<mutex> lock(m_receive_lock);
     LOG_DEBUG_STR("Websocket: On message lock");
@@ -349,16 +356,16 @@ void WebsocketServer::process_messages() {
 
 string WebsocketServer::getUserData(size_t luahandle) {
   auto it = m_luahandles.find(luahandle);
-   if(it != m_luahandles.end() && authMap.find((*it).second) != authMap.end()) {
-     return authData[authMap[(*it).second]].userData;
-   }
-   return "";
+  if (it != m_luahandles.end() && sessionMapRev.find((*it).second) != sessionMapRev.end()) {
+    return authData[usernameMap[sessionMapRev[(*it).second]]].userData;
+  }
+  return "invalid";
 }
 
 string WebsocketServer::getUserName(size_t luahandle) {
   auto it = m_luahandles.find(luahandle);
-  if (it != m_luahandles.end() && authMap.find((*it).second) != authMap.end()) {
-    return authMap[(*it).second];
+  if (it != m_luahandles.end() && sessionMapRev.find((*it).second) != sessionMapRev.end()) {
+    return usernameMap[sessionMapRev[(*it).second]];
   }
   return "invalid";
 }

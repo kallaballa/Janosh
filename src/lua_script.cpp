@@ -470,6 +470,7 @@ static void install_janosh_functions(lua_State* L, bool first) {
   lua_setglobal(L, "janosh_wsreceive");
   lua_pushcfunction(L, l_wssend);
   lua_setglobal(L, "janosh_wssend");
+
   lua_pushcfunction(L, l_wsgetuserdata);
   lua_setglobal(L, "janosh_wsgetuserdata");
   lua_pushcfunction(L, l_wsgetusername);
