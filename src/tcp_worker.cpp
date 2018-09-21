@@ -53,6 +53,9 @@ string reconstructCommandLine(Request& req) {
   if(req.runTriggers_)
      cmdline += "-t ";
 
+  if(!req.doTransaction_)
+     cmdline += "-n ";
+
    cmdline += (req.command_ + " ");
 
    if(!req.vecArgs_.empty()) {
@@ -127,12 +130,24 @@ void TcpWorker::run() {
         }
 
         Tracker::setDoPublish(req.runTriggers_);
+        bool result;
+        try {
+          bool begin = true;
+          if(req.doTransaction_)
+            begin = instance->beginTransaction();
+          assert(begin);
+          JanoshThreadPtr dt(new DatabaseThread(req, out_stream));
+          dt->runSynchron();
 
-        JanoshThreadPtr dt(new DatabaseThread(req, out_stream));
-        dt->runSynchron();
+          if(req.doTransaction_)
+            instance->endTransaction(true);
 
-        bool result = dt->result();
-
+          result = dt->result();
+        } catch (...) {
+          if(req.doTransaction_)
+            instance->endTransaction(false);
+          throw;
+        }
         // report return code
         writeResponseHeader(socket_, result ? 0 : 1);
 

@@ -84,21 +84,17 @@ bool TcpServer::run() {
 	try {
 	  TcpWorker* w = NULL;
 	  do {
-	    bool begin = janosh->beginTransaction();
-	    assert(begin);
 	    if(w)
 	      delete w;
 	    w = new TcpWorker(socket);
 
 	    w->runSynchron();
-      janosh->endTransaction(true);
 	  } while(w->connected());
 
 	  if(w)
       delete w;
 
   } catch (janosh_exception& ex) {
-    janosh->endTransaction(false);
     printException(ex);
 
     if (socket != NULL) {
@@ -107,7 +103,6 @@ bool TcpServer::run() {
       socket->close();
     }
   } catch (std::exception& ex) {
-    janosh->endTransaction(false);
     printException(ex);
 
     if (socket != NULL) {

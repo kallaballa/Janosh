@@ -1124,7 +1124,9 @@ namespace janosh {
 
   size_t Janosh::loadJson(std::istream& is) {
     js::Value rootValue;
+    std::cerr << "parsing json" << std::endl;
     js::read(is, rootValue);
+    std::cerr << "parsed json" << std::endl;
 
     Path path;
     return load(rootValue, path);
@@ -1261,6 +1263,7 @@ int main(int argc, char** argv) {
       ("luafile,f", po::value<string>(&luafile), "Run the lua script file")
       ("define,D", po::value<vector<string>>(&defines), "Define a macro for use in lua scripts. The format of the argument is key=value")
       ("json,j", "Produce json output")
+      ("notx,n", "Don't guard operation with a transaction")
       ("raw,r", "Produce raw output")
       ("bash,b", "Produce bash output")
       ("triggers,t", "Execute triggers")
@@ -1289,6 +1292,7 @@ int main(int argc, char** argv) {
     po::notify(vm);
 
     janosh::Format f = janosh::Bash;
+    bool doTransaction = true;
     bool execTriggers = vm.count("triggers");
     bool verbose = vm.count("verbose");
     bool daemon = vm.count("daemon");
@@ -1319,6 +1323,9 @@ int main(int argc, char** argv) {
       f = janosh::Bash;
     else if(vm.count("raw"))
       f = janosh::Raw;
+
+    if(vm.count("notx"))
+      doTransaction = false;
 
     if(vm.count("daemon") && (vm.count("define") || vm.count("bash") || vm.count("raw") || vm.count("json") || execTriggers)) {
       LOG_FATAL_STR("Incompatible option(s) conflicting with daemon mode detected");
@@ -1371,7 +1378,7 @@ int main(int argc, char** argv) {
             }
           }
         }
-        Request req(f, command, typedArgs, execTriggers, verbose, get_parent_info(), "");
+        Request req(f, command, typedArgs, execTriggers, doTransaction, verbose, get_parent_info(), "");
         TcpClient client;
         client.connect("localhost", s.port);
 

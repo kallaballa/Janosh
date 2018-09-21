@@ -33,6 +33,7 @@ public:
   string command_;
   vector<Value> vecArgs_;
   bool runTriggers_ = false;
+  bool doTransaction_ = true;
   bool verbose_ = false;
   ProcessInfo pinfo_;
   string info_;
@@ -40,11 +41,12 @@ public:
   Request() {
   }
 
-  Request(const Format& format, const string& command, const vector<Value>& vecArgs, const bool& triggers, const bool& verbose, ProcessInfo pinfo_, const string& info) :
+  Request(const Format& format, const string& command, const vector<Value>& vecArgs, const bool& triggers, const bool& verbose, const bool& doTransaction, ProcessInfo pinfo_, const string& info) :
    format_(format),
    command_(command),
    vecArgs_(vecArgs),
    runTriggers_(triggers),
+   doTransaction_(doTransaction),
    verbose_(verbose),
    pinfo_(pinfo_),
    info_() {
@@ -55,6 +57,7 @@ public:
     this->command_ = other.command_;
     this->vecArgs_ = other.vecArgs_;
     this->runTriggers_ = other.runTriggers_;
+    this->doTransaction_ = other.doTransaction_;
     this->verbose_ = other.verbose_;
     this->pinfo_ = other.pinfo_;
     this->info_ = other.info_;
@@ -67,6 +70,7 @@ public:
       ar & command_;
       ar & vecArgs_;
       ar & runTriggers_;
+      ar & doTransaction_;
       ar & verbose_;
       ar & pinfo_;
       ar & info_;
