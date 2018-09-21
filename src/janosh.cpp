@@ -224,10 +224,10 @@ namespace janosh {
 
     rec.fetch().read();
     std::mt19937 mt(rd());
-    std::uniform_real_distribution<double> dist(0, rec.getSize());
+    std::uniform_real_distribution<double> dist(1, rec.getSize());
 
     if(rec.isObject()) {
-      for(size_t i = 0; i < dist(mt) + 1; ++i) {
+      for(size_t i = 0; i < dist(mt); ++i) {
         rec.fetch();
         rec.nextMember();
       }
