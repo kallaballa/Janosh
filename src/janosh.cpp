@@ -219,23 +219,30 @@ namespace janosh {
   std::random_device rd;
 
   size_t Janosh::random(Record rec, std::ostream& out) {
-    rec.fetch();
-    if(!rec.isArray())
-      throw janosh_exception() << record_info( { "Path is not an array", rec });
-    rec.read();
+    if(!rec.isDirectory())
+      throw janosh_exception() << record_info( { "Path is not a directory", rec });
+
+    rec.fetch().read();
     std::mt19937 mt(rd());
     std::uniform_real_distribution<double> dist(0, rec.getSize());
 
-    Path p = rec.path();
-    p.pop();
-    p.pushIndex(dist(mt));
-    Record r(p);
-    r.fetch();
+    if(rec.isObject()) {
+      size_t member = dist(mt);
+      for(size_t i = 0; i < member; ++i) {
+        rec.fetch();
+        rec.nextMember();
+      }
+    } else {
+        Path p = rec.path();
+        p.pop();
+        p.pushIndex(dist(mt));
+        Record r(p);
+        r.fetch();
 
-    if(!r.exists())
-      p.pushMember(".");
-
-    return this->get({p}, out);
+        if(!r.exists())
+          p.pushMember(".");
+    }
+    return this->get({rec}, out);
   }
 
   size_t Janosh::recurseValue(Record& travRoot, PrintVisitor* vis, Value::Type rootType, ostream& out) {
