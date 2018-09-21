@@ -131,7 +131,7 @@ void TcpWorker::run() {
 
         Tracker::setDoPublish(req.runTriggers_);
         bool result;
-        if(!!req.doTransaction_)
+        if(!req.doTransaction_)
           LOG_DEBUG_STR("Disabling transactions");
 
         try {
