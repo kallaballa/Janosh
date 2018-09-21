@@ -227,8 +227,7 @@ namespace janosh {
     std::uniform_real_distribution<double> dist(0, rec.getSize());
 
     if(rec.isObject()) {
-      size_t member = dist(mt);
-      for(size_t i = 0; i < member; ++i) {
+      for(size_t i = 0; i < dist(mt) + 1; ++i) {
         rec.fetch();
         rec.nextMember();
       }
