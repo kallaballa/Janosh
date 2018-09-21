@@ -32,7 +32,7 @@ using websocketpp::lib::condition_variable;
 std::string make_sessionkey() {
   std::mt19937 rng;
   rng.seed(std::random_device()());
-  std::uniform_real_distribution<float> dist(0.0,1.0);
+  std::uniform_real_distribution<double> dist(0.0,1.0);
 
   string strRng = std::to_string(dist(rng));
   CryptoPP::SHA256 hash;

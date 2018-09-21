@@ -46,6 +46,8 @@ public:
 
   size_t process(int argc, char** argv);
 
+  size_t patch(const string& jsonfile);
+  size_t patch(istream& is);
   size_t loadJson(const string& jsonfile);
   size_t loadJson(istream& is);
 
@@ -84,6 +86,10 @@ private:
   Format getFormat();
   void setContainerSize(Record rec, const size_t s);
   void changeContainerSize(Record rec, const size_t by);
+  size_t patch(const Path& path, const Value& value);
+  size_t patch(js::Value& v, Path& path);
+  size_t patch(js::Object& obj, Path& path);
+  size_t patch(js::Array& array, Path& path);
   size_t load(const Path& path, const Value& value);
   size_t load(js::Value& v, Path& path);
   size_t load(js::Object& obj, Path& path);

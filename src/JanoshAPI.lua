@@ -270,6 +270,12 @@ function JanoshClass.load(self, value)
   return ret
 end
 
+function JanoshClass.patch(self, value)
+  local ret, value = self:request({"patch",value})
+  return ret
+end
+
+
 function JanoshClass.exists(self, key)
   local ret, val = self:request({"exists",key})
   return ret == 0

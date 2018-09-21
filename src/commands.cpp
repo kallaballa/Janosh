@@ -115,6 +115,29 @@ inline bool file_exists (const std::string& name) {
   return (stat (name.c_str(), &buffer) == 0);
 }
 
+class PatchCommand: public Command {
+public:
+  explicit PatchCommand(janosh::Janosh* janosh) :
+      Command(janosh) {
+  }
+
+  virtual Result operator()(const vector<Value>& params, std::ostream& out) {
+    if (params.empty()) {
+      janosh->patch(std::cin);
+    } else {
+      for(const Value& p : params) {
+        if(file_exists(p.str())) {
+          janosh->patch(p.str());
+        } else  {
+          std::stringstream ss(p.str());
+          janosh->patch(ss);
+        }
+      }
+    }
+    return {0, "Successful"};
+  }
+};
+
 class LoadCommand: public Command {
 public:
   explicit LoadCommand(janosh::Janosh* janosh) :
@@ -123,7 +146,7 @@ public:
 
   virtual Result operator()(const vector<Value>& params, std::ostream& out) {
     if (params.empty()) {
-      janosh->loadJson(std::cin);
+      janosh->patch(std::cin);
     } else {
       for(const Value& p : params) {
         if(file_exists(p.str())) {
@@ -449,6 +472,8 @@ CommandMap makeCommandMap(Janosh* janosh) {
   cm.insert( { "exists", new ExistsCommand(janosh) });
   cm.insert( { "random", new RandomCommand(janosh) });
   cm.insert( { "filter", new FilterCommand(janosh) });
+  cm.insert( { "patch", new PatchCommand(janosh) });
+
 
   return cm;
 }

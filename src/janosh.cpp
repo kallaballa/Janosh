@@ -124,19 +124,19 @@ namespace janosh {
     MessageQueue::getInstance()->publish(key,op, value.c_str());
   }
 
-  size_t Janosh::loadJson(const string& jsonfile) {
+  size_t Janosh::patch(const string& jsonfile) {
     std::ifstream is(jsonfile.c_str());
-    size_t cnt = this->loadJson(is);
+    size_t cnt = this->patch(is);
     is.close();
     return cnt;
   }
 
-  size_t Janosh::loadJson(std::istream& is) {
+  size_t Janosh::patch(std::istream& is) {
     js::Value rootValue;
     js::read(is, rootValue);
 
     Path path;
-    return load(rootValue, path);
+    return patch(rootValue, path);
   }
 
   size_t Janosh::filter(vector<Record> recs, const std::string& jsonPathExpr, std::ostream& out) {
@@ -1048,7 +1048,7 @@ namespace janosh {
     setContainerSize(container, container.getSize() + by);
   }
 
-  size_t Janosh::load(const Path& path, const Value& value) {
+  size_t Janosh::patch(const Path& path, const Value& value) {
     announceOperation(path.pretty(), value.makeDBString(), Tracker::WRITE);
     if(value.getType() == Value::Object || value.getType() == Value::Array){
  //     return Record::db.set(path, value.makeDBString()) ? 1 : 0;
@@ -1056,6 +1056,83 @@ namespace janosh {
     }
     else
       return this->set(Record(path), value);
+  }
+
+  size_t Janosh::patch(js::Value& v, Path& path) {
+    size_t cnt = 0;
+    if (v.type() == js::obj_type) {
+      cnt+=patch(v.get_obj(), path);
+    } else if (v.type() == js::array_type) {
+      cnt+=patch(v.get_array(), path);
+    } else if (v.type() == js::str_type) {
+      cnt+=this->patch(path, Value(v.get_str(), Value::String));
+    } else if (v.type() == js::int_type) {
+      cnt+=this->patch(path, Value(std::to_string(v.get_int64()), Value::Number));
+    } else if (v.type() == js::bool_type) {
+      cnt+=this->patch(path, Value(std::to_string(v.get_bool()), Value::Boolean));
+    } else if (v.type() == js::real_type) {
+      cnt+=this->patch(path, Value(std::to_string(v.get_real()), Value::Number));
+    }
+
+    return cnt;
+  }
+
+  size_t Janosh::patch(js::Object& obj, Path& path) {
+    size_t cnt = 0;
+    path.pushMember(".");
+    Record rec(path);
+    if(!rec.fetch().exists())
+      cnt+=this->makeObject(path);
+    path.pop();
+
+    for(js::Pair& p : obj) {
+      path.pushMember(p.name_);
+      cnt+=patch(p.value_, path);
+      path.pop();
+      ++cnt;
+    }
+
+    return cnt;
+  }
+
+  size_t Janosh::patch(js::Array& array, Path& path) {
+    size_t cnt = 0;
+    int index = 0;
+    path.pushMember(".");
+    Record rec(path);
+    if(!rec.fetch().exists())
+      cnt+=this->makeArray(path);
+    else
+      index = this->size(path);
+    path.pop();
+
+    for(js::Value& v : array){
+      path.pushIndex(index++);
+      cnt+=patch(v, path);
+      path.pop();
+      ++cnt;
+    }
+    return cnt;
+  }
+
+  size_t Janosh::loadJson(const string& jsonfile) {
+    std::ifstream is(jsonfile.c_str());
+    size_t cnt = this->loadJson(is);
+    is.close();
+    return cnt;
+  }
+
+  size_t Janosh::loadJson(std::istream& is) {
+    js::Value rootValue;
+    js::read(is, rootValue);
+
+    Path path;
+    return load(rootValue, path);
+  }
+
+  size_t Janosh::load(const Path& path, const Value& value) {
+    announceOperation(path.pretty(), value.makeDBString(), Tracker::WRITE);
+    return Record::db.set(path, value.makeDBString()) ? 1 : 0;
   }
 
   size_t Janosh::load(js::Value& v, Path& path) {
@@ -1067,7 +1144,7 @@ namespace janosh {
     } else if (v.type() == js::str_type) {
       cnt+=this->load(path, Value(v.get_str(), Value::String));
     } else if (v.type() == js::int_type) {
-      cnt+=this->load(path, Value(std::to_string(v.get_int64()), Value::Number));
+      cnt+=this->load(path, Value(std::to_string(v.get_int()), Value::Number));
     } else if (v.type() == js::bool_type) {
       cnt+=this->load(path, Value(std::to_string(v.get_bool()), Value::Boolean));
     } else if (v.type() == js::real_type) {
@@ -1080,9 +1157,7 @@ namespace janosh {
   size_t Janosh::load(js::Object& obj, Path& path) {
     size_t cnt = 0;
     path.pushMember(".");
-    Record rec(path);
-    if(!rec.fetch().exists())
-      cnt+=this->makeObject(path);
+    cnt+=this->load(path, Value((boost::format("O%d") % obj.size()).str(), Value::Object));
     path.pop();
 
     for(js::Pair& p : obj) {
@@ -1099,11 +1174,7 @@ namespace janosh {
     size_t cnt = 0;
     int index = 0;
     path.pushMember(".");
-    Record rec(path);
-    if(!rec.fetch().exists())
-      cnt+=this->makeArray(path);
-    else
-      index = this->size(path);
+    cnt+=this->load(path, Value((boost::format("A%d") % array.size()).str(), Value::Array));
     path.pop();
 
     for(js::Value& v : array){
