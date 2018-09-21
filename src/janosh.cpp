@@ -224,7 +224,7 @@ namespace janosh {
 
     rec.fetch().read();
     std::mt19937 mt(rd());
-    std::uniform_int_distribution<size_t> dist(1, rec.getSize());
+    std::uniform_int_distribution<size_t> dist(0, rec.getSize() - 1);
 
     if(rec.isObject()) {
       for(size_t i = 0; i < dist(mt); ++i) {
