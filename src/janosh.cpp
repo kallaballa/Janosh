@@ -232,6 +232,7 @@ namespace janosh {
         rec.fetch();
         rec.nextMember();
       }
+      return this->get({rec}, out);
     } else {
         Path p = rec.path();
         p.pop();
@@ -241,8 +242,8 @@ namespace janosh {
 
         if(!r.exists())
           p.pushMember(".");
+        return this->get({p}, out);
     }
-    return this->get({rec}, out);
   }
 
   size_t Janosh::recurseValue(Record& travRoot, PrintVisitor* vis, Value::Type rootType, ostream& out) {
