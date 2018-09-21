@@ -163,13 +163,20 @@ string WebsocketServer::loginUser(const connection_hdl h, const std::string& ses
 
     ConnectionHandle old = sessionMap[sessionKey];
     if(std::owner_less<ConnectionHandle>()(old,h.lock()) || std::owner_less<ConnectionHandle>()(h.lock(),old)) {
-      size_t lh = m_luahandles_rev[old];
-      m_luahandles_rev[h.lock()] = lh;
-      m_luahandles_rev.erase(old);
-      m_luahandles[lh] = h.lock();
-      sessionMap[sessionKey] = h.lock();
-      sessionMapRev[h.lock()] = sessionKey;
+      if(m_luahandles_rev.find(old) != m_luahandles_rev.end()) {
+        size_t lh = m_luahandles_rev[old];
+        m_luahandles_rev[h.lock()] = lh;
+        m_luahandles_rev.erase(old);
+        m_luahandles[lh] = h.lock();
+        sessionMap[sessionKey] = h.lock();
+        sessionMapRev[h.lock()] = sessionKey;
+      } else {
+        assert(m_luahandles_rev.find(h.lock()) != m_luahandles_rev.end());
+        sessionMap[sessionKey] = h.lock();
+        sessionMapRev[h.lock()] = sessionKey;
+      }
     }
+
     return "session-success:" + sessionKey;
   }
 }
