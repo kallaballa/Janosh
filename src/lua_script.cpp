@@ -185,7 +185,7 @@ static janosh::Request make_request(lua_State* L, bool trigger = false) {
     }
   }
 
-  return Request(janosh::Format::Json, command, typedArgs, trigger, false, get_parent_info(), info);
+  return Request(janosh::Format::Json, command, typedArgs, trigger, false, true, get_parent_info(), info);
 }
 
 //static janosh::Request make_request(string command, lua_State* L, bool trigger = false) {
@@ -317,7 +317,7 @@ static int l_request_trigger(lua_State* L) {
 
 static int l_raw(lua_State* L) {
   string key = lua_tostring(L, -1);
-  Request req(janosh::Format::Raw, "get", {{key, Value::String}}, false, false, get_parent_info(), "");
+  Request req(janosh::Format::Raw, "get", {{key, Value::String}}, false, false, true, get_parent_info(), "");
   auto result = LuaScript::getInstance()->performRequest(req);
   lua_pushnumber(L, result.first);
   lua_pushstring(L, result.second.c_str());

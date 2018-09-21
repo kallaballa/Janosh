@@ -219,19 +219,23 @@ namespace janosh {
   std::random_device rd;
 
   size_t Janosh::random(Record rec, std::ostream& out) {
-    if(!rec.isDirectory())
-      throw janosh_exception() << record_info( { "Path is not a directory", rec });
     rec.fetch();
+    if(!rec.isArray())
+      throw janosh_exception() << record_info( { "Path is not an array", rec });
     rec.read();
     std::mt19937 mt(rd());
     std::uniform_real_distribution<double> dist(0, rec.getSize());
 
-    for(size_t i = 0; i < dist(mt); ++i) {
-      rec.fetch();
-      rec.nextMember();
-    }
+    Path p = rec.path();
+    p.pop();
+    p.pushIndex(dist(mt));
+    Record r(p);
+    r.fetch();
 
-    return this->get({rec}, out);
+    if(!r.exists())
+      p.pushMember(".");
+
+    return this->get({p}, out);
   }
 
   size_t Janosh::recurseValue(Record& travRoot, PrintVisitor* vis, Value::Type rootType, ostream& out) {
@@ -1124,9 +1128,7 @@ namespace janosh {
 
   size_t Janosh::loadJson(std::istream& is) {
     js::Value rootValue;
-    std::cerr << "parsing json" << std::endl;
     js::read(is, rootValue);
-    std::cerr << "parsed json" << std::endl;
 
     Path path;
     return load(rootValue, path);
@@ -1378,7 +1380,7 @@ int main(int argc, char** argv) {
             }
           }
         }
-        Request req(f, command, typedArgs, execTriggers, doTransaction, verbose, get_parent_info(), "");
+        Request req(f, command, typedArgs, execTriggers, verbose, doTransaction, get_parent_info(), "");
         TcpClient client;
         client.connect("localhost", s.port);
 
