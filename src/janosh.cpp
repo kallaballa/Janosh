@@ -226,22 +226,25 @@ namespace janosh {
     std::mt19937 mt(rd());
     Path parent = rec.path();
 
+    std::cerr << "0:" << rec.path().pretty() << std::endl;
+
     if(rec.isObject()) {
-      rec.step();
       rec.fetch().read();
       std::uniform_int_distribution<size_t> dist(0, rec.getSize());
       size_t pick = dist(mt);
       std::cerr << pick << std::endl;
 
       for(size_t i = 0; i < pick; ++i) {
+        rec.step();
         rec.fetch();
+        std::cerr << "1:" << rec.path().pretty() << std::endl;
         if(rec.path().parent() != parent) {
           while(rec.path().parent() != parent) {
             rec.step();
             rec.fetch();
+            std::cerr << "2:" << rec.path().pretty() << std::endl;
           }
-        } else if(i < pick - 1)
-          rec.step();
+        }
       }
       return this->get({rec}, out);
     } else {
