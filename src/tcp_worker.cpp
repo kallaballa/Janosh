@@ -78,6 +78,7 @@ void TcpWorker::run() {
     Request req;
     bool cacheable = false;
     bool cachehit = false;
+    bool result = false;
     std::string peerAddr = socket_->remote_endpoint().address().to_string();
     LOG_DEBUG_MSG("accepted", peerAddr);
     LOG_DEBUG_MSG("socket", socket_);
@@ -130,28 +131,11 @@ void TcpWorker::run() {
         }
 
         Tracker::setDoPublish(req.runTriggers_);
-        bool result;
-        if(!req.doTransaction_) {
-          LOG_DEBUG_STR("Disabling transactions");
-        }
 
-        try {
-          bool begin = true;
-          if(req.doTransaction_)
-            begin = instance->beginTransaction();
-          assert(begin);
-          JanoshThreadPtr dt(new DatabaseThread(req, out_stream));
-          dt->runSynchron();
+        JanoshThreadPtr dt(new DatabaseThread(req, out_stream));
+        dt->runSynchron();
+        result = dt->result();
 
-          if(req.doTransaction_)
-            instance->endTransaction(true);
-
-          result = dt->result();
-        } catch (...) {
-          if(req.doTransaction_)
-            instance->endTransaction(false);
-          throw;
-        }
         // report return code
         writeResponseHeader(socket_, result ? 0 : 1);
 

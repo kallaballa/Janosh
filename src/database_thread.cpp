@@ -19,9 +19,18 @@ DatabaseThread::DatabaseThread(const Request& req, ostream_ptr out) :
 }
 
 void DatabaseThread::run() {
+  Janosh* instance = Janosh::getInstance();
+
   try {
     setResult(false);
-    Janosh* instance = Janosh::getInstance();
+    bool begin = true;
+
+    if(!req_.doTransaction_) {
+      LOG_DEBUG_STR("Disabling transactions");
+    }
+    if(req_.doTransaction_)
+      begin = instance->beginTransaction();
+    assert(begin);
 
     if (!req_.command_.empty()) {
       LOG_DEBUG_MSG("Execute command", req_.command_);
@@ -32,27 +41,25 @@ void DatabaseThread::run() {
       }
 
       Command::Result r;
-      try {
-        r = (*cmd)(req_.vecArgs_, *out_);
-        if (r.first == -1)
-          throw janosh_exception() << msg_info(r.second);
-        setResult(true);
-      } catch(janosh_exception& ex) {
-        Record::db.end_transaction(false);
-        throw;
-      } catch(std::exception& ex) {
-        Record::db.end_transaction(false);
-        throw;
-      }
+      r = (*cmd)(req_.vecArgs_, *out_);
+      if (r.first == -1)
+        throw janosh_exception() << msg_info(r.second);
+      setResult(true);
 
       LOG_INFO_MSG(r.second, r.first);
     } else {
       throw janosh_exception() << msg_info("missing command");
     }
+    if(req_.doTransaction_)
+      instance->endTransaction(true);
   } catch (janosh_exception& ex) {
+    if(req_.doTransaction_)
+      instance->endTransaction(false);
     printException(ex);
     return;
   } catch (std::exception& ex) {
+    if(req_.doTransaction_)
+      instance->endTransaction(false);
     printException(ex);
     return;
   }

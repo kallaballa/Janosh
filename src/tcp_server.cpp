@@ -64,10 +64,10 @@ void TcpServer::close() {
 }
 
 bool TcpServer::run() {
-  socket_ptr socket = NULL;
+  boost::asio::ip::tcp::socket* socket = NULL;
 
 	try  {
-	  socket = socket_ptr(new tcp::socket(io_service_));
+	  socket = new tcp::socket(io_service_);
 	  acceptor_.accept(*socket);
     socket->set_option(boost::asio::ip::tcp::no_delay(true));
 	} catch(std::exception& ex) {
@@ -80,13 +80,15 @@ bool TcpServer::run() {
 	  return false;
 	}
 
-	Janosh* janosh = Janosh::getInstance();
+	std::thread t([=]() {
+  socket_ptr shared(socket);
 	try {
+
 	  TcpWorker* w = NULL;
 	  do {
 	    if(w)
 	      delete w;
-	    w = new TcpWorker(socket);
+	    w = new TcpWorker(shared);
 
 	    w->runSynchron();
 	  } while(w->connected());
@@ -97,20 +99,24 @@ bool TcpServer::run() {
   } catch (janosh_exception& ex) {
     printException(ex);
 
-    if (socket != NULL) {
-      LOG_DEBUG_MSG("Closing socket", socket);
-      socket->shutdown(boost::asio::socket_base::shutdown_both);
-      socket->close();
+    if (shared != NULL) {
+      LOG_DEBUG_MSG("Closing socket", shared);
+      shared->shutdown(boost::asio::socket_base::shutdown_both);
+      shared->close();
     }
   } catch (std::exception& ex) {
     printException(ex);
 
-    if (socket != NULL) {
-      LOG_DEBUG_MSG("Closing socket", socket);
-      socket->shutdown(boost::asio::socket_base::shutdown_both);
-      socket->close();
+    if (shared != NULL) {
+      LOG_DEBUG_MSG("Closing socket", shared);
+      shared->shutdown(boost::asio::socket_base::shutdown_both);
+      shared->close();
     }
   }
+	});
+
+	t.detach();
+
   
   return true;
 }

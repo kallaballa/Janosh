@@ -1283,7 +1283,7 @@ int main(int argc, char** argv) {
       ("luafile,f", po::value<string>(&luafile), "Run the lua script file")
       ("define,D", po::value<vector<string>>(&defines), "Define a macro for use in lua scripts. The format of the argument is key=value")
       ("json,j", "Produce json output")
-      ("notx,n", "Don't guard operation with a transaction")
+      ("tx,x", "Guard the operation with a transaction")
       ("raw,r", "Produce raw output")
       ("bash,b", "Produce bash output")
       ("triggers,t", "Execute triggers")
@@ -1312,7 +1312,7 @@ int main(int argc, char** argv) {
     po::notify(vm);
 
     janosh::Format f = janosh::Bash;
-    bool doTransaction = true;
+    bool doTransaction = false;
     bool execTriggers = vm.count("triggers");
     bool verbose = vm.count("verbose");
     bool daemon = vm.count("daemon");
@@ -1344,8 +1344,8 @@ int main(int argc, char** argv) {
     else if(vm.count("raw"))
       f = janosh::Raw;
 
-    if(vm.count("notx"))
-      doTransaction = false;
+    if(vm.count("tx"))
+      doTransaction = true;
 
     if(vm.count("daemon") && (vm.count("define") || vm.count("bash") || vm.count("raw") || vm.count("json") || execTriggers)) {
       LOG_FATAL_STR("Incompatible option(s) conflicting with daemon mode detected");

@@ -31,7 +31,7 @@ public:
     void performOpen(const string& strID, bool lockRequest = true);
     void performClose(bool lockRequest = true);
     void printTransactions(std::ostream& os);
-    std::pair<int, string>  performRequest(janosh::Request req);
+    std::pair<int, string>  performRequest(janosh::Request req, bool doTransaction);
 
     static void init(std::function<void()> openCallback,
         std::function<std::pair<int,string>(janosh::Request&)> requestCallback,

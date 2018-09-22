@@ -3,11 +3,13 @@
 
 #include "janosh_thread.hpp"
 #include "shared_pointers.hpp"
+#include "request.hpp"
 
 namespace janosh {
 
 class TcpWorker : public JanoshThread {
   socket_ptr socket_;
+  Request readRequest();
 
 public:
   explicit TcpWorker(socket_ptr socket);
