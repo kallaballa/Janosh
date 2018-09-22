@@ -226,8 +226,6 @@ namespace janosh {
     std::mt19937 mt(rd());
     Path parent = rec.path();
 
-    std::cerr << "0:" << rec.path().pretty() << std::endl;
-
     if(rec.isObject()) {
       rec.fetch().read();
       std::uniform_int_distribution<size_t> dist(1, rec.getSize());
@@ -237,12 +235,10 @@ namespace janosh {
       for(size_t i = 0; i < pick; ++i) {
         rec.step();
         rec.fetch().readPath();
-        std::cerr << "1:" << rec.path().pretty() << std::endl;
         if(rec.path().parent() != parent) {
           while(rec.path().parent() != parent) {
             rec.step();
             rec.fetch().readPath();
-            std::cerr << "2:" << rec.path().pretty() << std::endl;
           }
         }
       }
