@@ -21,7 +21,7 @@ function JanoshClass.basename(self, path)
 end
 
 function JanoshClass.epoch(self)
-  return posix.time()
+  return janosh_epoch()
 end
 
 function JanoshClass.setenv(self,key,value)
