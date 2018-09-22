@@ -229,7 +229,7 @@ namespace janosh {
     if(rec.isObject()) {
       rec.step();
       rec.fetch().read();
-      std::uniform_int_distribution<size_t> dist(0, rec.getSize() + 1);
+      std::uniform_int_distribution<size_t> dist(0, rec.getSize());
       size_t pick = dist(mt);
       std::cerr << pick << std::endl;
 
