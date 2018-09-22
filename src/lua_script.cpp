@@ -319,6 +319,14 @@ static int l_wsgethandles(lua_State* L) {
   return handles.size();
 }
 
+static int l_epoch(lua_State* L) {
+  using namespace std::chrono;
+  lua_pushinteger(L, duration_cast< milliseconds >(
+      system_clock::now().time_since_epoch()
+  ).count());
+  return 1;
+}
+
 static int l_request(lua_State* L) {
   auto result = LuaScript::getInstance()->performRequest(make_request(L));
 
@@ -511,6 +519,8 @@ static void install_janosh_functions(lua_State* L, bool first) {
 
   lua_pushcfunction(L, l_sleep);
   lua_setglobal(L, "janosh_sleep");
+  lua_pushcfunction(L, l_epoch);
+  lua_setglobal(L, "janosh_epoch");
 
   lua_pushcfunction(L, l_request);
   lua_setglobal(L, "janosh_request");
