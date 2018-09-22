@@ -226,8 +226,6 @@ namespace janosh {
     std::mt19937 mt(rd());
     Path parent = rec.path();
 
-    std::cerr << "0:" << rec.path().pretty() << std::endl;
-
     if(rec.isObject()) {
       rec.step();
       rec.fetch().read();
@@ -237,12 +235,10 @@ namespace janosh {
 
       for(size_t i = 0; i < pick; ++i) {
         rec.fetch();
-        std::cerr << "1:" << rec.path().pretty() << std::endl;
         if(rec.path().parent() != parent) {
           while(rec.path().parent() != parent) {
             rec.step();
             rec.fetch();
-            std::cerr << "2:" << rec.path().pretty() << std::endl;
           }
         } else if(i < pick - 1)
           rec.step();
