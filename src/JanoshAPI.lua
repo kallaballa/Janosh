@@ -539,6 +539,10 @@ function JanoshClass.transaction(self, fn)
   self:close()
 end
 
+function JanoshClass.hasSubscription(self, keyprefix) 
+  return janosh_hassubscription(keyprefix);
+end
+
 function JanoshClass.subscribe(self, keyprefix, callback)
   janosh_subscribe(keyprefix);
   t = lanes.gen("*", function() 
@@ -702,10 +706,9 @@ function JanoshClass.wsGetUserName(self, handle)
   return janosh_wsgetusername(handle)
 end
 
-function JanoshClass.wsGetHandle(self, username)
-  return janosh_wsgethandle(username)
+function JanoshClass.wsGetHandles(self, username) 
+  return { janosh_wsgethandles(username) }
 end
-
 
 function JanoshClass.sleep(self, millis)
  janosh_sleep(millis)

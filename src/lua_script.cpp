@@ -53,6 +53,12 @@ private:
   std::map<string, zmq::context_t*> contextMap;
   std::map<string, zmq::socket_t*> socketMap;
 public:
+
+  bool has(const string& prefix) {
+    std::unique_lock<std::mutex> lock(mutex);
+    return contextMap.find(prefix) != contextMap.end();
+  }
+
   void make(const string& prefix) {
     std::unique_lock<std::mutex> lock(mutex);
     if(contextMap.find(prefix) != contextMap.end())
@@ -214,6 +220,12 @@ static int l_subscribe(lua_State* L) {
   return 0;
 }
 
+static int l_hassubscription(lua_State* L) {
+  string prefix = lua_tostring(L, -1);
+  lua_pushboolean(L, subscriptions.has(prefix));
+  return 1;
+}
+
 static int l_receive(lua_State* L) {
   string prefix = lua_tostring(L, -1);
   auto res = subscriptions.receive(prefix);
@@ -295,6 +307,16 @@ static int l_wsgetusername(lua_State* L) {
   string username = WebsocketServer::getInstance()->getUserName(handle);
   lua_pushstring(L, username.c_str());
   return 1;
+}
+
+static int l_wsgethandles(lua_State* L) {
+  string username  = lua_tostring(L, -1);
+  std::vector<size_t> handles = WebsocketServer::getInstance()->getHandles(username);
+
+  for(auto& h : handles)
+    lua_pushinteger(L, h);
+
+  return handles.size();
 }
 
 static int l_request(lua_State* L) {
@@ -475,9 +497,14 @@ static void install_janosh_functions(lua_State* L, bool first) {
   lua_setglobal(L, "janosh_wsgetuserdata");
   lua_pushcfunction(L, l_wsgetusername);
   lua_setglobal(L, "janosh_wsgetusername");
+  lua_pushcfunction(L, l_wsgethandles);
+  lua_setglobal(L, "janosh_wsgethandles");
 
   lua_pushcfunction(L, l_subscribe);
   lua_setglobal(L, "janosh_subscribe");
+  lua_pushcfunction(L, l_hassubscription);
+  lua_setglobal(L, "janosh_hassubscription");
+
   lua_pushcfunction(L, l_receive);
   lua_setglobal(L, "janosh_receive");
 

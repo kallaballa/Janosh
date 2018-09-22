@@ -154,26 +154,26 @@ void WebsocketServer::run(uint16_t port) {
 }
 
 string WebsocketServer::loginUser(const connection_hdl h, const std::string& sessionKey) {
-  if(sessionMap.find(sessionKey) == sessionMap.end()) {
+  if(skeyConMap.find(sessionKey) == skeyConMap.end()) {
     return "session-invalid";
   } else {
     unique_lock<mutex> lock(m_receive_lock);
     unique_lock<mutex> lock1(m_action_lock);
     unique_lock<mutex> lock2(m_connection_lock);
 
-    ConnectionHandle old = sessionMap[sessionKey];
+    ConnectionHandle old = skeyConMap[sessionKey];
     if(std::owner_less<ConnectionHandle>()(old,h.lock()) || std::owner_less<ConnectionHandle>()(h.lock(),old)) {
       if(m_luahandles_rev.find(old) != m_luahandles_rev.end()) {
         size_t lh = m_luahandles_rev[old];
         m_luahandles_rev[h.lock()] = lh;
         m_luahandles_rev.erase(old);
         m_luahandles[lh] = h.lock();
-        sessionMap[sessionKey] = h.lock();
-        sessionMapRev[h.lock()] = sessionKey;
+        skeyConMap[sessionKey] = h.lock();
+        conSkeyRev[h.lock()] = sessionKey;
       } else {
         assert(m_luahandles_rev.find(h.lock()) != m_luahandles_rev.end());
-        sessionMap[sessionKey] = h.lock();
-        sessionMapRev[h.lock()] = sessionKey;
+        skeyConMap[sessionKey] = h.lock();
+        conSkeyRev[h.lock()] = sessionKey;
       }
     }
 
@@ -189,12 +189,13 @@ string WebsocketServer::loginUser(const connection_hdl h, const std::string& use
     return "login-notfound";
   } else {
     string sessionKey = make_sessionkey();
-    usernameMap[sessionKey] = username;
+    skeyNameMap[sessionKey] = username;
+    nameSkeyMap.insert({username, sessionKey});
     Credentials& c = authData[username];
     std::pair<string,string> hashed = hash_password(password, c.salt);
     if(c.hash == hashed.first) {
-      sessionMap[sessionKey] = h.lock();
-      sessionMapRev[h.lock()] = sessionKey;
+      skeyConMap[sessionKey] = h.lock();
+      conSkeyRev[h.lock()] = sessionKey;
       return "login-success:" + sessionKey;
     } else {
       return "login-nomatch";
@@ -209,10 +210,12 @@ string WebsocketServer::registerUser(const connection_hdl h, const std::string& 
   if(authData.find(username) == authData.end()) {
     std::pair<string,string> hashed = hash_password(password);
     string sessionKey = make_sessionkey();
-    usernameMap[sessionKey] = username;
+    skeyNameMap[sessionKey] = username;
+    nameSkeyMap.insert({username, sessionKey});
+
     authData[username] = {hashed.first, hashed.second, userdata};
-    sessionMap[sessionKey] = h.lock();
-    sessionMapRev[h.lock()] = sessionKey;
+    skeyConMap[sessionKey] = h.lock();
+    conSkeyRev[h.lock()] = sessionKey;
     std::ofstream outfile;
     outfile.open(this->passwdFile, std::ios_base::app);
     string userData64;
@@ -270,7 +273,7 @@ void WebsocketServer::on_close(connection_hdl hdl) {
 }
 
 void WebsocketServer::on_message(connection_hdl h, server::message_ptr msg) {
-  if((doAuthenticate && sessionMapRev.find(h.lock()) != sessionMapRev.end()) || !doAuthenticate) {
+  if((doAuthenticate && conSkeyRev.find(h.lock()) != conSkeyRev.end()) || !doAuthenticate) {
     LOG_DEBUG_STR("Websocket: On message");
     unique_lock<mutex> lock(m_receive_lock);
     LOG_DEBUG_STR("Websocket: On message lock");
@@ -363,18 +366,32 @@ void WebsocketServer::process_messages() {
 
 string WebsocketServer::getUserData(size_t luahandle) {
   auto it = m_luahandles.find(luahandle);
-  if (it != m_luahandles.end() && sessionMapRev.find((*it).second) != sessionMapRev.end()) {
-    return authData[usernameMap[sessionMapRev[(*it).second]]].userData;
+  if (it != m_luahandles.end() && conSkeyRev.find((*it).second) != conSkeyRev.end()) {
+    return authData[skeyNameMap[conSkeyRev[(*it).second]]].userData;
   }
   return "invalid";
 }
 
 string WebsocketServer::getUserName(size_t luahandle) {
   auto it = m_luahandles.find(luahandle);
-  if (it != m_luahandles.end() && sessionMapRev.find((*it).second) != sessionMapRev.end()) {
-    return usernameMap[sessionMapRev[(*it).second]];
+  if (it != m_luahandles.end() && conSkeyRev.find((*it).second) != conSkeyRev.end()) {
+    return skeyNameMap[conSkeyRev[(*it).second]];
   }
   return "invalid";
+}
+
+std::vector<size_t> WebsocketServer::getHandles(const string& username) {
+  std::vector<size_t> handles;
+  const auto& range = nameSkeyMap.equal_range(username);
+  for(auto it = range.first; it != range.second; ++it) {
+    const auto& itsc = skeyConMap.find((*it).second);
+    assert(itsc != skeyConMap.end());
+    const auto& itlhr = m_luahandles_rev.find((*itsc).second);
+    assert(itlhr != m_luahandles_rev.end());
+    handles.push_back((*itlhr).second);
+  }
+
+  return handles;
 }
 
 void WebsocketServer::broadcast(const std::string& s) {

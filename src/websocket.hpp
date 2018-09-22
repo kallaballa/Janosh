@@ -73,6 +73,7 @@ private:
 public:
     string getUserData(size_t luahandle);
     string getUserName(size_t luahandle);
+    std::vector<size_t> getHandles(const string& username);
     size_t getHandle(string username);
 
     void broadcast(const std::string& s);
@@ -103,9 +104,11 @@ private:
     std::deque<lua_message> m_receive;
 
     bool doAuthenticate = false;
-    std::map<string, string> usernameMap;
-    std::map<string, ConnectionHandle> sessionMap;
-    std::map<ConnectionHandle, string> sessionMapRev;
+    std::map<string, string> skeyNameMap;
+    std::multimap<string, string> nameSkeyMap;
+
+    std::map<string, ConnectionHandle> skeyConMap;
+    std::map<ConnectionHandle, string> conSkeyRev;
 
 
     AuthData authData;
