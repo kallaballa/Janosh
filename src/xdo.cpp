@@ -1,6 +1,7 @@
 #include "xdo.hpp"
 #include <iostream>
 
+#ifndef JANOSH_NO_XDO
 namespace janosh {
 namespace lua {
 
@@ -84,4 +85,4 @@ XDO* XDO::getInstance() {
 XDO* XDO::instance_ = NULL;
 }
 }
-
+#endif
