@@ -29,7 +29,6 @@ Build dependencies:
 
 Install luarocks:
 
-    sudo luarocks install luarocks
     sudo luarocks install lua-resty-template
     sudo luarocks install luaposix
     sudo luarocks install bitlib
