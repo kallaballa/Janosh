@@ -1,6 +1,7 @@
 #ifndef JANOSH_XDO_HPP_
 #define JANOSH_XDO_HPP_
 
+#ifndef JANOSH_NO_XDO
 #include <string>
 extern "C" {
 #include <xdo.h>
@@ -33,4 +34,5 @@ namespace lua {
 }
 }
 
+#endif
 #endif
