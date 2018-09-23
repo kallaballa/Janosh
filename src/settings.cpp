@@ -52,6 +52,12 @@ Settings::Settings() {
        } else {
          error(this->janoshFile.string(), "port definition not found");
        }
+
+       if(find(jObj, "maxThreads", v)) {
+            this->maxThreads = std::stoi(v.get_str());
+       } else {
+         error(this->janoshFile.string(), "maxThreads definition not found");
+       }
      } catch (exception& e) {
        error("Unable to load janosh configuration", e.what());
      }

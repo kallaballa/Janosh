@@ -105,7 +105,7 @@ bool WebsocketServer::Authenticator::hasSession(const std::string& sessionKey) {
 }
 
 bool WebsocketServer::Authenticator::hasConnectionHandle(ConnectionHandle c) {
-  return conSkeyRev.find(c) != conSkeyRev.end();
+  return conSkeyMap.find(c) != conSkeyMap.end();
 }
 
 void WebsocketServer::Authenticator::remapSession(const connection_hdl h, const std::string& sessionKey) {
@@ -117,11 +117,11 @@ void WebsocketServer::Authenticator::remapSession(const connection_hdl h, const 
       m_luahandles_rev.erase(old);
       m_luahandles[lh] = h.lock();
       skeyConMap[sessionKey] = h.lock();
-      conSkeyRev[h.lock()] = sessionKey;
+      conSkeyMap[h.lock()] = sessionKey;
     } else {
       assert(m_luahandles_rev.find(h.lock()) != m_luahandles_rev.end());
       skeyConMap[sessionKey] = h.lock();
-      conSkeyRev[h.lock()] = sessionKey;
+      conSkeyMap[h.lock()] = sessionKey;
     }
   }
 }
@@ -135,11 +135,32 @@ string WebsocketServer::Authenticator::createSession(const connection_hdl h, con
   std::pair<string,string> hashed = hash_password(password, c.salt);
   if(c.hash == hashed.first) {
     skeyConMap[sessionKey] = h.lock();
-    conSkeyRev[h.lock()] = sessionKey;
+    conSkeyMap[h.lock()] = sessionKey;
     return sessionKey;
   } else {
     return "";
   }
+}
+
+void WebsocketServer::Authenticator::destroySession(const std::string& sessionKey) {
+  assert(skeyNameMap.find(sessionKey) != skeyNameMap.end());
+  string username = skeyNameMap[sessionKey];
+
+  auto itpair = nameSkeyMap.equal_range(username);
+  for (auto it = itpair.first; it != itpair.second; ++it) {
+      if (it->second == sessionKey) {
+          nameSkeyMap.erase(it);
+          break;
+      }
+  }
+  auto itsc =skeyConMap.find(sessionKey);
+  assert(itsc != skeyConMap.end());
+  ConnectionHandle c = (*itsc).second;
+
+  auto itcs = conSkeyMap.find(c);
+  assert(itcs != conSkeyMap.end());
+  skeyConMap.erase(itsc);
+  conSkeyMap.erase(itcs);
 }
 
 string WebsocketServer::Authenticator::createUser(const connection_hdl h, const std::string& username, const std::string& password,
@@ -151,7 +172,7 @@ string WebsocketServer::Authenticator::createUser(const connection_hdl h, const 
 
   authData[username] = {hashed.first, hashed.second, userdata};
   skeyConMap[sessionKey] = h.lock();
-  conSkeyRev[h.lock()] = sessionKey;
+  conSkeyMap[h.lock()] = sessionKey;
   std::ofstream outfile;
   outfile.open(this->passwdFile, std::ios_base::app);
   string userData64;
@@ -189,16 +210,16 @@ void WebsocketServer::Authenticator::readAuthData(const std::string& passwdFile)
 
 string WebsocketServer::Authenticator::getUserData(size_t luahandle) {
   auto it = m_luahandles.find(luahandle);
-  if (it != m_luahandles.end() && conSkeyRev.find((*it).second) != conSkeyRev.end()) {
-    return authData[skeyNameMap[conSkeyRev[(*it).second]]].userData;
+  if (it != m_luahandles.end() && conSkeyMap.find((*it).second) != conSkeyMap.end()) {
+    return authData[skeyNameMap[conSkeyMap[(*it).second]]].userData;
   }
   return "";
 }
 
 string WebsocketServer::Authenticator::getUserName(size_t luahandle) {
   auto it = m_luahandles.find(luahandle);
-  if (it != m_luahandles.end() && conSkeyRev.find((*it).second) != conSkeyRev.end()) {
-    return skeyNameMap[conSkeyRev[(*it).second]];
+  if (it != m_luahandles.end() && conSkeyMap.find((*it).second) != conSkeyMap.end()) {
+    return skeyNameMap[conSkeyMap[(*it).second]];
   }
   return "";
 }
@@ -339,7 +360,14 @@ string WebsocketServer::registerUser(const connection_hdl h, const std::string& 
     return "register-duplicate";
   }
 }
-
+bool WebsocketServer::logoutUser(const string& sessionKey) {
+  if(auth.hasSession(sessionKey)) {
+    auth.destroySession(sessionKey);
+    return true;
+  } else {
+    return false;
+  }
+}
 
 void WebsocketServer::on_open(connection_hdl hdl) {
   LOG_DEBUG_STR("Websocket: Open");
@@ -361,14 +389,32 @@ void WebsocketServer::on_close(connection_hdl hdl) {
 
 void WebsocketServer::on_message(connection_hdl h, server::message_ptr msg) {
   if((doAuthenticate && auth.hasConnectionHandle(h.lock())) || !doAuthenticate) {
-    LOG_DEBUG_STR("Websocket: On message");
-    unique_lock<mutex> lock(m_receive_lock);
-    LOG_DEBUG_STR("Websocket: On message lock");
+    const std::string& payload = msg->get_payload();
+    std::stringstream ss(payload);
+    std::vector<string> tokens;
+    string token;
+    while(std::getline(ss, token)) {
+        tokens.push_back(token);
+    }
+    if(tokens.size() == 2 && tokens[0] == "logout" && auth.hasSession(tokens[1])) {
+      bool success = logoutUser(tokens[1]);
+      string response;
+      if(success)
+        response = "logout-success";
+      else
+        response = "logout-nosession";
 
-    m_receive.push_back(std::make_pair(auth.getLuaHandle(h.lock()), msg->get_payload()));
+      this->send(auth.getLuaHandle(h.lock()), response);
+    } else {
+      LOG_DEBUG_STR("Websocket: On message");
+      unique_lock<mutex> lock(m_receive_lock);
+      LOG_DEBUG_STR("Websocket: On message lock");
 
-    lock.unlock();
-    m_receive_cond.notify_one();
+      m_receive.push_back(std::make_pair(auth.getLuaHandle(h.lock()), msg->get_payload()));
+
+      lock.unlock();
+      m_receive_cond.notify_one();
+    }
   } else {
     const std::string& payload = msg->get_payload();
     std::stringstream ss(payload);

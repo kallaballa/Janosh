@@ -36,7 +36,7 @@ using std::ostream;
 
 TcpServer* TcpServer::instance_;
 
-TcpServer::TcpServer() : io_service_(), acceptor_(io_service_){
+TcpServer::TcpServer(int maxThreads) : io_service_(), acceptor_(io_service_), threadSema_(new Semaphore(maxThreads)){
   ExitHandler::getInstance()->addExitFunc([&](){this->close();});
 }
 
@@ -52,6 +52,7 @@ void TcpServer::open(int port) {
 }
 
 TcpServer::~TcpServer() {
+  delete threadSema_;
   this->close();
 }
 
@@ -80,21 +81,33 @@ bool TcpServer::run() {
 	  return false;
 	}
 
+	threadSema_->wait();
 	std::thread t([=]() {
   socket_ptr shared(socket);
 	try {
 
 	  TcpWorker* w = NULL;
-	  do {
-	    if(w)
-	      delete w;
-	    w = new TcpWorker(shared);
+    try {
+      do {
+        if(w) {
+          delete w;
+          w = NULL;
+        }
+        w = new TcpWorker(shared);
 
-	    w->runSynchron();
-	  } while(w->connected());
-
-	  if(w)
+        w->runSynchron();
+      } while(w->connected());
+    } catch (...) {
+      if(w) {
+        delete w;
+        w = NULL;
+      }
+      throw;
+    }
+    if(w) {
       delete w;
+      w = NULL;
+    }
 
   } catch (janosh_exception& ex) {
     printException(ex);
@@ -112,7 +125,14 @@ bool TcpServer::run() {
       shared->shutdown(boost::asio::socket_base::shutdown_both);
       shared->close();
     }
+  } catch (...) {
+    if (shared != NULL) {
+      LOG_DEBUG_MSG("Closing socket", shared);
+      shared->shutdown(boost::asio::socket_base::shutdown_both);
+      shared->close();
+    }
   }
+  threadSema_->notify();
 	});
 
 	t.detach();

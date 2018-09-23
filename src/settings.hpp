@@ -27,6 +27,7 @@ public:
   fs::path databaseFile;
   fs::path logFile;
   int port;
+  int maxThreads;
 
   Settings();
   template<typename T> void error(const string& msg, T t, int exitcode=1) {

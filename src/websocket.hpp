@@ -69,7 +69,7 @@ private:
     std::multimap<string, string> nameSkeyMap;
 
     std::map<string, ConnectionHandle> skeyConMap;
-    std::map<ConnectionHandle, string> conSkeyRev;
+    std::map<ConnectionHandle, string> conSkeyMap;
     AuthData authData;
     string passwdFile;
   public:
@@ -82,6 +82,8 @@ private:
     void remapSession(const connection_hdl h, const std::string& sessionKey);
     string createSession(const connection_hdl h, const std::string& username, const std::string& password);
     string createUser(const connection_hdl hdl, const std::string& username, const std::string& password, const std::string& userdata);
+    void destroySession(const std::string& sessionKey);
+
     void readAuthData(const std::string& passwdFile);
     string getUserData(size_t luahandle);
     string getUserName(size_t luahandle);
@@ -98,6 +100,8 @@ private:
   string loginUser(const connection_hdl hdl, const std::string& sessionKey);
   string loginUser(const connection_hdl hdl, const std::string& username, const std::string& password);
   string registerUser(const connection_hdl hdl, const std::string& username, const std::string& password, const std::string& userdata);
+  bool logoutUser(const string& sessionKey);
+
   void run(uint16_t port);
   void on_open(connection_hdl hdl);
   void on_close(connection_hdl hdl);

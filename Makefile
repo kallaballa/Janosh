@@ -72,6 +72,12 @@ debug: LDFLAGS += -Wl,--export-dynamic
 debug: LIBS+= -ldl
 debug: ${TARGET}
 
+profile: CXXFLAGS += -g3 -O1 -D_JANOSH_DEBUG
+profile: LDFLAGS += -Wl,--export-dynamic -rdynamic
+profile: LIBS+= -ldl
+profile: $(TARGET)
+
+
 verbose: CXXFLAGS += -g3 -O0 -rdynamic -D_JANOSH_DEBUG -D_JANOSH_BACKTRACE
 verbose: LDFLAGS += -Wl,--export-dynamic
 verbose: LIBS+= -lbfd -ldl -ldw
