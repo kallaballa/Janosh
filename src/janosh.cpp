@@ -16,6 +16,7 @@
 #include <stack>
 #include <thread>
 #include <chrono>
+#include <random>
 #include <boost/program_options.hpp>
 #include <boost/functional/hash.hpp>
 #include <boost/tokenizer.hpp>
@@ -1367,7 +1368,7 @@ int main(int argc, char** argv) {
       Janosh* instance = Janosh::getInstance();
       instance->open(false);
       if(luafile.empty()) {
-        TcpServer* server = TcpServer::getInstance();
+        TcpServer* server = TcpServer::getInstance(instance->settings_.maxThreads);
         server->open(instance->settings_.port);
         while (server->run()) {
         }
