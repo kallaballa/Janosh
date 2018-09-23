@@ -31,19 +31,20 @@ using websocketpp::lib::condition_variable;
  */
 
 enum action_type {
-    SUBSCRIBE,
-    UNSUBSCRIBE,
-    MESSAGE
+  SUBSCRIBE, UNSUBSCRIBE, MESSAGE
 };
 
 struct action {
-    action(action_type t, connection_hdl h) : type(t), hdl(h) {}
-    action(action_type t, std::string m)
-      : type(t), msg(m) {}
+  action(action_type t, connection_hdl h) :
+      type(t), hdl(h) {
+  }
+  action(action_type t, std::string m) :
+      type(t), msg(m) {
+  }
 
-    action_type type;
-    websocketpp::connection_hdl hdl;
-    std::string msg;
+  action_type type;
+  websocketpp::connection_hdl hdl;
+  std::string msg;
 };
 
 typedef std::pair<size_t, std::string> lua_message;
@@ -59,64 +60,82 @@ typedef std::shared_ptr<void> ConnectionHandle;
 
 class WebsocketServer {
 private:
-    WebsocketServer(const std::string passwdFile = "");
-    ~WebsocketServer();
-    string loginUser(const connection_hdl hdl, const std::string& sessionKey);
-    string loginUser(const connection_hdl hdl, const std::string& username, const std::string& password);
-    string registerUser(const connection_hdl hdl, const std::string& username, const std::string& password, const std::string& userdata);
-    void readAuthData(const std::string& passwdFile);
-    void run(uint16_t port);
-    void on_open(connection_hdl hdl);
-    void on_close(connection_hdl hdl);
-    void on_message(connection_hdl hdl, server::message_ptr msg);
-    void process_messages();
-public:
-    string getUserData(size_t luahandle);
-    string getUserName(size_t luahandle);
-    std::vector<size_t> getHandles(const string& username);
-    size_t getHandle(string username);
-
-    void broadcast(const std::string& s);
-    std::pair<size_t, std::string> receive();
-    void send(size_t luahandle, const std::string& message);
-
-    static void init(const int port, const string passwdFile = "");
-    static WebsocketServer* getInstance();
-private:
-    typedef std::set<ConnectionHandle,std::owner_less<ConnectionHandle> > con_list;
-    typedef std::map<size_t, ConnectionHandle > con_lua_handles;
-    typedef std::map<ConnectionHandle, size_t, std::owner_less<ConnectionHandle> > con_lua_handles_rev;
-
-    server m_server;
-    con_list m_connections;
-    con_lua_handles m_luahandles;
-    con_lua_handles_rev m_luahandles_rev;
+  class Authenticator {
+  private:
+    std::map<size_t, ConnectionHandle> m_luahandles;
+    std::map<ConnectionHandle, size_t, std::owner_less<ConnectionHandle> > m_luahandles_rev;
     size_t luaHandleMax = 0;
-    std::queue<action> m_actions;
-
-    mutex m_action_lock;
-    mutex m_connection_lock;
-    condition_variable m_action_cond;
-    static WebsocketServer* server_instance;
-
-    mutex m_receive_lock;
-    condition_variable m_receive_cond;
-    std::deque<lua_message> m_receive;
-
-    bool doAuthenticate = false;
     std::map<string, string> skeyNameMap;
     std::multimap<string, string> nameSkeyMap;
 
     std::map<string, ConnectionHandle> skeyConMap;
     std::map<ConnectionHandle, string> conSkeyRev;
-
-
     AuthData authData;
     string passwdFile;
+  public:
+    Authenticator() {}
+    ~Authenticator() {}
+    bool hasUsername(const std::string& username);
+    bool hasSession(const std::string& sessionKey);
+    bool hasConnectionHandle(ConnectionHandle c);
+
+    void remapSession(const connection_hdl h, const std::string& sessionKey);
+    string createSession(const connection_hdl h, const std::string& username, const std::string& password);
+    string createUser(const connection_hdl hdl, const std::string& username, const std::string& password, const std::string& userdata);
+    void readAuthData(const std::string& passwdFile);
+    string getUserData(size_t luahandle);
+    string getUserName(size_t luahandle);
+    std::vector<size_t> getHandles(const string& username);
+    size_t getLuaHandle(ConnectionHandle c);
+    ConnectionHandle getConnectionHandle(size_t luaHandle);
+    size_t createLuaHandle(ConnectionHandle c);
+    void destroyLuaHandle(ConnectionHandle c);
+  };
+
+
+  WebsocketServer(const std::string passwdFile = "");
+  ~WebsocketServer();
+  string loginUser(const connection_hdl hdl, const std::string& sessionKey);
+  string loginUser(const connection_hdl hdl, const std::string& username, const std::string& password);
+  string registerUser(const connection_hdl hdl, const std::string& username, const std::string& password, const std::string& userdata);
+  void run(uint16_t port);
+  void on_open(connection_hdl hdl);
+  void on_close(connection_hdl hdl);
+  void on_message(connection_hdl hdl, server::message_ptr msg);
+  void process_messages();
+public:
+  string getUserData(size_t luahandle);
+  string getUserName(size_t luahandle);
+  std::vector<size_t> getHandles(const string& username);
+  size_t getHandle(string username);
+
+  void broadcast(const std::string& s);
+  std::pair<size_t, std::string> receive();
+  void send(size_t luahandle, const std::string& message);
+
+  static void init(const int port, const string passwdFile = "");
+  static WebsocketServer* getInstance();
+private:
+  typedef std::set<ConnectionHandle, std::owner_less<ConnectionHandle> > con_list;
+
+  server m_server;
+  con_list m_connections;
+  std::queue<action> m_actions;
+
+  mutex m_action_lock;
+  mutex m_connection_lock;
+  condition_variable m_action_cond;
+  static WebsocketServer* server_instance;
+
+  mutex m_receive_lock;
+  condition_variable m_receive_cond;
+  std::deque<lua_message> m_receive;
+
+  bool doAuthenticate = false;
+  Authenticator auth;
 };
 
 }
 }
-
 
 #endif
