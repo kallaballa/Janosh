@@ -12,33 +12,28 @@ Janosh is written in C++11. It is used in the [ScreenInvader](https://github.com
 ### Debian
 
 Install required packages:
-<pre>
-  apt-get install build-essential g++4.8 libboost-dev libboost-filesystem-dev \
-  libboost-system-dev libboost-thread-dev libkyotocabinet-dev libluajit-5.1-dev \
-  cmake libzmq3-dev
-</pre>
+
+    apt-get install build-essential g++ libboost-dev libboost-filesystem-dev \
+    libboost-system-dev libboost-thread-dev libkyotocabinet-dev libluajit-5.1-dev \
+     cmake libzmq3-dev git-core libcrypto++-dev libboost-program-options-dev
 
 Download source:
-<pre>
-  git clone git://github.com/kallaballa/Janosh.git
-</pre>
+
+    git clone git://github.com/kallaballa/Janosh.git
 
 Build dependencies:
-<pre>
-  cd Janosh
- ./build_dependencies.sh
-</pre>
+
+    cd Janosh
+    ./build_dependencies.sh
 
 Build Janosh:
-<pre>
-  make
-</pre>
+
+    make
 
 Copy janosh binary and default configuration:
-<pre>
-  sudo make install
-  cp -r .janosh ~/
-</pre>
+
+    sudo make install
+    cp -r .janosh ~/
 
 ## Note
 
