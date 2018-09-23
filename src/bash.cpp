@@ -11,7 +11,7 @@ void BashPrintVisitor::begin() {
 }
 
 void BashPrintVisitor::close() {
-  out << ")" << std::endl;
+  out << ")" << '\n';
 }
 
 void BashPrintVisitor::record(const Path& p, const Value& value, bool array, bool first) {

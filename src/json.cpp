@@ -34,33 +34,33 @@ string JsonPrintVisitor::escape(const std::string &s) const {
 void JsonPrintVisitor::beginArray(const Path& p, bool parentIsArray, bool first) {
   string name = p.name().pretty();
   if (!first) {
-    this->out << ',' << endl;
+    this->out << ',' << '\n';
   }
 
   if (parentIsArray)
-    this->out << "[ " << endl;
+    this->out << "[ " << '\n';
   else
-    this->out << '"' << escape(name) << "\": [ " << endl;
+    this->out << '"' << escape(name) << "\": [ " << '\n';
 }
 
 void JsonPrintVisitor::endArray(const Path& p) {
-  this->out << " ] " << endl;
+  this->out << " ] " << '\n';
 }
 
 void JsonPrintVisitor::beginObject(const Path& p, bool parentIsArray, bool first) {
   string name = p.name().pretty();
   if (!first) {
-    this->out << ',' << endl;
+    this->out << ',' << '\n';
   }
 
   if (parentIsArray)
-    this->out << "{ " << endl;
+    this->out << "{ " << '\n';
   else
-    this->out << '"' << escape(name) << "\": { " << endl;
+    this->out << '"' << escape(name) << "\": { " << '\n';
 }
 
 void JsonPrintVisitor::endObject(const Path& p) {
-  this->out << " } " << endl;
+  this->out << " } " << '\n';
 }
 
 void JsonPrintVisitor::record(const Path& p, const Value& value, bool parentIsArray, bool first) {
@@ -69,7 +69,7 @@ void JsonPrintVisitor::record(const Path& p, const Value& value, bool parentIsAr
 
   if (parentIsArray) {
     if (!first) {
-      this->out << ',' << endl;
+      this->out << ',' << '\n';
     }
     if(value.getType() == Value::Number || value.getType() == Value::Boolean)
       this->out << jsonValue;
@@ -78,7 +78,7 @@ void JsonPrintVisitor::record(const Path& p, const Value& value, bool parentIsAr
 
   } else {
     if (!first) {
-      this->out << ',' << endl;
+      this->out << ',' << '\n';
     }
     if(value.getType() == Value::Number || value.getType() == Value::Boolean)
       this->out << '"' << name << "\":" << jsonValue;

@@ -16,6 +16,6 @@ using std::shared_ptr;
 typedef shared_ptr<std::ostream> ostream_ptr;
 typedef shared_ptr<boost::asio::ip::tcp::socket> socket_ptr;
 typedef shared_ptr<boost::asio::streambuf> streambuf_ptr;
-
+typedef shared_ptr<boost::asio::ip::tcp::iostream> iostream_ptr;
 
 #endif /* SHARED_POINTERS_HPP_ */

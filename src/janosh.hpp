@@ -56,9 +56,11 @@ public:
   size_t makeDirectory(Record target, Value::Type type, size_t size = 0);
   size_t filter(vector<Record> targets, const std::string& jsonPathExps, std::ostream& out);
   size_t get(vector<Record> targets, std::ostream& out);
+  size_t get(vector<Record> recs, PrintVisitor* vis,std::ostream& out);
   size_t size(Record target);
   size_t remove(Record& target, bool pack = true);
   size_t random(Record rec, std::ostream& out);
+  size_t random(Record rec, const string& jsonPathExpr, std::ostream& out);
 
   size_t add(Record target, const Value& value);
   size_t replace(Record target, const Value& value);

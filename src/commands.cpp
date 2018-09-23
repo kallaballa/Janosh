@@ -42,8 +42,15 @@ public:
       }
       else
         return {-1, "Expected a directory"};
+    } else if(params.size() == 2) {
+      Record rec(params[0].str());
+      if(rec.isDirectory()) {
+        return {janosh->random(rec, params[1].str(), out), "Successful"};
+      }
+      else
+        return {-1, "Expected a directory"};
     } else {
-      return {-1, "Only one parameter expected"};
+      return {-1, "Only one or two parameters expected"};
     }
   }
 };

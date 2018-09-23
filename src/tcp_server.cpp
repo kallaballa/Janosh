@@ -65,25 +65,20 @@ void TcpServer::close() {
 }
 
 bool TcpServer::run() {
-  boost::asio::ip::tcp::socket* socket = NULL;
+  boost::asio::ip::tcp::iostream* stream = new boost::asio::ip::tcp::iostream();
+  stream->unsetf(std::ios_base::unitbuf);
 
 	try  {
-	  socket = new tcp::socket(io_service_);
-	  acceptor_.accept(*socket);
-    socket->set_option(boost::asio::ip::tcp::no_delay(true));
+	  acceptor_.accept(*stream->rdbuf());
 	} catch(std::exception& ex) {
-	  if (socket != NULL) {
-	    LOG_DEBUG_MSG("Closing socket", socket);
-	    socket->shutdown(boost::asio::socket_base::shutdown_both);
-	    socket->close();
-	  }
 	  janosh::printException(ex);
+	  stream->close();
 	  return false;
 	}
 
 	threadSema_->wait();
 	std::thread t([=]() {
-  socket_ptr shared(socket);
+	iostream_ptr shared(stream);
 	try {
 
 	  TcpWorker* w = NULL;
@@ -111,26 +106,12 @@ bool TcpServer::run() {
 
   } catch (janosh_exception& ex) {
     printException(ex);
-
-    if (shared != NULL) {
-      LOG_DEBUG_MSG("Closing socket", shared);
-      shared->shutdown(boost::asio::socket_base::shutdown_both);
-      shared->close();
-    }
+    shared->close();
   } catch (std::exception& ex) {
     printException(ex);
-
-    if (shared != NULL) {
-      LOG_DEBUG_MSG("Closing socket", shared);
-      shared->shutdown(boost::asio::socket_base::shutdown_both);
-      shared->close();
-    }
+    shared->close();
   } catch (...) {
-    if (shared != NULL) {
-      LOG_DEBUG_MSG("Closing socket", shared);
-      shared->shutdown(boost::asio::socket_base::shutdown_both);
-      shared->close();
-    }
+    shared->close();
   }
   threadSema_->notify();
 	});

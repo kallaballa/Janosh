@@ -7,6 +7,7 @@
 #include "tracker.hpp"
 #include "logger.hpp"
 #include "json.hpp"
+#include "jsoncons.hpp"
 #include "bash.hpp"
 #include "raw.hpp"
 #include "exithandler.hpp"
@@ -42,7 +43,6 @@ namespace janosh {
 
   using std::cerr;
   using std::cout;
-  using std::endl;
   using std::string;
   using std::vector;
   using std::map;
@@ -83,6 +83,10 @@ namespace janosh {
   void Janosh::open(bool readOnly=false) {
     // open the database
     uint32_t mode;
+    Record::db.tune_options(kc::TreeDB::TLINEAR);
+    Record::db.tune_buckets(655360);
+    Record::db.tune_map(65536000000);
+    Record::db.tune_page_cache(655360000);
     if(readOnly)
       mode = kc::PolyDB::OAUTOTRAN | kc::PolyDB::OREADER;
     else
@@ -90,6 +94,7 @@ namespace janosh {
     if(!Record::db.open(settings_.databaseFile.string(),  mode)) {
 			LOG_FATAL_MSG("open error: " + settings_.databaseFile.string(), Record::db.error().message());
     }
+
     ExitHandler::getInstance()->addExitFunc([&](){this->close(); });
     open_ = true;
   }
@@ -141,26 +146,18 @@ namespace janosh {
   }
 
   size_t Janosh::filter(vector<Record> recs, const std::string& jsonPathExpr, std::ostream& out) {
-    std::stringstream ss;
-    Format f = this->getFormat();
-    this->setFormat(Json);
-    size_t rc = this->get(recs, ss);
-    this->setFormat(f);
+    JsonPathVisitor* vis = new JsonPathVisitor(out);
+    this->get(recs, vis, out);
 
-    using namespace jsoncons;
-    json j = json::parse(ss.str());
-    json result = jsonpath::json_query(j, jsonPathExpr);
-    for(size_t i = 0; i < result.size(); ++i) {
-      out << result[i].as<std::string>() << std::endl;
+    json result = jsonpath::json_query(*vis->getRoot(), jsonPathExpr);
+    for (size_t i = 0; i < result.size(); ++i) {
+      out << result[i].as<std::string>() << '\n';
     }
-    return rc;
+    delete vis;
+
+    return result.size();
   }
-  /**
-   * Recursively traverses a record and prints it out.
-   * @param rec The record to print out.
-   * @param out The output stream to write to.
-   * @return number of total records affected.
-   */
+
   size_t Janosh::get(vector<Record> recs, std::ostream& out) {
     PrintVisitor* vis = NULL;
     switch (this->getFormat()) {
@@ -174,12 +171,24 @@ namespace janosh {
       vis = new RawPrintVisitor(out);
       break;
     }
+    size_t c = this->get(recs, vis, out);
+    delete vis;
+
+    return c;
+  }
+  /**
+   * Recursively traverses a record and prints it out.
+   * @param rec The record to print out.
+   * @param out The output stream to write to.
+   * @return number of total records affected.
+   */
+  size_t Janosh::get(vector<Record> recs, PrintVisitor* vis,std::ostream& out) {
     vis->begin();
 
     size_t cnt = 1;
 
     if(recs.size() > 1 && this->getFormat() == Json)
-      out << "{" << std::endl;
+      out << "{" << '\n';
 
     bool first = true;
     for (Record& rec : recs) {
@@ -193,7 +202,7 @@ namespace janosh {
       }
 
       if(recs.size() > 1 && this->getFormat() == Json && !first)
-        out << "," << std::endl;
+        out << "," << '\n';
 
       if (rec.isDirectory()) {
         recurseDirectory(rec, vis, (recs.size() > 1 ? Value::Object : Value::Array), out);
@@ -204,10 +213,9 @@ namespace janosh {
     }
 
     if(recs.size() > 1 && this->getFormat() == Json)
-      out << "}" << std::endl;
+      out << "}" << '\n';
 
     vis->close();
-    delete vis;
     return cnt;
   }
 
@@ -218,6 +226,20 @@ namespace janosh {
    * @return number of total records affected.
    */
   std::random_device rd;
+
+  size_t Janosh::random(Record rec, const string& jsonPathExpr, std::ostream& out) {
+    std::mt19937 mt(rd());
+    JsonPathVisitor* vis = new JsonPathVisitor(out);
+    this->get({rec}, vis, out);
+
+    json result = jsonpath::json_query(*vis->getRoot(), jsonPathExpr);
+    delete vis;
+    std::uniform_int_distribution<size_t> dist(1, result.size() - 1);
+
+    out << result[dist(mt)].as<std::string>() << '\n';
+
+    return result.size();
+  }
 
   size_t Janosh::random(Record rec, std::ostream& out) {
     if(!rec.isDirectory())
@@ -789,7 +811,7 @@ namespace janosh {
     size_t cnt = 0;
 
     while(cur->get(&key, &value, true)) {
-      out << "path:" << Path(key).pretty() <<  " value:" << value << endl;
+      out << "path:" << Path(key).pretty() <<  " value:" << value << '\n';
       ++cnt;
     }
     delete cur;
@@ -1226,15 +1248,6 @@ namespace janosh {
   }
 
   Janosh* Janosh::instance_ = NULL;
-}
-
-std::vector<size_t> sequence() {
-  std::vector<size_t> v(10);
-  size_t off = 5;
-  std::generate(v.begin(), v.end(), [&]() {
-    return ++off;
-  });
-  return v;
 }
 
 kyotocabinet::TreeDB janosh::Record::db;

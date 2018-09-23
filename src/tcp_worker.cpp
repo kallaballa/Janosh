@@ -16,25 +16,17 @@
 
 namespace janosh {
 
-TcpWorker::TcpWorker(socket_ptr socket) :
+TcpWorker::TcpWorker(iostream_ptr steam) :
     JanoshThread("TcpWorker"),
-    socket_(socket) {
+    stream_(steam) {
 }
 
-void shutdown(socket_ptr s) {
-  if (s != NULL) {
-    LOG_DEBUG_MSG("Closing socket", s);
-    s->shutdown(boost::asio::socket_base::shutdown_both);
-    s->close();
-  }
+void shutdown(iostream_ptr s) {
+  s->close();
 }
 
-void writeResponseHeader(socket_ptr socket, int returnCode) {
-  boost::asio::streambuf rc_buf;
-  ostream rc_stream(&rc_buf);
-  rc_stream << std::to_string(returnCode);
-  LOG_DEBUG_MSG("sending", rc_buf.size());
-  boost::asio::write(*socket, rc_buf);
+void writeResponseHeader(iostream_ptr stream, int returnCode) {
+  (*stream) << std::to_string(returnCode);
 }
 
 string reconstructCommandLine(Request& req) {
@@ -53,8 +45,8 @@ string reconstructCommandLine(Request& req) {
   if(req.runTriggers_)
      cmdline += "-t ";
 
-  if(!req.doTransaction_)
-     cmdline += "-n ";
+  if(req.doTransaction_)
+     cmdline += "-x ";
 
    cmdline += (req.command_ + " ");
 
@@ -79,21 +71,18 @@ void TcpWorker::run() {
     bool cacheable = false;
     bool cachehit = false;
     bool result = false;
-    std::string peerAddr = socket_->remote_endpoint().address().to_string();
-    LOG_DEBUG_MSG("accepted", peerAddr);
-    LOG_DEBUG_MSG("socket", socket_);
 
-    boost::asio::streambuf response;
+    string response;
+
     try {
-      boost::asio::read_until(*socket_, response, "\n");
+      std::getline(*stream_,response);
     } catch(std::exception& ex) {
       LOG_DEBUG_STR("End of request chain");
       setResult(false);
-      shutdown(socket_);
+      shutdown(stream_);
       return;
     }
-    std::istream response_stream(&response);
-
+    std::stringstream response_stream(response);
     read_request(req, response_stream);
 
     LOG_DEBUG_MSG("ppid", req.pinfo_.pid_);
@@ -121,8 +110,6 @@ void TcpWorker::run() {
     instance->setFormat(req.format_);
 
     if (!cachehit) {
-      streambuf_ptr out_buf(new boost::asio::streambuf());
-      ostream_ptr out_stream(new ostream(out_buf.get()));
 
       if (!req.command_.empty()) {
         if(req.command_ == "trigger") {
@@ -132,41 +119,42 @@ void TcpWorker::run() {
 
         Tracker::setDoPublish(req.runTriggers_);
 
-        JanoshThreadPtr dt(new DatabaseThread(req, out_stream));
+        JanoshThreadPtr dt(new DatabaseThread(req, stream_));
         dt->runSynchron();
         result = dt->result();
 
-        // report return code
-        writeResponseHeader(socket_, result ? 0 : 1);
+        (*stream_) << "__JANOSH_EOF\n" <<  std::to_string(result ? 0 : 1) << '\n';
 
         if (!result) {
           //shutdown(socket_);
           setResult(false);
         }
       } else {
-        writeResponseHeader(socket_, 0);
+        (*stream_) << "__JANOSH_EOF\n" <<  std::to_string(0) << '\n';
       }
 
-      (*out_stream) << "__JANOSH_EOF\n";
-      out_stream->flush();
-      JanoshThreadPtr flusher(new FlusherThread(socket_, out_buf, cacheable));
-      flusher->runSynchron();
+      stream_->flush();
+      stream_->close();
+      //JanoshThreadPtr flusher(new FlusherThread(stream_, out_buf, false));
+      //flusher->runSynchron();
 //     shutdown(socket_);
     } else {
-      JanoshThreadPtr cacheWriter(new CacheThread(socket_));
-      cacheWriter->runSynchron();
+      //JanoshThreadPtr cacheWriter(new CacheThread(stream_));
+      //cacheWriter->runSynchron();
 //      shutdown(socket_);
     }
     setResult(true);
   } catch (std::exception& ex) {
     janosh::printException(ex);
     setResult(false);
-    socket_->close();
+    (*stream_) << "__JANOSH_EOF\n" <<  std::to_string(1) << '\n';
+    stream_->flush();
+    stream_->close();
   //  shutdown(socket_);
   }
 }
 
 bool TcpWorker::connected() {
-  return socket_->is_open();
+  return stream_->good();
 }
 } /* namespace janosh */

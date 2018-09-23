@@ -281,9 +281,14 @@ function JanoshClass.exists(self, key)
   return ret == 0
 end
 
-function JanoshClass.random(self, key)
+function JanoshClass.random(self, key, filter)
+if filter ~= nil then
+  local ret, val = self:request({"random",key, filter})
+  return JSON:decode(val)
+else
   local ret, val = self:request({"random",key})
   return JSON:decode(val)
+end
 end
 
 function JanoshClass.set(self, key, value)

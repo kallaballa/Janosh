@@ -53,27 +53,25 @@ int TcpClient::run(Request& req, std::ostream& out) {
     boost::asio::write(socket, request);
     boost::asio::streambuf response;
     std::istream response_stream(&response);
-    boost::array<char, 1> buf;
-
-    socket.read_some(boost::asio::buffer(buf));
-
-    returnCode = std::stoi(string() + buf[0]);
-
-    if (returnCode == 0) {
-      LOG_DEBUG_STR("Successful");
-    } else {
-      LOG_INFO_MSG("Failed", returnCode);
-    }
 
     string line;
     while (response_stream) {
       boost::asio::read_until(socket, response, "\n");
       std::getline(response_stream, line);
       if(endsWith(line,"__JANOSH_EOF")) {
+        std::getline(response_stream, line);
+        returnCode = std::stoi(line);
+
+        if (returnCode == 0) {
+          LOG_DEBUG_STR("Successful");
+        } else {
+          LOG_INFO_MSG("Failed", returnCode);
+        }
         out << line.substr(0, line.size() - string("__JANOSH_EOF").size());
+
         break;
       }
-      out << line << std::endl;
+      out << line << '\n';
     }
   } catch (std::exception& ex) {
     LOG_ERR_MSG("Caught in tcp_client run", ex.what());

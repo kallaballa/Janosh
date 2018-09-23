@@ -47,8 +47,8 @@ public:
     Path asWildcard() const;
     Path withChild(const Component& c) const;
     Path withChild(const size_t& i) const;
-    void pushMember(const string& name);
-    void pushIndex(const size_t& index);
+    void pushMember(const string& name, bool update = true);
+    void pushIndex(const size_t& index, bool update = true);
     void pop(bool doUpdate=false);
     Path basePath() const;
     Component name() const;

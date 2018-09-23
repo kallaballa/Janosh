@@ -144,14 +144,16 @@ Path Path::withChild(const size_t& i) const {
   return Path(this->basePath().key() + "/#" + boost::lexical_cast<string>(i));
 }
 
-void Path::pushMember(const string& name) {
-  components.push_back((boost::format("%s") % name).str());
-  update(compilePathString());
+void Path::pushMember(const string& name, bool doUpdate) {
+  components.push_back(name);
+  if(doUpdate)
+    update(compilePathString());
 }
 
-void Path::pushIndex(const size_t& index) {
+void Path::pushIndex(const size_t& index, bool doUpdate) {
   components.push_back((boost::format("#%d") % index).str());
-  update(compilePathString());
+  if(doUpdate)
+    update(compilePathString());
 }
 
 void Path::pop(bool doUpdate) {
@@ -188,7 +190,7 @@ Path Path::parent() const {
   Path parent(this->basePath());
   if (!parent.isEmpty() && !this->isWildcard())
     parent.pop(false);
-  parent.pushMember(".");
+  parent.pushMember(".",false);
 
   return parent;
 }
