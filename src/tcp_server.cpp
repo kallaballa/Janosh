@@ -41,7 +41,7 @@ TcpServer::TcpServer(int maxThreads) : maxThreads_(maxThreads), context_(1), soc
 }
 
 void TcpServer::open(int port) {
-  sock_.bind("tcp://*:" + std::to_string(port));
+  sock_.bind(("tcp://*:" + std::to_string(port)).c_str());
 }
 
 TcpServer::~TcpServer() {

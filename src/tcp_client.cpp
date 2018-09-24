@@ -25,7 +25,7 @@ TcpClient::~TcpClient() {
 }
 
 void TcpClient::connect(string host, int port) {
-  sock_.connect("tcp://" + host + ":" + std::to_string(port));
+  sock_.connect(("tcp://" + host + ":" + std::to_string(port)).c_str());
 }
 
 bool endsWith(const std::string &mainStr, const std::string &toMatch)
