@@ -15,8 +15,10 @@
 
 namespace janosh {
 
-TcpWorker::TcpWorker(socket_ptr socket) :
+TcpWorker::TcpWorker(int maxThreads, socket_ptr socket) :
     JanoshThread("TcpWorker"),
+    sendMutex_(new std::mutex()),
+    threadSema_(new Semaphore(maxThreads)),
     socket_(socket) {
 }
 
@@ -57,63 +59,70 @@ string reconstructCommandLine(Request& req) {
 }
 
 void TcpWorker::run() {
-  std::ostringstream sso;
+  zmq::message_t* request = new zmq::message_t();
 
   try {
-    Request req;
-    bool result = false;
-
-    string response;
-    zmq::message_t request;
-
-    try {
-      socket_->recv (&request);
-    } catch(std::exception& ex) {
-      LOG_DEBUG_STR("End of request chain");
-      setResult(false);
-      //socket_->shutdown(0);
+    if(socket_->connected())
+      socket_->recv(request);
+    else
       return;
-    }
-
-    std::stringstream response_stream;
-    response_stream.write((char*)request.data(), request.size());
-    read_request(req, response_stream);
-
-    LOG_DEBUG_MSG("ppid", req.pinfo_.pid_);
-    LOG_DEBUG_MSG("cmdline", req.pinfo_.cmdline_);
-    LOG_INFO_STR(reconstructCommandLine(req));
-
-    Janosh* instance = Janosh::getInstance();
-    instance->setFormat(req.format_);
-
-    if (!req.command_.empty()) {
-      if(req.command_ == "trigger") {
-        req.command_ = "set";
-        req.runTriggers_ = true;
-      }
-
-      Tracker::setDoPublish(req.runTriggers_);
-      JanoshThreadPtr dt(new DatabaseThread(req, sso));
-      dt->runSynchron();
-      result = dt->result();
-
-      sso << "__JANOSH_EOF\n" <<  std::to_string(result ? 0 : 1) << '\n';
-
-      if (!result) {
-        setResult(false);
-      }
-    } else {
-      sso << "__JANOSH_EOF\n" <<  std::to_string(0) << '\n';
-    }
-
-    socket_->send(sso.str().c_str(), sso.str().size(), 0);
-    setResult(true);
-  } catch (std::exception& ex) {
-    janosh::printException(ex);
+  } catch(std::exception& ex) {
+    printException(ex);
+    LOG_DEBUG_STR("End of request chain");
     setResult(false);
-    sso << "__JANOSH_EOF\n" <<  std::to_string(1) << '\n';
-    socket_->send(sso.str().c_str(), sso.str().size(), 0);
+    //socket_->shutdown(0);
+    return;
   }
+//  threadSema_->wait();
+//  std::thread t([=]() {
+    std::ostringstream sso;
+    bool result = false;
+    try {
+      Request req;
+      std::stringstream response_stream;
+      response_stream.write((char*)request->data(), request->size());
+      read_request(req, response_stream);
+
+      LOG_DEBUG_MSG("ppid", req.pinfo_.pid_);
+      LOG_DEBUG_MSG("cmdline", req.pinfo_.cmdline_);
+      LOG_INFO_STR(reconstructCommandLine(req));
+
+      Janosh* instance = Janosh::getInstance();
+      instance->setFormat(req.format_);
+
+      if (!req.command_.empty()) {
+        if(req.command_ == "trigger") {
+          req.command_ = "set";
+          req.runTriggers_ = true;
+        }
+
+        Tracker::setDoPublish(req.runTriggers_);
+        JanoshThreadPtr dt(new DatabaseThread(req, sso));
+        dt->runSynchron();
+        result = dt->result();
+
+        sso << "__JANOSH_EOF\n" << std::to_string(result ? 0 : 1) << '\n';
+
+        if (!result) {
+          setResult(false);
+        }
+      } else {
+        sso << "__JANOSH_EOF\n" << std::to_string(0) << '\n';
+      }
+      std::unique_lock<std::mutex>(*sendMutex_.get());
+      socket_->send(sso.str().c_str(), sso.str().size(), 0);
+      setResult(true);
+    } catch (std::exception& ex) {
+      janosh::printException(ex);
+      setResult(false);
+      sso << "__JANOSH_EOF\n" << std::to_string(1) << '\n';
+      std::unique_lock<std::mutex>(*sendMutex_.get());
+      socket_->send(sso.str().c_str(), sso.str().size(), 0);
+    }
+//    threadSema_->notify();
+//  });
+//
+//  t.detach();
 }
 
 bool TcpWorker::connected() {

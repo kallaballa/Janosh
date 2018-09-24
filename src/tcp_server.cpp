@@ -36,17 +36,16 @@ using std::ostream;
 
 TcpServer* TcpServer::instance_;
 
-TcpServer::TcpServer(int maxThreads) : threadSema_(new Semaphore(maxThreads)), context_(1), sock_(context_, ZMQ_REP) {
+TcpServer::TcpServer(int maxThreads) : maxThreads_(maxThreads), context_(1), sock_(context_, ZMQ_REP) {
   ExitHandler::getInstance()->addExitFunc([&](){this->close();});
 }
 
 void TcpServer::open(int port) {
-  sock_.bind("ipc:///tmp/reqrep.ipc");
+  sock_.bind("tcp://*:" + std::to_string(port));
 }
 
 TcpServer::~TcpServer() {
   this->close();
-  delete threadSema_;
 }
 
 
@@ -55,8 +54,6 @@ void TcpServer::close() {
 }
 
 bool TcpServer::run() {
-//	threadSema_->wait();
-//	std::thread t([=]() {
 	socket_ptr shared(&sock_);
 	try {
 
@@ -67,7 +64,7 @@ bool TcpServer::run() {
           delete w;
           w = NULL;
         }
-        w = new TcpWorker(shared);
+        w = new TcpWorker(maxThreads_, shared);
 
         w->runSynchron();
       } while(w->connected());

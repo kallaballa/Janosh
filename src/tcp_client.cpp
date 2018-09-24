@@ -25,7 +25,7 @@ TcpClient::~TcpClient() {
 }
 
 void TcpClient::connect(string host, int port) {
-  sock_.connect("ipc:///tmp/reqrep.ipc");
+  sock_.connect("tcp://" + host + ":" + std::to_string(port));
 }
 
 bool endsWith(const std::string &mainStr, const std::string &toMatch)
