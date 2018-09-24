@@ -60,14 +60,17 @@ int TcpClient::run(Request& req, std::ostream& out) {
       std::getline(response_stream, line);
       if(endsWith(line,"__JANOSH_EOF")) {
         std::getline(response_stream, line);
-        returnCode = std::stoi(line);
+        if(line.empty())
+          returnCode = 1;
+        else
+          returnCode = std::stoi(line);
 
         if (returnCode == 0) {
           LOG_DEBUG_STR("Successful");
         } else {
           LOG_INFO_MSG("Failed", returnCode);
         }
-        out << line.substr(0, line.size() - string("__JANOSH_EOF").size());
+        //out << line.substr(0, line.size() - string("__JANOSH_EOF").size());
 
         break;
       }

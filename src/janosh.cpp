@@ -233,10 +233,10 @@ namespace janosh {
     this->get({rec}, vis, out);
 
     json result = jsonpath::json_query(*vis->getRoot(), jsonPathExpr);
-    delete vis;
-    std::uniform_int_distribution<size_t> dist(1, result.size() - 1);
+    std::uniform_int_distribution<size_t> dist(0, result.size() - 1);
 
     out << result[dist(mt)].as<std::string>() << '\n';
+    delete vis;
 
     return result.size();
   }

@@ -190,7 +190,7 @@ Path Path::parent() const {
   Path parent(this->basePath());
   if (!parent.isEmpty() && !this->isWildcard())
     parent.pop(false);
-  parent.pushMember(".",false);
+  parent.pushMember(".",true);
 
   return parent;
 }

@@ -67,6 +67,7 @@ void TcpServer::close() {
 bool TcpServer::run() {
   boost::asio::ip::tcp::iostream* stream = new boost::asio::ip::tcp::iostream();
   stream->unsetf(std::ios_base::unitbuf);
+  stream->tie(nullptr);
 
 	try  {
 	  acceptor_.accept(*stream->rdbuf());

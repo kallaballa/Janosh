@@ -134,7 +134,7 @@ void TcpWorker::run() {
       }
 
       stream_->flush();
-      stream_->close();
+    //  stream_->close();
       //JanoshThreadPtr flusher(new FlusherThread(stream_, out_buf, false));
       //flusher->runSynchron();
 //     shutdown(socket_);
@@ -149,7 +149,6 @@ void TcpWorker::run() {
     setResult(false);
     (*stream_) << "__JANOSH_EOF\n" <<  std::to_string(1) << '\n';
     stream_->flush();
-    stream_->close();
   //  shutdown(socket_);
   }
 }
