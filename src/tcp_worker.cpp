@@ -8,25 +8,18 @@
 #include "tcp_worker.hpp"
 #include "exception.hpp"
 #include "database_thread.hpp"
-#include "flusher_thread.hpp"
-#include "cache_thread.hpp"
+//#include "flusher_thread.hpp"
+//#include "cache_thread.hpp"
 #include "janosh.hpp"
 #include "tracker.hpp"
 #include "cache.hpp"
 
 namespace janosh {
 
-TcpWorker::TcpWorker(iostream_ptr steam) :
+TcpWorker::TcpWorker(nnsocket_ptr socket) :
     JanoshThread("TcpWorker"),
-    stream_(steam) {
-}
-
-void shutdown(iostream_ptr s) {
-  s->close();
-}
-
-void writeResponseHeader(iostream_ptr stream, int returnCode) {
-  (*stream) << std::to_string(returnCode);
+    socket_(socket),
+    connected_(true) {
 }
 
 string reconstructCommandLine(Request& req) {
@@ -66,6 +59,8 @@ string reconstructCommandLine(Request& req) {
 }
 
 void TcpWorker::run() {
+  std::ostringstream sso;
+
   try {
     Request req;
     bool cacheable = false;
@@ -73,17 +68,20 @@ void TcpWorker::run() {
     bool result = false;
 
     string response;
-
+    char* buf = NULL;
+    size_t num;
     try {
-      std::getline(*stream_,response);
+      num = socket_->recv(&buf, NN_MSG, 0);
     } catch(std::exception& ex) {
       LOG_DEBUG_STR("End of request chain");
       setResult(false);
-      shutdown(stream_);
+      //socket_->shutdown(0);
       return;
     }
-    std::stringstream response_stream(response);
+    std::stringstream response_stream;
+    response_stream.write(buf, num);
     read_request(req, response_stream);
+    nn::freemsg(buf);
 
     LOG_DEBUG_MSG("ppid", req.pinfo_.pid_);
     LOG_DEBUG_MSG("cmdline", req.pinfo_.cmdline_);
@@ -110,7 +108,6 @@ void TcpWorker::run() {
     instance->setFormat(req.format_);
 
     if (!cachehit) {
-
       if (!req.command_.empty()) {
         if(req.command_ == "trigger") {
           req.command_ = "set";
@@ -118,22 +115,21 @@ void TcpWorker::run() {
         }
 
         Tracker::setDoPublish(req.runTriggers_);
-
-        JanoshThreadPtr dt(new DatabaseThread(req, stream_));
+        JanoshThreadPtr dt(new DatabaseThread(req, sso));
         dt->runSynchron();
         result = dt->result();
 
-        (*stream_) << "__JANOSH_EOF\n" <<  std::to_string(result ? 0 : 1) << '\n';
+        sso << "__JANOSH_EOF\n" <<  std::to_string(result ? 0 : 1) << '\n';
 
         if (!result) {
           //shutdown(socket_);
           setResult(false);
         }
       } else {
-        (*stream_) << "__JANOSH_EOF\n" <<  std::to_string(0) << '\n';
+        sso << "__JANOSH_EOF\n" <<  std::to_string(0) << '\n';
       }
 
-      stream_->flush();
+      socket_->send(sso.str().c_str(), sso.str().size(), 0);
     //  stream_->close();
       //JanoshThreadPtr flusher(new FlusherThread(stream_, out_buf, false));
       //flusher->runSynchron();
@@ -147,13 +143,14 @@ void TcpWorker::run() {
   } catch (std::exception& ex) {
     janosh::printException(ex);
     setResult(false);
-    (*stream_) << "__JANOSH_EOF\n" <<  std::to_string(1) << '\n';
-    stream_->flush();
+    connected_ = false;
+    sso << "__JANOSH_EOF\n" <<  std::to_string(1) << '\n';
+    socket_->send(sso.str().c_str(), sso.str().size(), 0);
   //  shutdown(socket_);
   }
 }
 
 bool TcpWorker::connected() {
-  return stream_->good();
+  return connected_;
 }
 } /* namespace janosh */

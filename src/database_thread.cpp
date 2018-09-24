@@ -12,7 +12,7 @@
 
 namespace janosh {
 
-DatabaseThread::DatabaseThread(const Request& req, ostream_ptr out) :
+DatabaseThread::DatabaseThread(const Request& req, std::ostream& out) :
     JanoshThread("Database"),
     req_(req),
     out_(out) {
@@ -41,7 +41,7 @@ void DatabaseThread::run() {
       }
 
       Command::Result r;
-      r = (*cmd)(req_.vecArgs_, *out_);
+      r = (*cmd)(req_.vecArgs_, out_);
       if (r.first == -1)
         throw janosh_exception() << msg_info(r.second);
       setResult(true);

@@ -8,11 +8,12 @@
 namespace janosh {
 
 class TcpWorker : public JanoshThread {
-  iostream_ptr stream_;
+  nnsocket_ptr socket_;
   Request readRequest();
+  bool connected_;
 
 public:
-  explicit TcpWorker(iostream_ptr stream);
+  explicit TcpWorker(nnsocket_ptr stream);
   void run();
   bool connected();
 };

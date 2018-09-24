@@ -8,10 +8,12 @@
 #ifndef TCPSERVER_H_
 #define TCPSERVER_H_
 
-#include <boost/asio.hpp>
 #include "format.hpp"
+#include "nn.hpp"
+#include "nanomsg/pair.h"
 #include <mutex>
 #include <condition_variable>
+
 
 namespace janosh {
 
@@ -47,12 +49,11 @@ public:
     }
 };
 
-using boost::asio::ip::tcp;
 class TcpServer {
-  boost::asio::io_service io_service_;
-  boost::asio::ip::tcp::acceptor acceptor_;
   static TcpServer* instance_;
   Semaphore* threadSema_;
+  nn::socket sock_;
+
   TcpServer(int maxThreads);
 
 public:

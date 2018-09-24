@@ -14,9 +14,9 @@ using boost::asio::ip::tcp;
 
 class DatabaseThread : public JanoshThread {
   Request req_;
-  ostream_ptr out_;
+  std::ostream& out_;
 public:
-  DatabaseThread(const Request& req, ostream_ptr out);
+  DatabaseThread(const Request& req, std::ostream& out);
   void run();
 };
 } /* namespace janosh */
