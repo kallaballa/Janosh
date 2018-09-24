@@ -11,10 +11,9 @@
 
 namespace janosh {
 
-using boost::asio::ip::tcp;
-
 TcpClient::TcpClient() :
-    socket(io_service) {
+    context_(1),
+    sock_(context_, ZMQ_REQ) {
 }
 
 TcpClient::~TcpClient() {
@@ -26,11 +25,7 @@ TcpClient::~TcpClient() {
 }
 
 void TcpClient::connect(string host, int port) {
-  tcp::resolver resolver(io_service);
-  tcp::resolver::query query(host, std::to_string(port));
-  tcp::resolver::iterator iterator = resolver.resolve(query);
-  boost::asio::connect(socket, iterator);
-  socket.set_option(boost::asio::ip::tcp::no_delay(true));
+  sock_.connect("ipc:///tmp/reqrep.ipc");
 }
 
 bool endsWith(const std::string &mainStr, const std::string &toMatch)
@@ -42,21 +37,36 @@ bool endsWith(const std::string &mainStr, const std::string &toMatch)
       return false;
 }
 
+std::string string_to_hex(const std::string& input)
+{
+    static const char* const lut = "0123456789ABCDEF";
+    size_t len = input.length();
+
+    std::string output;
+    output.reserve(2 * len);
+    for (size_t i = 0; i < len; ++i)
+    {
+        const unsigned char c = input[i];
+        output.push_back(lut[c >> 4]);
+        output.push_back(lut[c & 15]);
+        output.push_back(' ');
+    }
+    return output;
+}
+
+
 int TcpClient::run(Request& req, std::ostream& out) {
   int returnCode = -1;
   try {
-    boost::asio::streambuf request;
-    std::ostream request_stream(&request);
-
+    std::ostringstream request_stream;
     write_request(req, request_stream);
-
-    boost::asio::write(socket, request);
-    boost::asio::streambuf response;
-    std::istream response_stream(&response);
-
+    sock_.send(request_stream.str().c_str(), request_stream.str().size(), 0);
+    zmq::message_t reply;
+    sock_.recv(&reply);
+    std::stringstream response_stream;
+    response_stream.write((char*)reply.data(), reply.size());
     string line;
     while (response_stream) {
-      boost::asio::read_until(socket, response, "\n");
       std::getline(response_stream, line);
       if(endsWith(line,"__JANOSH_EOF")) {
         std::getline(response_stream, line);
@@ -84,9 +94,8 @@ int TcpClient::run(Request& req, std::ostream& out) {
 
 void TcpClient::close() {
   try {
-  LOG_DEBUG_MSG("Closing socket", &socket);
-  socket.shutdown(boost::asio::socket_base::shutdown_both);
-  socket.close();
+  LOG_DEBUG_STR("Closing socket");
+  //sock_.close();
   } catch(...) {
   }
 }

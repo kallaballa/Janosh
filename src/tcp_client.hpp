@@ -4,7 +4,7 @@
 
 #include <string>
 #include <vector>
-#include <boost/asio.hpp>
+#include <zmq.hpp>
 #include "format.hpp"
 #include "request.hpp"
 
@@ -13,8 +13,9 @@ using std::string;
 using std::vector;
 
 class TcpClient {
-    boost::asio::io_service io_service;
-    boost::asio::ip::tcp::socket socket;
+  zmq::context_t context_;
+  zmq::socket_t sock_;
+
 public:
 	TcpClient();
 	virtual ~TcpClient();

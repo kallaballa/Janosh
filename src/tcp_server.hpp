@@ -8,10 +8,11 @@
 #ifndef TCPSERVER_H_
 #define TCPSERVER_H_
 
-#include <boost/asio.hpp>
 #include "format.hpp"
+#include <zmq.hpp>
 #include <mutex>
 #include <condition_variable>
+
 
 namespace janosh {
 
@@ -47,12 +48,11 @@ public:
     }
 };
 
-using boost::asio::ip::tcp;
 class TcpServer {
-  boost::asio::io_service io_service_;
-  boost::asio::ip::tcp::acceptor acceptor_;
   static TcpServer* instance_;
   Semaphore* threadSema_;
+  zmq::context_t context_;
+  zmq::socket_t sock_;
   TcpServer(int maxThreads);
 
 public:

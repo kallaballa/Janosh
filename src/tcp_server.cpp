@@ -25,9 +25,9 @@
 #include "shared_pointers.hpp"
 #include "janosh.hpp"
 
+
 namespace janosh {
 
-using boost::asio::ip::tcp;
 using std::string;
 using std::vector;
 using std::stringstream;
@@ -36,50 +36,28 @@ using std::ostream;
 
 TcpServer* TcpServer::instance_;
 
-TcpServer::TcpServer(int maxThreads) : io_service_(), acceptor_(io_service_), threadSema_(new Semaphore(maxThreads)){
+TcpServer::TcpServer(int maxThreads) : threadSema_(new Semaphore(maxThreads)), context_(1), sock_(context_, ZMQ_REP) {
   ExitHandler::getInstance()->addExitFunc([&](){this->close();});
 }
 
 void TcpServer::open(int port) {
-  tcp::resolver resolver(io_service_);
-  tcp::resolver::query query("0.0.0.0", std::to_string(port));
-  boost::asio::ip::tcp::endpoint endpoint = *resolver.resolve(query);
-
-  acceptor_.open(endpoint.protocol());
-  acceptor_.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
-  acceptor_.bind(endpoint);
-  acceptor_.listen();
+  sock_.bind("ipc:///tmp/reqrep.ipc");
 }
 
 TcpServer::~TcpServer() {
-  delete threadSema_;
   this->close();
+  delete threadSema_;
 }
 
-bool TcpServer::isOpen() {
-  return acceptor_.is_open();
-}
 
 void TcpServer::close() {
-  io_service_.stop();
+  //sock_.shutdown(0);
 }
 
 bool TcpServer::run() {
-  boost::asio::ip::tcp::iostream* stream = new boost::asio::ip::tcp::iostream();
-  stream->unsetf(std::ios_base::unitbuf);
-  stream->tie(nullptr);
-
-	try  {
-	  acceptor_.accept(*stream->rdbuf());
-	} catch(std::exception& ex) {
-	  janosh::printException(ex);
-	  stream->close();
-	  return false;
-	}
-
-	threadSema_->wait();
-	std::thread t([=]() {
-	iostream_ptr shared(stream);
+//	threadSema_->wait();
+//	std::thread t([=]() {
+	socket_ptr shared(&sock_);
 	try {
 
 	  TcpWorker* w = NULL;
@@ -107,17 +85,17 @@ bool TcpServer::run() {
 
   } catch (janosh_exception& ex) {
     printException(ex);
-    shared->close();
+    //shared->shutdown(0);
   } catch (std::exception& ex) {
     printException(ex);
-    shared->close();
+    //shared->shutdown(0);
   } catch (...) {
-    shared->close();
+    //shared->shutdown(0);
   }
-  threadSema_->notify();
-	});
+//  threadSema_->notify();
+//	});
 
-	t.detach();
+//	t.detach();
 
   
   return true;
