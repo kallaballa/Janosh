@@ -85,8 +85,8 @@ namespace janosh {
     uint32_t mode;
     Record::db.tune_options(kc::TreeDB::TLINEAR);
     Record::db.tune_buckets(655360);
-    Record::db.tune_map(65536000000);
-    Record::db.tune_page_cache(655360000);
+    Record::db.tune_map(6553600000);
+    Record::db.tune_page_cache(65536000);
     if(readOnly)
       mode = kc::PolyDB::OAUTOTRAN | kc::PolyDB::OREADER;
     else
@@ -1415,7 +1415,9 @@ int main(int argc, char** argv) {
         TcpClient client;
         client.connect("localhost", s.port);
 
-        return client.run(req, std::cout);
+        int rc = client.run(req, std::cout);
+        client.close();
+        return rc;
       } else {
         Settings s;
         TcpClient client;

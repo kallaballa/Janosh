@@ -13,7 +13,7 @@ namespace janosh {
 
 TcpClient::TcpClient() :
     context_(1),
-    sock_(new zmq::socket_t(context_, ZMQ_REQ)) {
+    sock_(NULL) {
 }
 
 TcpClient::~TcpClient() {
@@ -22,9 +22,11 @@ TcpClient::~TcpClient() {
   } catch(...) {
     //ignore
   }
+  delete sock_;
 }
 
 void TcpClient::connect(string host, int port) {
+  sock_ = new zmq::socket_t(context_, ZMQ_REQ);
   sock_->connect(("tcp://" + host + ":" + std::to_string(port)).c_str());
 }
 
@@ -90,12 +92,11 @@ int TcpClient::run(Request& req, std::ostream& out) {
 }
 
 void TcpClient::close() {
-//  try {
-//  LOG_DEBUG_STR("Closing socket");
-//  sock_->close();
-//  delete sock_;
-//  sock_ = new zmq::socket_t(context_, ZMQ_REQ);
-//  } catch(...) {
-//  }
+  try {
+  LOG_DEBUG_STR("Closing socket");
+  if(sock_->connected())
+    sock_->close();
+  } catch(...) {
+  }
 }
 } /* namespace janosh */
