@@ -245,7 +245,7 @@ namespace janosh {
     if(!rec.isDirectory())
       throw janosh_exception() << record_info( { "Path is not a directory", rec });
 
-    rec.fetch().read();
+    rec.fetch().readValue();
     std::mt19937 mt(rd());
     Path parent = rec.path();
 
@@ -256,7 +256,6 @@ namespace janosh {
 
       for(size_t i = 0; i < pick; ++i) {
         rec.step();
-        rec.readPath();
         if (rec.path().parent() != parent) {
           do {
             rec.step();
@@ -367,7 +366,7 @@ namespace janosh {
 
     Path last;
     do {
-      rec.fetch();
+      rec.readValue();
       const Path& path = rec.path();
       const Value& value = rec.value();
       const Value::Type& t = rec.getType();

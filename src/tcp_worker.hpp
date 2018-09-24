@@ -41,7 +41,6 @@ public:
 };
 
 class TcpWorker : public JanoshThread {
-  shared_ptr<std::mutex> sendMutex_;
   shared_ptr<Semaphore> threadSema_;
   socket_ptr socket_;
   Request readRequest();

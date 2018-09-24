@@ -1,4 +1,5 @@
 #include <boost/tokenizer.hpp>
+#include <boost/algorithm/string.hpp>
 #include <boost/format.hpp>
 #include "path.hpp"
 #include "exception.hpp"
@@ -40,6 +41,24 @@ Path::Path(const Path& other) {
   this->components = other.components;
 }
 
+void parse(vector<string>& inboundVector,
+           const string& stringToBeParsed,
+           const char& charToSepBy)
+{
+    string temporary; // automatically initialized to empty string
+    // range-based for loop is preferable when it'll work:
+    for (auto ch : stringToBeParsed) {
+        // use `ch` instead of `stringToBeParsed[i]` throughout loop body
+        if (ch != charToSepBy) {
+            temporary.push_back(ch);
+        }
+        else {
+            inboundVector.push_back(temporary);
+            temporary.clear(); // clear() is designed specifically to empty a string
+        }
+    }
+    inboundVector.push_back(temporary);
+}
 void Path::update(const string& p) {
   using namespace boost;
   if (p.empty()) {
@@ -54,9 +73,12 @@ void Path::update(const string& p) {
   if (p.find(' ') != string::npos) {
     throw path_exception() << string_info( { "spaces not allowed in paths", p });
   }
-
-  char_separator<char> ssep("[/", "", boost::keep_empty_tokens);
-  tokenizer<char_separator<char> > tokComponents(p, ssep);
+  std::vector<std::string> tokComponents;
+  tokComponents.reserve(10);
+//  boost::split( tokComponents, p , boost::is_any_of("/"), boost::token_compress_off);       //Split data line
+  parse(tokComponents, p, '/');
+//  char_separator<char> ssep("[/", "", boost::keep_empty_tokens);
+//  tokenizer<char_separator<char> > tokComponents(p, ssep);
   this->components.clear();
   tokComponents.begin();
   if (tokComponents.begin() != tokComponents.end()) {

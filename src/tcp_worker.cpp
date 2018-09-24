@@ -17,7 +17,6 @@ namespace janosh {
 
 TcpWorker::TcpWorker(int maxThreads, socket_ptr socket) :
     JanoshThread("TcpWorker"),
-    sendMutex_(new std::mutex()),
     threadSema_(new Semaphore(maxThreads)),
     socket_(socket) {
 }
@@ -59,11 +58,12 @@ string reconstructCommandLine(Request& req) {
 }
 
 void TcpWorker::run() {
-  zmq::message_t* request = new zmq::message_t();
+  std::shared_ptr<zmq::message_t> request(new zmq::message_t());
 
   try {
-    if(socket_->connected())
-      socket_->recv(request);
+    if(socket_->connected()) {
+      socket_->recv(request.get());
+    }
     else
       return;
   } catch(std::exception& ex) {
@@ -109,14 +109,12 @@ void TcpWorker::run() {
       } else {
         sso << "__JANOSH_EOF\n" << std::to_string(0) << '\n';
       }
-      std::unique_lock<std::mutex>(*sendMutex_.get());
       socket_->send(sso.str().c_str(), sso.str().size(), 0);
       setResult(true);
     } catch (std::exception& ex) {
       janosh::printException(ex);
       setResult(false);
       sso << "__JANOSH_EOF\n" << std::to_string(1) << '\n';
-      std::unique_lock<std::mutex>(*sendMutex_.get());
       socket_->send(sso.str().c_str(), sso.str().size(), 0);
     }
 //    threadSema_->notify();

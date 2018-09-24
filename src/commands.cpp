@@ -429,7 +429,7 @@ public:
       return {-1, "Expected a path"};
     } else {
       Record p(params.front().str());
-      out << janosh->size(p) << std::endl;
+      out << janosh->size(p) << '\n';
     }
     return {0, "Successful"};
   }

@@ -14,7 +14,7 @@ using std::vector;
 
 class TcpClient {
   zmq::context_t context_;
-  zmq::socket_t sock_;
+  zmq::socket_t* sock_;
 
 public:
 	TcpClient();

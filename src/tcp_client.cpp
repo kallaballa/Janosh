@@ -13,7 +13,7 @@ namespace janosh {
 
 TcpClient::TcpClient() :
     context_(1),
-    sock_(context_, ZMQ_REQ) {
+    sock_(new zmq::socket_t(context_, ZMQ_REQ)) {
 }
 
 TcpClient::~TcpClient() {
@@ -25,7 +25,7 @@ TcpClient::~TcpClient() {
 }
 
 void TcpClient::connect(string host, int port) {
-  sock_.connect(("tcp://" + host + ":" + std::to_string(port)).c_str());
+  sock_->connect(("tcp://" + host + ":" + std::to_string(port)).c_str());
 }
 
 bool endsWith(const std::string &mainStr, const std::string &toMatch)
@@ -60,27 +60,24 @@ int TcpClient::run(Request& req, std::ostream& out) {
   try {
     std::ostringstream request_stream;
     write_request(req, request_stream);
-    sock_.send(request_stream.str().c_str(), request_stream.str().size(), 0);
+    sock_->send(request_stream.str().c_str(), request_stream.str().size(), 0);
     zmq::message_t reply;
-    sock_.recv(&reply);
+    sock_->recv(&reply);
     std::stringstream response_stream;
     response_stream.write((char*)reply.data(), reply.size());
     string line;
     while (response_stream) {
       std::getline(response_stream, line);
       if(endsWith(line,"__JANOSH_EOF")) {
+        out << line.substr(0, line.size() - string("__JANOSH_EOF").size()) << '\n';
         std::getline(response_stream, line);
-        if(line.empty())
-          returnCode = 1;
-        else
-          returnCode = std::stoi(line);
+        returnCode = std::stoi(line);
 
         if (returnCode == 0) {
           LOG_DEBUG_STR("Successful");
         } else {
           LOG_INFO_MSG("Failed", returnCode);
         }
-        //out << line.substr(0, line.size() - string("__JANOSH_EOF").size());
 
         break;
       }
@@ -93,10 +90,12 @@ int TcpClient::run(Request& req, std::ostream& out) {
 }
 
 void TcpClient::close() {
-  try {
-  LOG_DEBUG_STR("Closing socket");
-  //sock_.close();
-  } catch(...) {
-  }
+//  try {
+//  LOG_DEBUG_STR("Closing socket");
+//  sock_->close();
+//  delete sock_;
+//  sock_ = new zmq::socket_t(context_, ZMQ_REQ);
+//  } catch(...) {
+//  }
 }
 } /* namespace janosh */

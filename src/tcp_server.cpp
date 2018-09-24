@@ -50,6 +50,7 @@ TcpServer::~TcpServer() {
 
 
 void TcpServer::close() {
+  sock_.close();
   //sock_.shutdown(0);
 }
 
@@ -57,29 +58,14 @@ bool TcpServer::run() {
 	socket_ptr shared(&sock_);
 	try {
 
-	  TcpWorker* w = NULL;
+	  shared_ptr<TcpWorker> w(new TcpWorker(maxThreads_, shared));
     try {
       do {
-        if(w) {
-          delete w;
-          w = NULL;
-        }
-        w = new TcpWorker(maxThreads_, shared);
-
         w->runSynchron();
       } while(w->connected());
     } catch (...) {
-      if(w) {
-        delete w;
-        w = NULL;
-      }
       throw;
     }
-    if(w) {
-      delete w;
-      w = NULL;
-    }
-
   } catch (janosh_exception& ex) {
     printException(ex);
     //shared->shutdown(0);
@@ -89,11 +75,6 @@ bool TcpServer::run() {
   } catch (...) {
     //shared->shutdown(0);
   }
-//  threadSema_->notify();
-//	});
-
-//	t.detach();
-
   
   return true;
 }
