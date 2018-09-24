@@ -4,8 +4,7 @@
 
 #include <string>
 #include <vector>
-#include "nn.hpp"
-#include "nanomsg/pair.h"
+#include <zmq.hpp>
 #include "format.hpp"
 #include "request.hpp"
 
@@ -14,7 +13,8 @@ using std::string;
 using std::vector;
 
 class TcpClient {
-  nn::socket sock_;
+  zmq::context_t context_;
+  zmq::socket_t sock_;
 
 public:
 	TcpClient();

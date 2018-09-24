@@ -12,7 +12,8 @@
 namespace janosh {
 
 TcpClient::TcpClient() :
-    sock_(AF_SP, NN_PAIR) {
+    context_(1),
+    sock_(context_, ZMQ_REQ) {
 }
 
 TcpClient::~TcpClient() {
@@ -57,14 +58,13 @@ std::string string_to_hex(const std::string& input)
 int TcpClient::run(Request& req, std::ostream& out) {
   int returnCode = -1;
   try {
-    char* buf = NULL;
     std::ostringstream request_stream;
     write_request(req, request_stream);
-
     sock_.send(request_stream.str().c_str(), request_stream.str().size(), 0);
-    sock_.recv(&buf, NN_MSG, 0);
-    std::istringstream response_stream(buf);
-
+    zmq::message_t reply;
+    sock_.recv(&reply);
+    std::stringstream response_stream;
+    response_stream.write((char*)reply.data(), reply.size());
     string line;
     while (response_stream) {
       std::getline(response_stream, line);
@@ -95,7 +95,7 @@ int TcpClient::run(Request& req, std::ostream& out) {
 void TcpClient::close() {
   try {
   LOG_DEBUG_STR("Closing socket");
-  sock_.shutdown(0);
+  //sock_.close();
   } catch(...) {
   }
 }

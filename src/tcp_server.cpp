@@ -36,7 +36,7 @@ using std::ostream;
 
 TcpServer* TcpServer::instance_;
 
-TcpServer::TcpServer(int maxThreads) : threadSema_(new Semaphore(maxThreads)), sock_(AF_SP, NN_PAIR) {
+TcpServer::TcpServer(int maxThreads) : threadSema_(new Semaphore(maxThreads)), context_(1), sock_(context_, ZMQ_REP) {
   ExitHandler::getInstance()->addExitFunc([&](){this->close();});
 }
 
@@ -55,9 +55,9 @@ void TcpServer::close() {
 }
 
 bool TcpServer::run() {
-	threadSema_->wait();
-	std::thread t([=]() {
-	nnsocket_ptr shared(&sock_);
+//	threadSema_->wait();
+//	std::thread t([=]() {
+	socket_ptr shared(&sock_);
 	try {
 
 	  TcpWorker* w = NULL;
@@ -92,10 +92,10 @@ bool TcpServer::run() {
   } catch (...) {
     //shared->shutdown(0);
   }
-  threadSema_->notify();
-	});
+//  threadSema_->notify();
+//	});
 
-	t.detach();
+//	t.detach();
 
   
   return true;

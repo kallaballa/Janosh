@@ -9,8 +9,7 @@
 #define TCPSERVER_H_
 
 #include "format.hpp"
-#include "nn.hpp"
-#include "nanomsg/pair.h"
+#include <zmq.hpp>
 #include <mutex>
 #include <condition_variable>
 
@@ -52,8 +51,8 @@ public:
 class TcpServer {
   static TcpServer* instance_;
   Semaphore* threadSema_;
-  nn::socket sock_;
-
+  zmq::context_t context_;
+  zmq::socket_t sock_;
   TcpServer(int maxThreads);
 
 public:
