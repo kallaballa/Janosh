@@ -10,12 +10,12 @@
 namespace janosh {
 
 void read_request(Request& req, istream& is) {
-  boost::archive::text_iarchive ia(is);
+  boost::archive::binary_iarchive ia(is);
   ia >> req;
 }
 
 void write_request(Request& req, ostream& os) {
-  boost::archive::text_oarchive oa(os);
+  boost::archive::binary_oarchive oa(os);
   oa << req;
 }
 
