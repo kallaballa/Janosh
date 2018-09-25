@@ -41,24 +41,6 @@ bool endsWith(const std::string &mainStr, const std::string &toMatch)
       return false;
 }
 
-std::string string_to_hex(const std::string& input)
-{
-    static const char* const lut = "0123456789ABCDEF";
-    size_t len = input.length();
-
-    std::string output;
-    output.reserve(2 * len);
-    for (size_t i = 0; i < len; ++i)
-    {
-        const unsigned char c = input[i];
-        output.push_back(lut[c >> 4]);
-        output.push_back(lut[c & 15]);
-        output.push_back(' ');
-    }
-    return output;
-}
-
-
 int TcpClient::run(Request& req, std::ostream& out) {
   int returnCode = -1;
   try {
@@ -73,7 +55,7 @@ int TcpClient::run(Request& req, std::ostream& out) {
     while (response_stream) {
       std::getline(response_stream, line);
       if(endsWith(line,"__JANOSH_EOF")) {
-        out << line.substr(0, line.size() - string("__JANOSH_EOF").size()) << '\n';
+        out << line.substr(0, line.size() - string("__JANOSH_EOF").size());
         std::getline(response_stream, line);
         returnCode = std::stoi(line);
 
