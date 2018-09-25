@@ -29,10 +29,7 @@ void TcpClient::connect(string host, int port) {
   if(sock_ != NULL)
     delete sock_;
   sock_ = new zmq::socket_t(context_, ZMQ_REQ);
-  sock_->setsockopt(ZMQ_IMMEDIATE, 1);
-  sock_->setsockopt(ZMQ_RECONNECT_IVL, -1);
   sock_->connect(("tcp://" + host + ":" + std::to_string(port)).c_str());
-  std::cerr << sock_->connected() << std::endl;
 }
 
 bool endsWith(const std::string &mainStr, const std::string &toMatch)
