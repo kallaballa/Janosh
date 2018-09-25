@@ -10,15 +10,6 @@ using boost::tokenizer;
 using boost::char_separator;
 using boost::format;
 
-string Path::compilePathString() const {
-  std::stringstream ss;
-
-  for (auto it = this->components.begin(); it != this->components.end(); ++it) {
-    ss << '/' << (*it).key();
-  }
-  return ss.str();
-}
-
 Path::Path() :
     directory(false), wildcard(false) {
 }
@@ -41,7 +32,7 @@ Path::Path(const Path& other) {
   this->components = other.components;
 }
 
-void parse(vector<string>& inboundVector,
+void tokenize(vector<string>& inboundVector,
            const string& stringToBeParsed,
            const char& charToSepBy)
 {
@@ -59,15 +50,17 @@ void parse(vector<string>& inboundVector,
     }
     inboundVector.push_back(temporary);
 }
+
 void Path::rebuild() {
   this->keyStr.clear();
   this->prettyStr.clear();
   this->keyStr.reserve(this->components.size() * 10);
   this->prettyStr.reserve(this->components.size() * 10);
+  const char slash = '/';
   for (auto it = this->components.begin(); it != this->components.end(); ++it) {
-    this->keyStr.push_back('/');
+    this->keyStr.push_back(slash);
     this->keyStr.append((*it).key());
-    this->prettyStr.push_back('/');
+    this->prettyStr.push_back(slash);
     this->prettyStr.append((*it).pretty());
   }
 
@@ -92,7 +85,7 @@ void Path::update(const string& p) {
   std::vector<std::string> tokComponents;
   tokComponents.reserve(10);
 //  boost::split( tokComponents, p , boost::is_any_of("/"), boost::token_compress_off);       //Split data line
-  parse(tokComponents, p, '/');
+  tokenize(tokComponents, p, '/');
 //  char_separator<char> ssep("[/", "", boost::keep_empty_tokens);
 //  tokenizer<char_separator<char> > tokComponents(p, ssep);
   this->components.clear();
