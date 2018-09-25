@@ -29,13 +29,14 @@ void Tracker::update(const string& key, const string& value, const Operation& op
 void Tracker::update(const string& key, const char* value, const Operation& op) {
   if(doPublish_ && (op == WRITE || op == DELETE))
     MessageQueue::getInstance()->publish(key, (op == WRITE ? "W" : "D"), value);
-
-  map<string, size_t>& m = get(op);
-  auto iter = m.find(key);
-  if(iter != m.end()) {
-    m[key]++;
-  } else {
-    m[key]=1;
+  if(printDirective_ != DONTPRINT) {
+    map<string, size_t>& m = get(op);
+    auto iter = m.find(key);
+    if(iter != m.end()) {
+      m[key]++;
+    } else {
+      m[key]=1;
+    }
   }
 }
 

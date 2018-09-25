@@ -45,20 +45,36 @@ void parse(vector<string>& inboundVector,
            const string& stringToBeParsed,
            const char& charToSepBy)
 {
-    string temporary; // automatically initialized to empty string
-    // range-based for loop is preferable when it'll work:
-    for (auto ch : stringToBeParsed) {
-        // use `ch` instead of `stringToBeParsed[i]` throughout loop body
+    string temporary;
+    temporary.reserve(10);
+    for (const auto& ch : stringToBeParsed) {
         if (ch != charToSepBy) {
             temporary.push_back(ch);
         }
         else {
             inboundVector.push_back(temporary);
-            temporary.clear(); // clear() is designed specifically to empty a string
+            temporary.clear();
+            temporary.reserve(10);
         }
     }
     inboundVector.push_back(temporary);
 }
+void Path::rebuild() {
+  this->keyStr.clear();
+  this->prettyStr.clear();
+  this->keyStr.reserve(this->components.size() * 10);
+  this->prettyStr.reserve(this->components.size() * 10);
+  for (auto it = this->components.begin(); it != this->components.end(); ++it) {
+    this->keyStr.push_back('/');
+    this->keyStr.append((*it).key());
+    this->prettyStr.push_back('/');
+    this->prettyStr.append((*it).pretty());
+  }
+
+  this->directory = !this->components.empty() && this->components.back().isDirectory();
+  this->wildcard = !this->components.empty() && this->components.back().isWildcard();
+}
+
 void Path::update(const string& p) {
   using namespace boost;
   if (p.empty()) {
@@ -92,15 +108,7 @@ void Path::update(const string& p) {
       this->components.push_back(Component(c));
     }
 
-    this->keyStr.clear();
-    this->prettyStr.clear();
-    for (auto it = this->components.begin(); it != this->components.end(); ++it) {
-      this->keyStr += "/" + (*it).key();
-      this->prettyStr += "/" + (*it).pretty();
-    }
-
-    this->directory = !this->components.empty() && this->components.back().isDirectory();
-    this->wildcard = !this->components.empty() && this->components.back().isWildcard();
+    this->rebuild();
   } else {
     reset();
   }
@@ -166,29 +174,29 @@ Path Path::withChild(const size_t& i) const {
   return Path(this->basePath().key() + "/#" + boost::lexical_cast<string>(i));
 }
 
-void Path::pushMember(const string& name, bool doUpdate) {
+void Path::pushMember(const string& name) {
   components.push_back(name);
-  if(doUpdate)
-    update(compilePathString());
+  rebuild();
 }
 
-void Path::pushIndex(const size_t& index, bool doUpdate) {
+void Path::pushIndex(const size_t& index) {
   components.push_back((boost::format("#%d") % index).str());
-  if(doUpdate)
-    update(compilePathString());
+  rebuild();
 }
 
-void Path::pop(bool doUpdate) {
+void Path::pop(const bool& doRebuild) {
   components.erase(components.end() - 1);
-  if (doUpdate)
-    update(compilePathString());
+  if(doRebuild)
+    rebuild();
 }
 
 Path Path::basePath() const {
   if (isDirectory() || isWildcard()) {
-    return Path(this->keyStr.substr(0, this->keyStr.size() - 2));
+    Path bp(*this);
+    bp.pop();
+    return bp;
   } else {
-    return Path(*this);
+    return *this;
   }
 }
 
@@ -212,8 +220,8 @@ Path Path::parent() const {
   Path parent(this->basePath());
   if (!parent.isEmpty() && !this->isWildcard())
     parent.pop(false);
-  parent.pushMember(".",true);
-
+  parent.pushMember(".");
+  parent.rebuild();
   return parent;
 }
 

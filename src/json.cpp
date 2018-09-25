@@ -9,26 +9,29 @@ JsonPrintVisitor::JsonPrintVisitor(std::ostream& out) : PrintVisitor(out) {
 }
 
 string JsonPrintVisitor::escape(const std::string &s) const {
-    std::ostringstream o;
-    for (auto c = s.cbegin(); c != s.cend(); c++)  {
+    std::string o;
+    o.reserve(s.size() * 2);
+    char hexbuffer [4];
+    for (auto c = s.cbegin(); c != s.cend(); ++c)  {
         switch (*c) {
-        case '"': o << "\\\""; break;
-        case '\\': o << "\\\\"; break;
-        case '\b': o << "\\b"; break;
-        case '\f': o << "\\f"; break;
-        case '\n': o << "\\n"; break;
-        case '\r': o << "\\r"; break;
-        case '\t': o << "\\t"; break;
+        case '"': o.append("\\\""); break;
+        case '\\': o.append("\\\\"); break;
+        case '\b': o.append("\\b"); break;
+        case '\f': o.append("\\f"); break;
+        case '\n': o.append("\\n"); break;
+        case '\r': o.append("\\r"); break;
+        case '\t': o.append("\\t"); break;
         default:
             if ('\x00' <= *c && *c <= '\x1f') {
-                o << "\\u"
-                  << std::hex << std::setw(4) << std::setfill('0') << (int)*c;
+              sprintf (hexbuffer, "%04x", (int)*c);
+              o.append("\\u");
+              o += hexbuffer;
             } else {
-                o << *c;
+                o.push_back(*c);
             }
         }
     }
-    return o.str();
+    return o;
 }
 
 void JsonPrintVisitor::beginArray(const Path& p, bool parentIsArray, bool first) {

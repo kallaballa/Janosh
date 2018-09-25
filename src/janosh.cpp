@@ -267,7 +267,7 @@ namespace janosh {
     } else {
       std::uniform_int_distribution<size_t> dist(0, rec.getSize() - 1);
         Path p = rec.path();
-        p.pop();
+        p.pop(false);
         p.pushIndex(dist(mt));
         Record r(p);
         r.fetch();
