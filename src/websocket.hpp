@@ -1,30 +1,25 @@
 #ifndef JANOSH_WEBSOCKET_HPP_
 #define JANOSH_WEBSOCKET_HPP_
 
-#include "websocketpp/config/asio_no_tls.hpp"
-#include "websocketpp/server.hpp"
+#include <uWS/uWS.h>
+using namespace uWS;
+
 #include <iostream>
 #include <set>
 #include <deque>
 #include <map>
 #include <memory>
+#include <mutex>
+#include <queue>
 #include "semaphore.hpp"
+
 
 namespace janosh {
 namespace lua {
-
+using std::mutex;
+using std::condition_variable;
 using std::string;
-typedef websocketpp::server<websocketpp::config::asio> server;
 
-using websocketpp::connection_hdl;
-using websocketpp::lib::placeholders::_1;
-using websocketpp::lib::placeholders::_2;
-using websocketpp::lib::bind;
-
-using websocketpp::lib::thread;
-using websocketpp::lib::mutex;
-using websocketpp::lib::unique_lock;
-using websocketpp::lib::condition_variable;
 
 /* on_open insert connection_hdl into channel
  * on_close remove connection_hdl from channel
@@ -35,16 +30,18 @@ enum action_type {
   SUBSCRIBE, UNSUBSCRIBE, MESSAGE
 };
 
+typedef WebSocket<SERVER>* connection_hdl;
+
 struct action {
   action(action_type t, connection_hdl h) :
       type(t), hdl(h) {
   }
   action(action_type t, std::string m) :
-      type(t), msg(m) {
+      type(t), hdl(NULL), msg(m) {
   }
 
   action_type type;
-  websocketpp::connection_hdl hdl;
+  connection_hdl hdl;
   std::string msg;
 };
 
@@ -57,20 +54,19 @@ struct Credentials {
 };
 
 typedef std::map<std::string, Credentials> AuthData;
-typedef std::shared_ptr<void> ConnectionHandle;
 
 class WebsocketServer {
 private:
   class Authenticator {
   private:
-    std::map<size_t, ConnectionHandle> m_luahandles;
-    std::map<ConnectionHandle, size_t, std::owner_less<ConnectionHandle> > m_luahandles_rev;
+    std::map<size_t, connection_hdl> m_luahandles;
+    std::map<connection_hdl, size_t> m_luahandles_rev;
     size_t luaHandleMax = 0;
     std::map<string, string> skeyNameMap;
     std::multimap<string, string> nameSkeyMap;
 
-    std::map<string, ConnectionHandle> skeyConMap;
-    std::map<ConnectionHandle, string> conSkeyMap;
+    std::map<string, connection_hdl> skeyConMap;
+    std::map<connection_hdl, string> conSkeyMap;
     AuthData authData;
     string passwdFile;
   public:
@@ -78,7 +74,7 @@ private:
     ~Authenticator() {}
     bool hasUsername(const std::string& username);
     bool hasSession(const std::string& sessionKey);
-    bool hasConnectionHandle(ConnectionHandle c);
+    bool hasConnectionHandle(connection_hdl c);
     bool hasLuaHandle(size_t l);
 
 
@@ -91,10 +87,10 @@ private:
     string getUserData(size_t luahandle);
     string getUserName(size_t luahandle);
     std::vector<size_t> getHandles(const string& username);
-    size_t getLuaHandle(ConnectionHandle c);
-    ConnectionHandle getConnectionHandle(size_t luaHandle);
-    size_t createLuaHandle(ConnectionHandle c);
-    void destroyLuaHandle(ConnectionHandle c);
+    size_t getLuaHandle(connection_hdl c);
+    connection_hdl getConnectionHandle(size_t luaHandle);
+    size_t createLuaHandle(connection_hdl c);
+    void destroyLuaHandle(connection_hdl c);
   };
 
 
@@ -106,9 +102,9 @@ private:
   bool logoutUser(const string& sessionKey);
 
   void run(uint16_t port);
-  void on_open(connection_hdl hdl);
-  void on_close(connection_hdl hdl);
-  void on_message(connection_hdl hdl, server::message_ptr msg);
+  void on_open(uWS::WebSocket<uWS::SERVER> *ws);
+  void on_close(uWS::WebSocket<uWS::SERVER> *ws);
+  void on_message(WebSocket<SERVER> *ws, char *message, size_t length, OpCode opCode);
   void process_messages();
 public:
   string getUserData(size_t luahandle);
@@ -123,9 +119,9 @@ public:
   static void init(const int port, const string passwdFile = "");
   static WebsocketServer* getInstance();
 private:
-  typedef std::set<ConnectionHandle, std::owner_less<ConnectionHandle> > con_list;
+  typedef std::set<connection_hdl> con_list;
 
-  server m_server;
+  Hub m_server;
   con_list m_connections;
   std::queue<action> m_actions;
 

@@ -691,7 +691,7 @@ function JanoshClass.wsOnReceive(self, numThreads, callback)
   lanes.gen("*", function()
     janosh_register_thread("WsReceiver")
     while true do
-      local handle,message = janosh_wsreceive(keyprefix)
+      local handle,message = janosh_wsreceive()
       status, msg = pcall(callback,handle,message)
       if not status then
         print("Receiver " .. handle .. " failed: ", msg)
