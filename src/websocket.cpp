@@ -3,6 +3,7 @@
 #include "exithandler.hpp"
 #include "logger.hpp"
 #include "exception.hpp"
+#include "semaphore.hpp"
 
 #include <fstream>
 #include <cryptopp/base64.h>
@@ -106,6 +107,10 @@ bool WebsocketServer::Authenticator::hasSession(const std::string& sessionKey) {
 
 bool WebsocketServer::Authenticator::hasConnectionHandle(ConnectionHandle c) {
   return conSkeyMap.find(c) != conSkeyMap.end();
+}
+
+bool WebsocketServer::Authenticator::hasLuaHandle(size_t l) {
+  return m_luahandles.find(l) != m_luahandles.end();
 }
 
 void WebsocketServer::Authenticator::remapSession(const connection_hdl h, const std::string& sessionKey) {
@@ -239,28 +244,36 @@ std::vector<size_t> WebsocketServer::Authenticator::getHandles(const string& use
 }
 
 size_t WebsocketServer::Authenticator::getLuaHandle(ConnectionHandle c) {
-  assert(m_luahandles_rev.find(c) != m_luahandles_rev.end());
+  if(m_luahandles_rev.find(c) == m_luahandles_rev.end()) {
+    throw janosh_exception() << msg_info("Lua handle doesn't exist anymore");
+  }
   return m_luahandles_rev[c];
 }
 
 ConnectionHandle WebsocketServer::Authenticator::getConnectionHandle(size_t luaHandle) {
-  assert(m_luahandles.find(luaHandle) != m_luahandles.end());
+  if(m_luahandles.find(luaHandle) == m_luahandles.end()) {
+    throw janosh_exception() << msg_info("Lua handle doesn't exist anymore: " + std::to_string(luaHandle));
+  }
   return m_luahandles[luaHandle];
 }
 size_t WebsocketServer::Authenticator::createLuaHandle(ConnectionHandle c) {
   size_t handle = ++luaHandleMax;
-  m_luahandles[++luaHandleMax] = c;
-  m_luahandles_rev[c] = luaHandleMax;
+  std::cerr << "CREATE HANDLE: " << handle << std::endl;
+  m_luahandles[handle] = c;
+  m_luahandles_rev[c] = handle;
   return handle;
 }
 
 void WebsocketServer::Authenticator::destroyLuaHandle(ConnectionHandle c) {
   size_t intHandle = m_luahandles_rev[c];
+  std::cerr << "DESTROY HANDLE: " << intHandle << std::endl;
   m_luahandles.erase(intHandle);
   m_luahandles_rev.erase(c);
+  if(conSkeyMap.find(c) != conSkeyMap.end())
+    destroySession(conSkeyMap[c]);
 }
 
-WebsocketServer::WebsocketServer(const std::string passwdFile) {
+WebsocketServer::WebsocketServer(const std::string passwdFile) : messageSema(10) {
   if(passwdFile.empty()) {
     this->doAuthenticate = false;
   } else {
@@ -389,7 +402,7 @@ void WebsocketServer::on_close(connection_hdl hdl) {
 
 void WebsocketServer::on_message(connection_hdl h, server::message_ptr msg) {
   if((doAuthenticate && auth.hasConnectionHandle(h.lock())) || !doAuthenticate) {
-    const std::string& payload = msg->get_payload();
+    std::string payload = msg->get_payload();
     std::stringstream ss(payload);
     std::vector<string> tokens;
     string token;
@@ -406,16 +419,24 @@ void WebsocketServer::on_message(connection_hdl h, server::message_ptr msg) {
 
       this->send(auth.getLuaHandle(h.lock()), response);
     } else {
+      bool block = messageSema.try_wait();
+      if(block) {
+        std::cerr << "PAUSING: " << (int*)h.lock().get() << std::endl;
+        m_server.pause_reading(h);
+      }
       LOG_DEBUG_STR("Websocket: On message");
       unique_lock<mutex> lock(m_receive_lock);
       LOG_DEBUG_STR("Websocket: On message lock");
 
-      m_receive.push_back(std::make_pair(auth.getLuaHandle(h.lock()), msg->get_payload()));
-
+      m_receive.push_back(std::make_pair(auth.getLuaHandle(h.lock()), payload));
       lock.unlock();
+      messageSema.wait();
       m_receive_cond.notify_one();
     }
   } else {
+    LOG_DEBUG_STR("Websocket: On message");
+    unique_lock<mutex> lock(m_receive_lock);
+    LOG_DEBUG_STR("Websocket: On message lock");
     const std::string& payload = msg->get_payload();
     std::stringstream ss(payload);
     std::vector<string> tokens;
@@ -475,13 +496,14 @@ void WebsocketServer::process_messages() {
 
         m_connections.erase(a.hdl.lock());
         auth.destroyLuaHandle(a.hdl.lock());
+        m_server.pause_reading(a.hdl);
+        m_server.close(a.hdl, websocketpp::close::status::normal, "");
       } else if (a.type == MESSAGE) {
         unique_lock<mutex> con_lock(m_connection_lock);
 
         con_list::iterator it;
-        for (it = m_connections.begin(); it != m_connections.end(); ++it) {
-          m_server.send(*it, a.msg, websocketpp::frame::opcode::TEXT);
-        }
+          m_server.send(a.hdl, a.msg, websocketpp::frame::opcode::TEXT);
+
       } else {
         assert(false);
       }
@@ -528,14 +550,26 @@ std::pair<size_t, std::string> WebsocketServer::receive() {
   unique_lock<mutex> lock(m_receive_lock);
   LOG_DEBUG_STR("Websocket: Receive lock");
   lua_message msg;
+
+  do {
   if(!m_receive.empty()) {
     msg = m_receive.front();
     m_receive.pop_front();
+    std::cerr << "resume" << std::endl;
+    m_server.resume_reading(auth.getConnectionHandle(msg.first));
+    messageSema.notify();
   } else {
     m_receive_cond.wait(lock);
-    msg = m_receive.front();
-    m_receive.pop_front();
+    if(!m_receive.empty()) {
+      msg = m_receive.front();
+      m_receive.pop_front();
+      std::cerr << "resume" << std::endl;
+      m_server.resume_reading(auth.getConnectionHandle(msg.first));
+      messageSema.notify();
+    }
   }
+  } while(!auth.hasLuaHandle(msg.first));
+
   LOG_DEBUG_STR("Websocket: Receive end");
   return msg;
 }
@@ -545,14 +579,11 @@ void WebsocketServer::send(size_t luahandle, const std::string& message) {
   unique_lock<mutex> con_lock(m_connection_lock);
   unique_lock<mutex> lock(m_receive_lock);
   LOG_DEBUG_STR("Websocket: Send release");
-
   try {
     ConnectionHandle c = auth.getConnectionHandle(luahandle);
     m_server.send(c, message, websocketpp::frame::opcode::TEXT);
-  } catch (std::exception& ex) {
-    LOG_ERR_MSG("Exception in websocket run loop", ex.what());
-  } catch (...) {
-    LOG_ERR_STR("Caught (...) in websocket run loop");
+  } catch (janosh_exception& ex) {
+    printException(ex);
   }
   LOG_DEBUG_STR("Websocket: Send end");
 }

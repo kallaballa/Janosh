@@ -686,17 +686,19 @@ function JanoshClass.wsOpen(self, port, passwdFile)
   end
 end
 
-function JanoshClass.wsOnReceive(self, callback) 
+function JanoshClass.wsOnReceive(self, numThreads, callback) 
+  for i=1,numThreads do
   lanes.gen("*", function()
     janosh_register_thread("WsReceiver")
     while true do
-      key, op, value = janosh_wsreceive(keyprefix)
-      status, msg = pcall(callback,key, op, value)
+      local handle,message = janosh_wsreceive(keyprefix)
+      status, msg = pcall(callback,handle,message)
       if not status then
-        print("Receiver " .. keyprefix .. " failed: ", msg)
+        print("Receiver " .. handle .. " failed: ", msg)
       end
     end
   end)()
+  end
 end
 
 function JanoshClass.wsSend(self, handle, msg) 

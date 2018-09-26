@@ -78,7 +78,8 @@ int TcpClient::run(Request& req, std::ostream& out) {
 void TcpClient::close() {
   try {
     LOG_DEBUG_STR("Closing socket");
-    sock_->close();
+    if(sock_ != NULL)
+      sock_->close();
   } catch(...) {
   }
 }

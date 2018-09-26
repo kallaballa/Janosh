@@ -8,6 +8,7 @@
 #include <deque>
 #include <map>
 #include <memory>
+#include "semaphore.hpp"
 
 namespace janosh {
 namespace lua {
@@ -78,6 +79,8 @@ private:
     bool hasUsername(const std::string& username);
     bool hasSession(const std::string& sessionKey);
     bool hasConnectionHandle(ConnectionHandle c);
+    bool hasLuaHandle(size_t l);
+
 
     void remapSession(const connection_hdl h, const std::string& sessionKey);
     string createSession(const connection_hdl h, const std::string& username, const std::string& password);
@@ -137,6 +140,7 @@ private:
 
   bool doAuthenticate = false;
   Authenticator auth;
+  Semaphore messageSema;
 };
 
 }
