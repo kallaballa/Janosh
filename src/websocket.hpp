@@ -27,7 +27,7 @@ using std::string;
  */
 
 enum action_type {
-  SUBSCRIBE, UNSUBSCRIBE, MESSAGE
+  SUBSCRIBE, UNSUBSCRIBE, MESSAGE, BROADCAST
 };
 
 typedef WebSocket<SERVER>* connection_hdl;

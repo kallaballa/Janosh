@@ -263,7 +263,7 @@ void WebsocketServer::Authenticator::destroyLuaHandle(connection_hdl c) {
     destroySession(conSkeyMap[c]);
 }
 
-WebsocketServer::WebsocketServer(const std::string passwdFile) : messageSema(10) {
+WebsocketServer::WebsocketServer(const std::string passwdFile) : m_server(), messageSema(10) {
   if(passwdFile.empty()) {
     this->doAuthenticate = false;
   } else {
@@ -296,7 +296,7 @@ void WebsocketServer::run(uint16_t port) {
   LOG_DEBUG_STR("Websocket: Listen");
 
   // listen on specified port
-  if (m_server.listen(port)) {
+  if (m_server.listen(port, nullptr, uS::ListenOptions::REUSE_PORT)) {
     try {
       LOG_DEBUG_STR("Websocket: Run");
       m_server.run();
@@ -371,12 +371,12 @@ void WebsocketServer::on_open(uWS::WebSocket<uWS::SERVER> *ws) {
 }
 
 void WebsocketServer::on_close(uWS::WebSocket<uWS::SERVER> *ws) {
-  LOG_DEBUG_STR("Websocket: On close");
+  LOG_DEBUG_STR("Websocket: Close");
   unique_lock<mutex> lock(m_action_lock);
   m_actions.push(action(UNSUBSCRIBE, connection_hdl(ws)));
   lock.unlock();
   m_action_cond.notify_one();
-  LOG_DEBUG_STR("Websocket: On close end");
+  LOG_DEBUG_STR("Websocket: Close end");
 }
 
 void WebsocketServer::on_message(WebSocket<SERVER> *ws, char *message, size_t length, OpCode opCode) {
@@ -401,6 +401,7 @@ void WebsocketServer::on_message(WebSocket<SERVER> *ws, char *message, size_t le
 
       this->send(auth.getLuaHandle(ws), response);
     } else {
+      messageSema.wait();
       LOG_DEBUG_STR("Websocket: On message");
       unique_lock<mutex> lock(m_receive_lock);
       LOG_DEBUG_STR("Websocket: On message lock");
@@ -477,9 +478,14 @@ void WebsocketServer::process_messages() {
         con_list::iterator it;
         a.hdl->send(a.msg.c_str(), a.msg.size(), OpCode::TEXT);
 
+      } else if(a.type == BROADCAST) {
+        m_server.getDefaultGroup<uWS::SERVER>().broadcast(a.msg.c_str(), a.msg.size(), OpCode::TEXT);
       } else {
         assert(false);
       }
+    } catch (janosh_exception& ex) {
+      LOG_ERR_MSG("Exception in websocket run loop", ex.what());
+      printException(ex);
     } catch (std::exception& ex) {
       LOG_ERR_MSG("Exception in websocket run loop", ex.what());
     } catch (...) {
@@ -512,7 +518,7 @@ std::vector<size_t> WebsocketServer::getHandles(const string& username) {
 void WebsocketServer::broadcast(const std::string& s) {
   LOG_DEBUG_STR("Websocket: broadcast");
   unique_lock<mutex> lock(m_action_lock);
-  m_actions.push(action(MESSAGE, s));
+  m_actions.push(action(BROADCAST, s));
   lock.unlock();
   m_action_cond.notify_one();
   LOG_DEBUG_STR("Websocket: broadcast end");
@@ -529,16 +535,15 @@ std::pair<size_t, std::string> WebsocketServer::receive() {
     m_receive.pop_front();
   } else {
     while(m_receive.empty()) {
-      std::cerr << "LOOP" << std::endl;
       m_receive_cond.wait(lock);
       if (!m_receive.empty()) {
-        std::cerr << "FOUND" << std::endl;
         msg = m_receive.front();
         m_receive.pop_front();
         break;
       }
     }
   }
+  messageSema.notify();
 
   LOG_DEBUG_STR("Websocket: Receive end");
   return msg;
@@ -562,9 +567,13 @@ void WebsocketServer::init(const int port, const string passwdFile) {
   assert(server_instance == NULL);
   server_instance = new WebsocketServer(passwdFile);
   std::thread maint([=](){
+    janosh::Logger::getInstance().registerThread("Websocket-RunLoop");
     server_instance->run(port);
   });
-  std::thread t(std::bind(&WebsocketServer::process_messages, server_instance));
+  std::thread t([=]() {
+    janosh::Logger::getInstance().registerThread("Websocket-ProcessMessages");
+    server_instance->process_messages();
+  });
 
   t.detach();
   maint.detach();
