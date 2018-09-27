@@ -17,6 +17,7 @@ public:
     void notify();
     void wait();
     bool try_wait();
+    bool would_wait();
 };
 }
 

@@ -19,7 +19,9 @@ class TcpServer {
   static TcpServer* instance_;
   int maxThreads_;
   zmq::context_t context_;
-  zmq::socket_t sock_;
+  zmq::socket_t clients_;
+  zmq::socket_t workers_;
+
   TcpServer(int maxThreads);
 
 public:

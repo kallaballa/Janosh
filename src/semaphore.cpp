@@ -24,4 +24,12 @@ bool Semaphore::try_wait() {
   }
   return false;
 }
+
+bool Semaphore::would_wait() {
+  std::lock_guard<decltype(mutex_)> lock(mutex_);
+  if (count_) {
+    return true;
+  }
+  return false;
+}
 }

@@ -15,10 +15,12 @@
 
 namespace janosh {
 
-TcpWorker::TcpWorker(int maxThreads, socket_ptr socket) :
+TcpWorker::TcpWorker(int maxThreads, zmq::context_t* context) :
     JanoshThread("TcpWorker"),
     threadSema_(new Semaphore(maxThreads)),
-    socket_(socket) {
+    context_(context),
+    socket_(*context_, ZMQ_REP) {
+  socket_.connect("inproc://workers");
 }
 
 string reconstructCommandLine(Request& req) {
@@ -58,29 +60,24 @@ string reconstructCommandLine(Request& req) {
 }
 
 void TcpWorker::run() {
-  std::shared_ptr<zmq::message_t> request(new zmq::message_t());
 
-  try {
-    if(socket_->connected()) {
-      socket_->recv(request.get());
-    }
-    else
+  std::shared_ptr<zmq::message_t> request(new zmq::message_t());
+  while (true) {
+    try {
+      socket_.recv(request.get());
+    } catch (std::exception& ex) {
+      printException(ex);
+      LOG_DEBUG_STR("End of request chain");
+      setResult(false);
       return;
-  } catch(std::exception& ex) {
-    printException(ex);
-    LOG_DEBUG_STR("End of request chain");
-    setResult(false);
-    //socket_->shutdown(0);
-    return;
-  }
-//  threadSema_->wait();
-//  std::thread t([=]() {
+    }
+
     std::ostringstream sso;
     bool result = false;
     try {
       Request req;
       std::stringstream response_stream;
-      response_stream.write((char*)request->data(), request->size());
+      response_stream.write((char*) request->data(), request->size());
       read_request(req, response_stream);
 
       LOG_DEBUG_MSG("ppid", req.pinfo_.pid_);
@@ -91,7 +88,7 @@ void TcpWorker::run() {
       instance->setFormat(req.format_);
 
       if (!req.command_.empty()) {
-        if(req.command_ == "trigger") {
+        if (req.command_ == "trigger") {
           req.command_ = "set";
           req.runTriggers_ = true;
         }
@@ -109,21 +106,14 @@ void TcpWorker::run() {
       } else {
         sso << "__JANOSH_EOF\n" << std::to_string(0) << '\n';
       }
-      socket_->send(sso.str().c_str(), sso.str().size(), 0);
+      socket_.send(sso.str().c_str(), sso.str().size(), 0);
       setResult(true);
     } catch (std::exception& ex) {
       janosh::printException(ex);
       setResult(false);
       sso << "__JANOSH_EOF\n" << std::to_string(1) << '\n';
-      socket_->send(sso.str().c_str(), sso.str().size(), 0);
+      socket_.send(sso.str().c_str(), sso.str().size(), 0);
     }
-//    threadSema_->notify();
-//  });
-//
-//  t.detach();
-}
-
-bool TcpWorker::connected() {
-  return socket_->connected();
+  }
 }
 } /* namespace janosh */

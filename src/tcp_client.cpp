@@ -13,23 +13,22 @@ namespace janosh {
 
 TcpClient::TcpClient() :
     context_(1),
-    sock_(NULL) {
+    sock_(context_, ZMQ_REQ) {
 }
 
 TcpClient::~TcpClient() {
-  try {
     this->close();
-  } catch(...) {
-    //ignore
-  }
-  delete sock_;
 }
 
 void TcpClient::connect(string host, int port) {
-  if(sock_ != NULL)
-    delete sock_;
-  sock_ = new zmq::socket_t(context_, ZMQ_REQ);
-  sock_->connect(("tcp://" + host + ":" + std::to_string(port)).c_str());
+
+  try {
+    sock_ = zmq::socket_t(context_, ZMQ_REQ);
+  } catch (...) {
+    context_ = zmq::context_t(1);
+    sock_ = zmq::socket_t(context_, ZMQ_REQ);
+  }
+  sock_.connect(("tcp://" + host + ":" + std::to_string(port)).c_str());
 }
 
 bool endsWith(const std::string &mainStr, const std::string &toMatch)
@@ -46,9 +45,9 @@ int TcpClient::run(Request& req, std::ostream& out) {
   try {
     std::ostringstream request_stream;
     write_request(req, request_stream);
-    sock_->send(request_stream.str().c_str(), request_stream.str().size(), 0);
+    sock_.send(request_stream.str().c_str(), request_stream.str().size(), 0);
     zmq::message_t reply;
-    sock_->recv(&reply);
+    sock_.recv(&reply);
     std::stringstream response_stream;
     response_stream.write((char*)reply.data(), reply.size());
     string line;
@@ -76,11 +75,7 @@ int TcpClient::run(Request& req, std::ostream& out) {
 }
 
 void TcpClient::close() {
-  try {
     LOG_DEBUG_STR("Closing socket");
-    if(sock_ != NULL)
-      sock_->close();
-  } catch(...) {
-  }
+    sock_.close();
 }
 } /* namespace janosh */

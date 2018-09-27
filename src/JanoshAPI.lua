@@ -551,15 +551,15 @@ end
 function JanoshClass.subscribe(self, keyprefix, callback)
   janosh_subscribe(keyprefix);
   t = lanes.gen("*", function() 
-		janosh_register_thread("Subscriber: " .. keyprefix)
-		while true do
-			key, op, value = janosh_receive(keyprefix)
-			status, msg = pcall(function() callback(key, op, value) end)
-      if not status then
-        print("Subscriber " .. keyprefix .. " failed: ", msg)
-      end
+	janosh_register_thread("Subscriber: " .. keyprefix)
+	while true do
+		key, op, value = janosh_receive(keyprefix)
+		status, msg = pcall(function() callback(key, op, value) end)
+		if not status then
+        		print("Subscriber " .. keyprefix .. " failed: ", msg)
 		end
-	end)
+	end
+  end)
   t()
 end
 

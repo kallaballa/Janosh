@@ -401,6 +401,10 @@ void WebsocketServer::on_message(WebSocket<SERVER> *ws, char *message, size_t le
 
       this->send(auth.getLuaHandle(ws), response);
     } else {
+//      if(messageSema.would_wait()) {
+//        LOG_DEBUG_STR("Websocket: Backlog detected");
+//      }
+
       messageSema.wait();
       LOG_DEBUG_STR("Websocket: On message");
       unique_lock<mutex> lock(m_receive_lock);
@@ -411,9 +415,6 @@ void WebsocketServer::on_message(WebSocket<SERVER> *ws, char *message, size_t le
       m_receive_cond.notify_one();
     }
   } else {
-    LOG_DEBUG_STR("Websocket: On message");
-    unique_lock<mutex> lock(m_receive_lock);
-    LOG_DEBUG_STR("Websocket: On message lock");
     std::stringstream ss(payload);
     std::vector<string> tokens;
     string token;
@@ -479,6 +480,7 @@ void WebsocketServer::process_messages() {
         a.hdl->send(a.msg.c_str(), a.msg.size(), OpCode::TEXT);
 
       } else if(a.type == BROADCAST) {
+        unique_lock<mutex> con_lock(m_connection_lock);
         m_server.getDefaultGroup<uWS::SERVER>().broadcast(a.msg.c_str(), a.msg.size(), OpCode::TEXT);
       } else {
         assert(false);
@@ -533,17 +535,20 @@ std::pair<size_t, std::string> WebsocketServer::receive() {
   if (!m_receive.empty()) {
     msg = m_receive.front();
     m_receive.pop_front();
+    messageSema.notify();
   } else {
     while(m_receive.empty()) {
+      LOG_DEBUG_STR("Websocket: Receive wait");
       m_receive_cond.wait(lock);
+      LOG_DEBUG_STR("Websocket: Receive wait end");
       if (!m_receive.empty()) {
         msg = m_receive.front();
         m_receive.pop_front();
+        messageSema.notify();
         break;
       }
     }
   }
-  messageSema.notify();
 
   LOG_DEBUG_STR("Websocket: Receive end");
   return msg;
@@ -552,10 +557,11 @@ std::pair<size_t, std::string> WebsocketServer::receive() {
 void WebsocketServer::send(size_t luahandle, const std::string& message) {
   LOG_DEBUG_STR("Websocket: Send");
   unique_lock<mutex> con_lock(m_connection_lock);
-  unique_lock<mutex> lock(m_receive_lock);
   LOG_DEBUG_STR("Websocket: Send release");
   try {
     connection_hdl c = auth.getConnectionHandle(luahandle);
+    LOG_DEBUG_MSG("Websocket: Payload", message);
+
     c->send(message.c_str(), message.size(),OpCode::TEXT);
   } catch (janosh_exception& ex) {
     printException(ex);

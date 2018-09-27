@@ -10,11 +10,12 @@ namespace janosh {
 
 class TcpWorker : public JanoshThread {
   shared_ptr<Semaphore> threadSema_;
-  socket_ptr socket_;
+  zmq::context_t* context_;
+  zmq::socket_t socket_;
   Request readRequest();
 
 public:
-  explicit TcpWorker(int maxThreads, socket_ptr stream);
+  explicit TcpWorker(int maxThreads, zmq::context_t* context);
   void run();
   bool connected();
 };
