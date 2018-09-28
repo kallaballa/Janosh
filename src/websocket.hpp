@@ -70,7 +70,7 @@ private:
     AuthData authData;
     string passwdFile;
   public:
-    Authenticator() {}
+    Authenticator(const string& passwdFile) : passwdFile(passwdFile) {}
     ~Authenticator() {}
     bool hasUsername(const std::string& username);
     bool hasSession(const std::string& sessionKey);

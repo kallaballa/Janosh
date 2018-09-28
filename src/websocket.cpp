@@ -126,11 +126,11 @@ void WebsocketServer::Authenticator::remapSession(const connection_hdl h, const 
 
 string WebsocketServer::Authenticator::createSession(const connection_hdl h, const std::string& username, const std::string& password) {
   string sessionKey = make_sessionkey();
-  skeyNameMap[sessionKey] = username;
-  nameSkeyMap.insert({username, sessionKey});
   Credentials& c = authData[username];
   std::pair<string,string> hashed = hash_password(password, c.salt);
   if(c.hash == hashed.first) {
+    skeyNameMap[sessionKey] = username;
+    nameSkeyMap.insert({username, sessionKey});
     skeyConMap[sessionKey] = h;
     conSkeyMap[h] = sessionKey;
     return sessionKey;
@@ -259,11 +259,11 @@ void WebsocketServer::Authenticator::destroyLuaHandle(connection_hdl c) {
   size_t handle = m_luahandles_rev[c];
   m_luahandles.erase(handle);
   m_luahandles_rev.erase(c);
-  if(conSkeyMap.find(c) != conSkeyMap.end())
-    destroySession(conSkeyMap[c]);
+//  if(conSkeyMap.find(c) != conSkeyMap.end())
+//    destroySession(conSkeyMap[c]);
 }
 
-WebsocketServer::WebsocketServer(const std::string passwdFile) : m_server(), messageSema(10) {
+WebsocketServer::WebsocketServer(const std::string passwdFile) : m_server(), messageSema(10), auth(passwdFile) {
   if(passwdFile.empty()) {
     this->doAuthenticate = false;
   } else {
@@ -311,6 +311,7 @@ void WebsocketServer::run(uint16_t port) {
 }
 
 string WebsocketServer::loginUser(const connection_hdl h, const std::string& sessionKey) {
+  std::cerr << "session: " << sessionKey << std::endl;
   if(!auth.hasSession(sessionKey)) {
     return "session-invalid";
   } else {
@@ -561,7 +562,7 @@ void WebsocketServer::send(size_t luahandle, const std::string& message) {
   try {
     connection_hdl c = auth.getConnectionHandle(luahandle);
     LOG_DEBUG_MSG("Websocket: Payload", message);
-
+    std::cerr << "send: " << message << std::endl;
     c->send(message.c_str(), message.size(),OpCode::TEXT);
   } catch (janosh_exception& ex) {
     printException(ex);

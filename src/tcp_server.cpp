@@ -41,7 +41,7 @@ TcpServer::TcpServer(int maxThreads) : maxThreads_(maxThreads), context_(1), cli
 }
 
 void TcpServer::open(int port) {
-  clients_.bind(("tcp://*:" + std::to_string(port)).c_str());
+  clients_.bind("ipc:///tmp/janosh");
   workers_.bind ("inproc://workers");
 }
 
