@@ -311,7 +311,6 @@ void WebsocketServer::run(uint16_t port) {
 }
 
 string WebsocketServer::loginUser(const connection_hdl h, const std::string& sessionKey) {
-  std::cerr << "session: " << sessionKey << std::endl;
   if(!auth.hasSession(sessionKey)) {
     return "session-invalid";
   } else {
@@ -562,7 +561,6 @@ void WebsocketServer::send(size_t luahandle, const std::string& message) {
   try {
     connection_hdl c = auth.getConnectionHandle(luahandle);
     LOG_DEBUG_MSG("Websocket: Payload", message);
-    std::cerr << "send: " << message << std::endl;
     c->send(message.c_str(), message.size(),OpCode::TEXT);
   } catch (janosh_exception& ex) {
     printException(ex);
