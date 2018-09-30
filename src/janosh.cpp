@@ -1237,6 +1237,13 @@ namespace janosh {
     return cnt;
   }
 
+  void Janosh::report(ostream& out) {
+    std::map<string,string> stat;
+    Record::getDB()->report(&stat);
+    for(auto& p : stat) {
+      out << p.first << ":" << p.second << std::endl;
+    }
+  }
   bool Janosh::boundsCheck(Record p) {
     Record parent = p.parent();
 
@@ -1245,15 +1252,6 @@ namespace janosh {
 
     return (parent.path().isRoot() || (!parent.isArray() || p.path().parseIndex() <= parent.getSize()));
   }
-
-  Janosh* Janosh::getInstance() {
-      if(instance_ == NULL)
-        instance_ = new Janosh();
-
-      return instance_;
-  }
-
-  Janosh* Janosh::instance_ = NULL;
 }
 
 std::mutex janosh::Record::dbMutex;
@@ -1385,7 +1383,7 @@ int main(int argc, char** argv) {
       Logger::setTracing(tracing);
       Logger::setDBLogging(dblog);
       Tracker::setPrintDirective(printDirective);
-      Janosh* instance = Janosh::getInstance();
+      Janosh* instance = new Janosh();
       //instance->open(false);
       if(luafile.empty()) {
         TcpServer* server = TcpServer::getInstance(instance->settings_.maxThreads);

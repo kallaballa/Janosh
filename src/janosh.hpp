@@ -76,10 +76,10 @@ public:
 
   size_t dump(ostream& out);
   size_t hash(ostream& out);
+  void report(ostream& out);
   size_t truncate();
-  static Janosh* getInstance();
+
 private:
-  static Janosh* instance_;
   Format format;
   bool open_;
   string filename;
@@ -96,6 +96,7 @@ private:
   size_t load(js::Value& v, Path& path);
   size_t load(js::Object& obj, Path& path);
   size_t load(js::Array& array, Path& path);
+
   bool boundsCheck(Record p);
   Record makeTemp(const Value::Type& t);
 

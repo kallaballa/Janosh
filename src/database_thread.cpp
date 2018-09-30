@@ -12,14 +12,14 @@
 
 namespace janosh {
 
-DatabaseThread::DatabaseThread(const Request& req, std::ostream& out) :
+DatabaseThread::DatabaseThread(Janosh* janosh, const Request& req, std::ostream& out) :
     JanoshThread("Database"),
+    janosh_(janosh),
     req_(req),
     out_(out) {
 }
 
 void DatabaseThread::run() {
-  Janosh* instance = Janosh::getInstance();
 
   try {
     setResult(false);
@@ -29,12 +29,12 @@ void DatabaseThread::run() {
       LOG_DEBUG_STR("Disabling transactions");
     }
     if(req_.doTransaction_)
-      begin = instance->beginTransaction();
+      begin = janosh_->beginTransaction();
     assert(begin);
 
     if (!req_.command_.empty()) {
       LOG_DEBUG_MSG("Execute command", req_.command_);
-      Command* cmd = instance->cm_[req_.command_];
+      Command* cmd = janosh_->cm_[req_.command_];
 
       if (!cmd) {
         throw janosh_exception() << string_info( { "Unknown command", req_.command_ });
@@ -51,15 +51,15 @@ void DatabaseThread::run() {
       throw janosh_exception() << msg_info("missing command");
     }
     if(req_.doTransaction_)
-      instance->endTransaction(true);
+      janosh_->endTransaction(true);
   } catch (janosh_exception& ex) {
     if(req_.doTransaction_)
-      instance->endTransaction(false);
+      janosh_->endTransaction(false);
     printException(ex);
     return;
   } catch (std::exception& ex) {
     if(req_.doTransaction_)
-      instance->endTransaction(false);
+      janosh_->endTransaction(false);
     printException(ex);
     return;
   }

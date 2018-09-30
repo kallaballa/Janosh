@@ -457,6 +457,23 @@ public:
   }
 };
 
+class ReportCommand: public Command {
+public:
+  explicit ReportCommand(janosh::Janosh* janosh) :
+      Command(janosh) {
+  }
+
+  Result operator()(const vector<Value>& params, std::ostream& out) {
+    if (!params.empty()) {
+      return {-1, "status command doesn't take any arguments"};
+    } else {
+      janosh->report(out);
+    }
+    return {1, "Successful"};
+  }
+};
+
+
 CommandMap makeCommandMap(Janosh* janosh) {
   CommandMap cm;
   cm.insert( { "load", new LoadCommand(janosh) });
@@ -480,6 +497,7 @@ CommandMap makeCommandMap(Janosh* janosh) {
   cm.insert( { "random", new RandomCommand(janosh) });
   cm.insert( { "filter", new FilterCommand(janosh) });
   cm.insert( { "patch", new PatchCommand(janosh) });
+  cm.insert( { "report", new ReportCommand(janosh) });
 
 
   return cm;

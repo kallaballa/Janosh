@@ -86,7 +86,7 @@ void TcpWorker::run() {
       LOG_DEBUG_MSG("cmdline", req.pinfo_.cmdline_);
       LOG_INFO_STR(reconstructCommandLine(req));
 
-      Janosh* instance = Janosh::getInstance();
+      Janosh* instance = new Janosh();
       instance->setFormat(req.format_);
 
       if (!req.command_.empty()) {
@@ -96,7 +96,7 @@ void TcpWorker::run() {
         }
 
         Tracker::setDoPublish(req.runTriggers_);
-        JanoshThreadPtr dt(new DatabaseThread(req, sso));
+        JanoshThreadPtr dt(new DatabaseThread(instance,req, sso));
         dt->runSynchron();
         result = dt->result();
 
