@@ -337,9 +337,6 @@ string WebsocketServer::loginUser(const connection_hdl h, const std::string& ses
   if(!auth.hasSession(sessionKey)) {
     return "session-invalid";
   } else {
-    unique_lock<mutex> lock(m_receive_lock);
-    unique_lock<mutex> lock1(m_action_lock);
-    unique_lock<mutex> lock2(m_connection_lock);
     auth.remapSession(h,sessionKey);
     return "session-success:" + sessionKey;
   }
@@ -386,23 +383,19 @@ bool WebsocketServer::logoutUser(const string& sessionKey) {
 
 void WebsocketServer::on_open(uWS::WebSocket<uWS::SERVER> *ws) {
   LOG_DEBUG_STR("Websocket: Open");
-  unique_lock<mutex> lock(m_action_lock);
   m_actions.push(action(SUBSCRIBE, connection_hdl(ws)));
-  lock.unlock();
-  m_action_cond.notify_one();
   LOG_DEBUG_STR("Websocket: Open end");
 }
 
 void WebsocketServer::on_close(uWS::WebSocket<uWS::SERVER> *ws) {
   LOG_DEBUG_STR("Websocket: Close");
-  unique_lock<mutex> lock(m_action_lock);
   m_actions.push(action(UNSUBSCRIBE, connection_hdl(ws)));
-  lock.unlock();
-  m_action_cond.notify_one();
   LOG_DEBUG_STR("Websocket: Close end");
 }
 
 void WebsocketServer::on_message(WebSocket<SERVER> *ws, char *message, size_t length, OpCode opCode) {
+  LOG_DEBUG_STR("Websocket: on message");
+
   std::string payload;
   for(size_t i = 0; i < length; ++i) {
     payload.push_back(message[i]);
@@ -415,6 +408,8 @@ void WebsocketServer::on_message(WebSocket<SERVER> *ws, char *message, size_t le
         tokens.push_back(token);
     }
     if(tokens.size() == 2 && tokens[0] == "logout" && auth.hasSession(tokens[1])) {
+      LOG_DEBUG_STR("Websocket: on message logout");
+
       bool success = logoutUser(tokens[1]);
       string response;
       if(success)
@@ -424,18 +419,16 @@ void WebsocketServer::on_message(WebSocket<SERVER> *ws, char *message, size_t le
 
       this->send(auth.getLuaHandle(ws), response);
     } else if(tokens.size() > 1 && (tokens[0] == "register" || tokens[0] == "login")) {
+      LOG_DEBUG_STR("Websocket: on message ignore");
       //register or login no existing connection. ignore
     } else {
+      LOG_DEBUG_STR("Websocket: on message push");
       messageSema.wait();
-      LOG_DEBUG_STR("Websocket: On message");
-      unique_lock<mutex> lock(m_receive_lock);
-      LOG_DEBUG_STR("Websocket: On message lock");
-
-      m_receive.push_back(std::make_pair(auth.getLuaHandle(ws), payload));
-      lock.unlock();
-      m_receive_cond.notify_one();
+      m_receive.push(std::make_pair(auth.getLuaHandle(ws), payload));
     }
   } else {
+    LOG_DEBUG_STR("Websocket: on message auth");
+
     std::stringstream ss(payload);
     std::vector<string> tokens;
     string token;
@@ -462,46 +455,22 @@ void WebsocketServer::on_message(WebSocket<SERVER> *ws, char *message, size_t le
 
 void WebsocketServer::process_messages() {
   while (1) {
-    LOG_DEBUG_STR("Websocket: Process message");
-    unique_lock<mutex> lock(m_action_lock);
-    LOG_DEBUG_STR("Websocket: Process lock");
-
     try {
-      LOG_DEBUG_STR("Websocket: Process action");
-
-      while (m_actions.empty()) {
-        m_action_cond.wait(lock);
-      }
-      LOG_DEBUG_STR("Websocket: Process action lock");
-      action a = m_actions.front();
-      m_actions.pop();
-
-      lock.unlock();
+      LOG_DEBUG_STR("Websocket: Process action pop");
+      action a = m_actions.pop();
 
       if (a.type == SUBSCRIBE) {
-        LOG_DEBUG_STR("Websocket: Process message lock");
-        unique_lock<mutex> lock(m_receive_lock);
-        LOG_DEBUG_STR("Websocket: Process message release");
-
         unique_lock<mutex> con_lock(m_connection_lock);
         m_connections.insert(a.hdl);
         auth.createLuaHandle(a.hdl);
       } else if (a.type == UNSUBSCRIBE) {
-        LOG_DEBUG_STR("Websocket: Process message lock 2");
-        unique_lock<mutex> lock(m_receive_lock);
-        LOG_DEBUG_STR("Websocket: Process message release 2");
         unique_lock<mutex> con_lock(m_connection_lock);
-
         m_connections.erase(a.hdl);
         auth.destroyLuaHandle(a.hdl);
       } else if (a.type == MESSAGE) {
-        unique_lock<mutex> con_lock(m_connection_lock);
-
         con_list::iterator it;
         a.hdl->send(a.msg.c_str(), a.msg.size(), OpCode::TEXT);
-
       } else if(a.type == BROADCAST) {
-        unique_lock<mutex> con_lock(m_connection_lock);
         m_server.getDefaultGroup<uWS::SERVER>().broadcast(a.msg.c_str(), a.msg.size(), OpCode::TEXT);
       } else {
         assert(false);
@@ -540,38 +509,18 @@ std::vector<size_t> WebsocketServer::getHandles(const string& username) {
 
 void WebsocketServer::broadcast(const std::string& s) {
   LOG_DEBUG_STR("Websocket: broadcast");
-  unique_lock<mutex> lock(m_action_lock);
   m_actions.push(action(BROADCAST, s));
-  lock.unlock();
-  m_action_cond.notify_one();
   LOG_DEBUG_STR("Websocket: broadcast end");
 }
 
 std::pair<size_t, std::string> WebsocketServer::receive() {
-  LOG_DEBUG_STR("Websocket: Receive");
-  unique_lock<mutex> lock(m_receive_lock);
-  LOG_DEBUG_STR("Websocket: Receive lock");
+  LOG_DEBUG_STR("Websocket: receive");
+
   lua_message msg;
+  m_receive.pop(msg);
+  messageSema.notify();
 
-  if (!m_receive.empty()) {
-    msg = m_receive.front();
-    m_receive.pop_front();
-    messageSema.notify();
-  } else {
-    while(m_receive.empty()) {
-      LOG_DEBUG_STR("Websocket: Receive wait");
-      m_receive_cond.wait(lock);
-      LOG_DEBUG_STR("Websocket: Receive wait end");
-      if (!m_receive.empty()) {
-        msg = m_receive.front();
-        m_receive.pop_front();
-        messageSema.notify();
-        break;
-      }
-    }
-  }
-
-  LOG_DEBUG_STR("Websocket: Receive end");
+  LOG_DEBUG_STR("Websocket: receive end");
   return msg;
 }
 

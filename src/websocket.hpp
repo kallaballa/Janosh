@@ -10,8 +10,8 @@ using namespace uWS;
 #include <map>
 #include <memory>
 #include <mutex>
-#include <queue>
 #include "semaphore.hpp"
+#include "queue.hpp"
 
 
 namespace janosh {
@@ -123,16 +123,12 @@ private:
 
   Hub m_server;
   con_list m_connections;
-  std::queue<action> m_actions;
+  Queue<action> m_actions;
 
-  mutex m_action_lock;
   mutex m_connection_lock;
-  condition_variable m_action_cond;
   static WebsocketServer* server_instance;
 
-  mutex m_receive_lock;
-  condition_variable m_receive_cond;
-  std::deque<lua_message> m_receive;
+  Queue<lua_message> m_receive;
 
   bool doAuthenticate = false;
   Authenticator auth;
