@@ -81,7 +81,7 @@ namespace janosh {
 
   void Janosh::open(bool readOnly=false) {
     // open the database
-    uint32_t mode;
+//    uint32_t mode;
 //    Record::getDB()->tune_options(kc::TreeDB::TLINEAR);
 //    Record::getDB()->tune_buckets(655360);
 //    Record::getDB()->tune_map(6553600000);

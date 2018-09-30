@@ -423,6 +423,8 @@ void WebsocketServer::on_message(WebSocket<SERVER> *ws, char *message, size_t le
         response = "logout-nosession";
 
       this->send(auth.getLuaHandle(ws), response);
+    } else if(tokens.size() > 1 && (tokens[0] == "register" || tokens[0] == "login")) {
+      //register or login no existing connection. ignore
     } else {
       messageSema.wait();
       LOG_DEBUG_STR("Websocket: On message");
