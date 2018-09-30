@@ -421,7 +421,7 @@ function JanoshClass.get(self, keys)
   if type(keys) == "table" then
     	table.insert(keys, 1, "get")
 	local err, value = self:request(keys)
-	if not err then
+	if not err or value == nil then
 		return nil
 	end
 	local table = JSON:decode(value)
@@ -444,7 +444,7 @@ function JanoshClass.get(self, keys)
 	end	
   else
     local err, value = self:request({"get", keys})
-    if not err then
+    if not err or value == nil then
       return nil
     end
     local table = JSON:decode(value)
