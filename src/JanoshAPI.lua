@@ -714,7 +714,7 @@ function JanoshClass.wsGetUserName(self, handle)
 end
 
 function JanoshClass.wsGetHandles(self, username) 
-  return { janosh_wsgethandles(username) }
+  return janosh_wsgethandles(username)
 end
 
 function JanoshClass.sleep(self, millis)
