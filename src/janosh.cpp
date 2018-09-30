@@ -1137,7 +1137,7 @@ namespace janosh {
     path.pop();
 
     for(js::Pair& p : obj) {
-      path.pushMember(escape_json(p.name_));
+      path.pushMember(p.name_);
       cnt+=patch(p.value_, path);
       path.pop();
       ++cnt;

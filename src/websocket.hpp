@@ -69,6 +69,7 @@ private:
     std::map<connection_hdl, string> conSkeyMap;
     AuthData authData;
     string passwdFile;
+    std::mutex authMutex;
   public:
     Authenticator(const string& passwdFile) : passwdFile(passwdFile) {}
     ~Authenticator() {}
@@ -76,7 +77,6 @@ private:
     bool hasSession(const std::string& sessionKey);
     bool hasConnectionHandle(connection_hdl c);
     bool hasLuaHandle(size_t l);
-
 
     void remapSession(const connection_hdl h, const std::string& sessionKey);
     string createSession(const connection_hdl h, const std::string& username, const std::string& password);

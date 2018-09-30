@@ -6,13 +6,12 @@
  */
 
 #include "database_thread.hpp"
-#include "janosh.hpp"
 #include "commands.hpp"
 #include "exception.hpp"
 
 namespace janosh {
 
-DatabaseThread::DatabaseThread(Janosh* janosh, const Request& req, std::ostream& out) :
+DatabaseThread::DatabaseThread(std::shared_ptr<Janosh> janosh, const Request& req, std::ostream& out) :
     JanoshThread("Database"),
     janosh_(janosh),
     req_(req),

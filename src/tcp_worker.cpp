@@ -8,9 +8,6 @@
 #include "tcp_worker.hpp"
 #include "exception.hpp"
 #include "database_thread.hpp"
-//#include "flusher_thread.hpp"
-//#include "cache_thread.hpp"
-#include "janosh.hpp"
 #include "tracker.hpp"
 #include "record.hpp"
 
@@ -18,6 +15,7 @@ namespace janosh {
 
 TcpWorker::TcpWorker(int maxThreads, zmq::context_t* context) :
     JanoshThread("TcpWorker"),
+    janosh_(new Janosh()),
     threadSema_(new Semaphore(maxThreads)),
     context_(context),
     socket_(*context_, ZMQ_REP) {
@@ -86,8 +84,7 @@ void TcpWorker::run() {
       LOG_DEBUG_MSG("cmdline", req.pinfo_.cmdline_);
       LOG_INFO_STR(reconstructCommandLine(req));
 
-      Janosh* instance = new Janosh();
-      instance->setFormat(req.format_);
+      janosh_->setFormat(req.format_);
 
       if (!req.command_.empty()) {
         if (req.command_ == "trigger") {
@@ -96,7 +93,7 @@ void TcpWorker::run() {
         }
 
         Tracker::setDoPublish(req.runTriggers_);
-        JanoshThreadPtr dt(new DatabaseThread(instance,req, sso));
+        JanoshThreadPtr dt(new DatabaseThread(janosh_,req, sso));
         dt->runSynchron();
         result = dt->result();
 

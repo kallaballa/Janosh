@@ -5,10 +5,12 @@
 #include "shared_pointers.hpp"
 #include "request.hpp"
 #include "semaphore.hpp"
+#include "janosh.hpp"
 
 namespace janosh {
 
 class TcpWorker : public JanoshThread {
+  shared_ptr<Janosh> janosh_;
   shared_ptr<Semaphore> threadSema_;
   zmq::context_t* context_;
   zmq::socket_t socket_;

@@ -90,22 +90,27 @@ std::pair<string,string> hash_password(const string password, string salthex = "
 }
 
 bool WebsocketServer::Authenticator::hasUsername(const std::string& username) {
+  std::unique_lock<std::mutex> lock(authMutex);
   return authData.find(username) != authData.end();
 }
 
 bool WebsocketServer::Authenticator::hasSession(const std::string& sessionKey) {
+  std::unique_lock<std::mutex> lock(authMutex);
   return skeyConMap.find(sessionKey) != skeyConMap.end();
 }
 
 bool WebsocketServer::Authenticator::hasConnectionHandle(connection_hdl c) {
+  std::unique_lock<std::mutex> lock(authMutex);
   return conSkeyMap.find(c) != conSkeyMap.end();
 }
 
 bool WebsocketServer::Authenticator::hasLuaHandle(size_t l) {
+  std::unique_lock<std::mutex> lock(authMutex);
   return m_luahandles.find(l) != m_luahandles.end();
 }
 
 void WebsocketServer::Authenticator::remapSession(const connection_hdl h, const std::string& sessionKey) {
+  std::unique_lock<std::mutex> lock(authMutex);
   connection_hdl old = skeyConMap[sessionKey];
   if(old != h) {
     if(m_luahandles_rev.find(old) != m_luahandles_rev.end()) {
@@ -125,6 +130,7 @@ void WebsocketServer::Authenticator::remapSession(const connection_hdl h, const 
 
 
 string WebsocketServer::Authenticator::createSession(const connection_hdl h, const std::string& username, const std::string& password) {
+  std::unique_lock<std::mutex> lock(authMutex);
   string sessionKey = make_sessionkey();
   Credentials& c = authData[username];
   std::pair<string,string> hashed = hash_password(password, c.salt);
@@ -140,6 +146,7 @@ string WebsocketServer::Authenticator::createSession(const connection_hdl h, con
 }
 
 void WebsocketServer::Authenticator::destroySession(const std::string& sessionKey) {
+  std::unique_lock<std::mutex> lock(authMutex);
   assert(skeyNameMap.find(sessionKey) != skeyNameMap.end());
   string username = skeyNameMap[sessionKey];
 
@@ -162,6 +169,7 @@ void WebsocketServer::Authenticator::destroySession(const std::string& sessionKe
 
 string WebsocketServer::Authenticator::createUser(const connection_hdl h, const std::string& username, const std::string& password,
     const std::string& userdata) {
+  std::unique_lock<std::mutex> lock(authMutex);
   std::pair<string, string> hashed = hash_password(password);
   string sessionKey = make_sessionkey();
   skeyNameMap[sessionKey] = username;
@@ -181,6 +189,7 @@ string WebsocketServer::Authenticator::createUser(const connection_hdl h, const 
 }
 
 void WebsocketServer::Authenticator::readAuthData(const std::string& passwdFile) {
+  std::unique_lock<std::mutex> lock(authMutex);
   std::ifstream ifs(passwdFile);
   std::string line;
   std::string token;
@@ -206,6 +215,8 @@ void WebsocketServer::Authenticator::readAuthData(const std::string& passwdFile)
 }
 
 string WebsocketServer::Authenticator::getUserData(size_t luahandle) {
+  std::unique_lock<std::mutex> lock(authMutex);
+
   auto it = m_luahandles.find(luahandle);
   if (it != m_luahandles.end() && conSkeyMap.find((*it).second) != conSkeyMap.end()) {
     return authData[skeyNameMap[conSkeyMap[(*it).second]]].userData;
@@ -214,6 +225,8 @@ string WebsocketServer::Authenticator::getUserData(size_t luahandle) {
 }
 
 string WebsocketServer::Authenticator::getUserName(size_t luahandle) {
+  std::unique_lock<std::mutex> lock(authMutex);
+
   auto it = m_luahandles.find(luahandle);
   if (it != m_luahandles.end() && conSkeyMap.find((*it).second) != conSkeyMap.end()) {
     return skeyNameMap[conSkeyMap[(*it).second]];
@@ -222,6 +235,8 @@ string WebsocketServer::Authenticator::getUserName(size_t luahandle) {
 }
 
 std::vector<size_t> WebsocketServer::Authenticator::getHandles(const string& username) {
+  std::unique_lock<std::mutex> lock(authMutex);
+
   std::vector<size_t> handles;
   const auto& range = nameSkeyMap.equal_range(username);
   for(auto it = range.first; it != range.second; ++it) {
@@ -236,6 +251,8 @@ std::vector<size_t> WebsocketServer::Authenticator::getHandles(const string& use
 }
 
 size_t WebsocketServer::Authenticator::getLuaHandle(connection_hdl c) {
+  std::unique_lock<std::mutex> lock(authMutex);
+
   if(m_luahandles_rev.find(c) == m_luahandles_rev.end()) {
     throw janosh_exception() << msg_info("Lua handle doesn't exist anymore");
   }
@@ -243,12 +260,16 @@ size_t WebsocketServer::Authenticator::getLuaHandle(connection_hdl c) {
 }
 
 connection_hdl WebsocketServer::Authenticator::getConnectionHandle(size_t luaHandle) {
+  std::unique_lock<std::mutex> lock(authMutex);
+
   if(m_luahandles.find(luaHandle) == m_luahandles.end()) {
     throw janosh_exception() << msg_info("Lua handle doesn't exist anymore: " + std::to_string(luaHandle));
   }
   return m_luahandles[luaHandle];
 }
 size_t WebsocketServer::Authenticator::createLuaHandle(connection_hdl c) {
+  std::unique_lock<std::mutex> lock(authMutex);
+
   size_t handle = ++luaHandleMax;
   m_luahandles[handle] = c;
   m_luahandles_rev[c] = handle;
@@ -256,6 +277,8 @@ size_t WebsocketServer::Authenticator::createLuaHandle(connection_hdl c) {
 }
 
 void WebsocketServer::Authenticator::destroyLuaHandle(connection_hdl c) {
+  std::unique_lock<std::mutex> lock(authMutex);
+
   size_t handle = m_luahandles_rev[c];
   m_luahandles.erase(handle);
   m_luahandles_rev.erase(c);
@@ -263,7 +286,7 @@ void WebsocketServer::Authenticator::destroyLuaHandle(connection_hdl c) {
 //    destroySession(conSkeyMap[c]);
 }
 
-WebsocketServer::WebsocketServer(const std::string passwdFile) : m_server(), messageSema(10), auth(passwdFile) {
+WebsocketServer::WebsocketServer(const std::string passwdFile) : m_server(), auth(passwdFile), messageSema(10) {
   if(passwdFile.empty()) {
     this->doAuthenticate = false;
   } else {
@@ -401,10 +424,6 @@ void WebsocketServer::on_message(WebSocket<SERVER> *ws, char *message, size_t le
 
       this->send(auth.getLuaHandle(ws), response);
     } else {
-//      if(messageSema.would_wait()) {
-//        LOG_DEBUG_STR("Websocket: Backlog detected");
-//      }
-
       messageSema.wait();
       LOG_DEBUG_STR("Websocket: On message");
       unique_lock<mutex> lock(m_receive_lock);

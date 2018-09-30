@@ -88,7 +88,7 @@ void Value::init(string v, bool value) {
 
 string Value::makeDBString() const{
     if(type == String)
-      return "s" + escape_json(str());
+      return "s" + str();
     else if(type == Number)
       return "n" + str();
     else if(type == Boolean)
