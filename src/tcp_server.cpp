@@ -36,6 +36,7 @@ using std::ostream;
 
 TcpServer* TcpServer::instance_;
 
+
 TcpServer::TcpServer(int maxThreads) : maxThreads_(maxThreads), context_(1), clients_(context_, ZMQ_ROUTER), workers_(context_, ZMQ_DEALER) {
   ExitHandler::getInstance()->addExitFunc([&](){this->close();});
 }

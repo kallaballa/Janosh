@@ -1,27 +1,28 @@
 #ifndef _JANOSH_DBPATH_HPP
 #define _JANOSH_DBPATH_HPP
 
-#include <boost/smart_ptr.hpp>
-#include <kcpolydb.h>
+#include <memory>
+#include <ktremotedb.h>
 #include <string>
 #include <iostream>
+#include <thread>
+#include <mutex>
 
 #include "path.hpp"
 #include "value.hpp"
 #include "logger.hpp"
 
 namespace janosh {
-  namespace kc = kyotocabinet;
-  typedef kc::DB::Cursor Cursor;
+  typedef  std::shared_ptr<janosh::Cursor> Base;
 
-  class Record : private boost::shared_ptr<kc::DB::Cursor> {
+  class Record : private Base {
     Path pathObj;
     Value valueObj;
     bool doesExist;
-
+    static std::mutex dbMutex;
     void init(Path path);
+    static std::map<std::thread::id,kyototycoon::RemoteDB*> db;
   public:
-    static kc::TreeDB db;
 
     //exact copy referring to the same Cursor*
     Record(const Record& other);
@@ -29,8 +30,10 @@ namespace janosh {
     Record clone();
     Record();
 
-
-    kc::DB::Cursor* getCursorPtr();
+    static kyototycoon::RemoteDB* getDB();
+    static void makeDB();
+    static void destroyAllDB();
+    janosh::Cursor* getCursorPtr();
     const Value::Type getType()  const;
     const size_t getSize() const;
     const size_t getIndex() const;

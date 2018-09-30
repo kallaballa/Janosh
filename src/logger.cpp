@@ -146,29 +146,29 @@ namespace janosh {
     }
   }
 
-  DBLogger::~DBLogger() {
-    _assert_(true);
-  }
-
-  void DBLogger::log(const char* file, int32_t line, const char* func, Kind kind, const char* message) {
-    std::stringstream ss;
-    ss << "DB: " << "(" << file << ":" << line << " in " << func << "):" << message;
-
-    switch (kind) {
-    case DEBUG:
-        LOG(plog::debug) << ss.str();
-      break;
-      case INFO:
-        LOG(plog::info) << ss.str();
-      break;
-      case WARN:
-        LOG(plog::warning) << ss.str();
-      break;
-      case ERROR:
-        LOG(plog::error) << ss.str();
-      break;
-    }
-  }
+//  DBLogger::~DBLogger() {
+//    _assert_(true);
+//  }
+//
+//  void DBLogger::log(const char* file, int32_t line, const char* func, Kind kind, const char* message) {
+//    std::stringstream ss;
+//    ss << "DB: " << "(" << file << ":" << line << " in " << func << "):" << message;
+//
+//    switch (kind) {
+//    case DEBUG:
+//        LOG(plog::debug) << ss.str();
+//      break;
+//      case INFO:
+//        LOG(plog::info) << ss.str();
+//      break;
+//      case WARN:
+//        LOG(plog::warning) << ss.str();
+//      break;
+//      case ERROR:
+//        LOG(plog::error) << ss.str();
+//      break;
+//    }
+//  }
 
   void Logger::init(const LogLevel l) {
     Logger::instance_ = new Logger(l);
@@ -197,10 +197,10 @@ namespace janosh {
 
   void Logger::setDBLogging(bool enabled) {
     Logger::getInstance().dblog_ = enabled;
-    Record::db.tune_logger(&Logger::getInstance().dblogger_, kc::BasicDB::Logger::DEBUG
-        | kc::BasicDB::Logger::INFO
-        | kc::BasicDB::Logger::WARN
-        | kc::BasicDB::Logger::ERROR);
+//    Record::getDB()->tune_logger(&Logger::getInstance().dblogger_, kc::BasicDB::Logger::DEBUG
+//        | kc::BasicDB::Logger::INFO
+//        | kc::BasicDB::Logger::WARN
+//        | kc::BasicDB::Logger::ERROR);
   }
 
   void Logger::registerThread(const string& name) {

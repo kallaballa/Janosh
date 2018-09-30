@@ -25,7 +25,7 @@
 #include <assert.h>
 #include <sstream>
 #include <boost/lexical_cast.hpp>
-#include <kcdb.h>
+#include <ktremotedb.h>
 #include <sstream>
 #include <mutex>
 #include "plog/Log.h"
@@ -33,13 +33,12 @@
 
 namespace janosh {
   using std::string;
-  namespace kc = kyotocabinet;
 
-  class DBLogger: public kc::BasicDB::Logger {
-  public:
-    virtual ~DBLogger();
-    virtual void log(const char* file, int32_t line, const char* func, Kind kind, const char* message);
-  };
+//  class DBLogger: public kc::BasicDB::Logger {
+//  public:
+//    virtual ~DBLogger();
+//    virtual void log(const char* file, int32_t line, const char* func, Kind kind, const char* message);
+//  };
 
   enum LogLevel {
     L_FATAL = 0,
@@ -57,7 +56,7 @@ namespace janosh {
     static const string makeCallString(const string& caller, std::initializer_list<janosh::Record> records);
     bool tracing_;
     bool dblog_;
-    DBLogger dblogger_;
+  //  DBLogger dblogger_;
     Logger(const LogLevel l);
     static Logger* instance_;
   public:

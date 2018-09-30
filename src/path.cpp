@@ -10,6 +10,33 @@ using boost::tokenizer;
 using boost::char_separator;
 using boost::format;
 
+namespace janosh {
+string escape_json(const std::string &s) {
+      std::string o;
+      o.reserve(s.size() * 2);
+      char hexbuffer [4];
+      for (auto c = s.cbegin(); c != s.cend(); ++c)  {
+          switch (*c) {
+          case '"': o.append("\\\""); break;
+          case '\\': o.append("\\\\"); break;
+          case '\b': o.append("\\b"); break;
+          case '\f': o.append("\\f"); break;
+          case '\n': o.append("\\n"); break;
+          case '\r': o.append("\\r"); break;
+          case '\t': o.append("\\t"); break;
+          default:
+              if ('\x00' <= *c && *c <= '\x1f') {
+                sprintf (hexbuffer, "%04x", (int)*c);
+                o.append("\\u");
+                o += hexbuffer;
+              } else {
+                  o.push_back(*c);
+              }
+          }
+      }
+      return o;
+  }
+
 Path::Path() :
     directory(false), wildcard(false) {
 }
@@ -58,6 +85,10 @@ void Path::rebuild() {
   this->prettyStr.reserve(this->components.size() * 10);
   const char slash = '/';
   for (auto it = this->components.begin(); it != this->components.end(); ++it) {
+    const string& key = (*it).key();
+    if(key.find('/') != string::npos)
+      throw path_exception() << string_info( { "illegal path", key });
+
     this->keyStr.push_back(slash);
     this->keyStr.append((*it).key());
     this->prettyStr.push_back(slash);
@@ -264,4 +295,4 @@ const bool Path::above(const Path& other) const {
 
   return false;
 }
-
+}

@@ -4,7 +4,6 @@
 #include "logger.hpp"
 
 namespace janosh {
-  typedef  boost::shared_ptr<kc::DB::Cursor> Base;
 
   void Record::init(Path path) {
     if(path.isWildcard()) {
@@ -50,7 +49,7 @@ namespace janosh {
   }
 
   Record::Record(const Path& path) :
-    Base(Record::db.cursor()),
+    Base(Record::getDB()->cursor()),
     pathObj(path),
     doesExist(false)
   {}
@@ -59,8 +58,29 @@ namespace janosh {
     doesExist(false){
   }
 
-  kc::DB::Cursor* Record::getCursorPtr() {
-    return Base::operator->();
+  kyototycoon::RemoteDB* Record::getDB() {
+    std::unique_lock<std::mutex> lock(dbMutex);
+    assert(Record::db.find(std::this_thread::get_id()) != Record::db.end());
+    return Record::db[std::this_thread::get_id()];
+  }
+
+  void Record::makeDB() {
+    std::unique_lock<std::mutex> lock(dbMutex);
+    if(Record::db.find(std::this_thread::get_id()) == Record::db.end()) {
+      Record::db[std::this_thread::get_id()] = new kyototycoon::RemoteDB();
+      Record::db[std::this_thread::get_id()]->open();
+    }
+  }
+
+
+  void Record::destroyAllDB() {
+    std::unique_lock<std::mutex> lock(dbMutex);
+    for(auto& p : Record::db)
+      p.second->close();
+  }
+
+  janosh::Cursor* Record::getCursorPtr() {
+    return Base::get();
   }
 
   const Value::Type Record::getType()  const {
@@ -307,8 +327,6 @@ namespace janosh {
 
     if(empty())
       throw record_exception() << path_info({"no value found", this->pathObj});
-
-
 
     string v;
     bool s = getCursorPtr()->get_value(&v);

@@ -3,17 +3,16 @@
 
 #include <string>
 #include <vector>
-#include <kcpolydb.h>
-
+#include <ktremotedb.h>
 #include "logger.hpp"
 #include "component.hpp"
 
 namespace janosh {
+  string escape_json(const std::string &s);
   using std::string;
   using std::vector;
 
-  namespace kc = kyotocabinet;
-  typedef kc::DB::Cursor Cursor;
+  typedef kyototycoon::RemoteDB::Cursor Cursor;
 
   class Path {
     string keyStr;

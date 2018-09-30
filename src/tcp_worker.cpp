@@ -12,6 +12,7 @@
 //#include "cache_thread.hpp"
 #include "janosh.hpp"
 #include "tracker.hpp"
+#include "record.hpp"
 
 namespace janosh {
 
@@ -60,6 +61,7 @@ string reconstructCommandLine(Request& req) {
 }
 
 void TcpWorker::run() {
+  Record::makeDB();
 
   std::shared_ptr<zmq::message_t> request(new zmq::message_t());
   while (true) {

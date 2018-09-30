@@ -13,6 +13,7 @@
 #include "exithandler.hpp"
 #include "lua_script.hpp"
 #include "message_queue.hpp"
+#include <ktremotedb.h>
 
 #include <stack>
 #include <thread>
@@ -37,10 +38,8 @@ using boost::tokenizer;
 using boost::char_separator;
 
 namespace janosh {
-  namespace kc = kyotocabinet;
   namespace js = json_spirit;
   namespace fs = boost::filesystem;
-
   using std::cerr;
   using std::cout;
   using std::string;
@@ -83,18 +82,18 @@ namespace janosh {
   void Janosh::open(bool readOnly=false) {
     // open the database
     uint32_t mode;
-    Record::db.tune_options(kc::TreeDB::TLINEAR);
-    Record::db.tune_buckets(655360);
-    Record::db.tune_map(6553600000);
-    Record::db.tune_page_cache(65536000);
-    if(readOnly)
-      mode = kc::PolyDB::OAUTOTRAN | kc::PolyDB::OREADER;
-    else
-      mode = kc::PolyDB::OTRYLOCK | kc::PolyDB::OREADER | kc::PolyDB::OWRITER | kc::PolyDB::OCREATE;
-    if(!Record::db.open(settings_.databaseFile.string(),  mode)) {
-			LOG_FATAL_MSG("open error: " + settings_.databaseFile.string(), Record::db.error().message());
-    }
-
+//    Record::getDB()->tune_options(kc::TreeDB::TLINEAR);
+//    Record::getDB()->tune_buckets(655360);
+//    Record::getDB()->tune_map(6553600000);
+//    Record::getDB()->tune_page_cache(65536000);
+//    if(readOnly)
+//      mode = kyototycoon::PolyDB::OAUTOTRAN | kc::PolyDB::OREADER;
+//    else
+//      mode = kc::PolyDB::OTRYLOCK | kc::PolyDB::OREADER | kc::PolyDB::OWRITER | kc::PolyDB::OCREATE;
+    //settings_.databaseFile.string(),  mode
+//    if(!Record::getDB()->open("localhost")) {
+//			LOG_FATAL_MSG("open error: " + settings_.databaseFile.string(), Record::getDB()->error().message());
+//    }
     ExitHandler::getInstance()->addExitFunc([&](){this->close(); });
     open_ = true;
   }
@@ -106,20 +105,20 @@ namespace janosh {
   void Janosh::close() {
     if(isOpen()) {
       open_ = false;
-      Record::db.close();
+      Record::destroyAllDB();
     }
   }
 
   bool Janosh::beginTransaction() {
-    return Record::db.begin_transaction();
+    return true;// Record::getDB()->begin_transaction();
   }
 
   bool Janosh::beginTransactionTry() {
-    return Record::db.begin_transaction_try();
+    return true;// Record::getDB()->begin_transaction_try();
   }
 
   void Janosh::endTransaction(bool commit) {
-    Record::db.end_transaction(commit);
+   // Record::getDB()->end_transaction(commit);
   }
 
   void Janosh::publish(const string& key, const string& op, const char* value) {
@@ -186,8 +185,8 @@ namespace janosh {
     vis->begin();
 
     size_t cnt = 1;
-
-    if(recs.size() > 1 && this->getFormat() == Json)
+    bool open = recs.size() > 1 && this->getFormat() == Json;
+    if(open)
       out << "{" << '\n';
 
     bool first = true;
@@ -212,7 +211,7 @@ namespace janosh {
       first = false;
     }
 
-    if(recs.size() > 1 && this->getFormat() == Json)
+    if(open)
       out << "}" << '\n';
 
     vis->close();
@@ -244,8 +243,11 @@ namespace janosh {
   size_t Janosh::random(Record rec, std::ostream& out) {
     if(!rec.isDirectory())
       throw janosh_exception() << record_info( { "Path is not a directory", rec });
+    rec.fetch();
+    if(!rec.exists())
+      throw janosh_exception() << record_info( { "Path doesn't exists", rec });
 
-    rec.fetch().readValue();
+    rec.readValue();
     std::mt19937 mt(rd());
     Path parent = rec.path();
 
@@ -287,13 +289,13 @@ namespace janosh {
     std::stack<std::pair<const Component, const Value::Type> > hierachy;
     size_t cnt = 0;
     Path last;
-    Record rec;
+    Record* rec;
     for (size_t i = 0; i < parents.size(); ++i) {
-      rec = parents[i];
-      rec.fetch();
-      const Path& path = rec.path();
-      const Value& value = rec.value();
-      const Value::Type& t = rec.getType();
+      rec = &parents[i];
+      rec->fetch();
+      const Path& path = rec->path();
+      const Value& value = rec->value();
+      const Value::Type& t = rec->getType();
       const Path& parent = path.parent();
 
       const Component& name = path.name();
@@ -357,14 +359,14 @@ namespace janosh {
   }
 
 
-  size_t Janosh::recurseDirectory(Record& travRoot, PrintVisitor* vis, Value::Type rootType, ostream& out) {
-    JANOSH_TRACE( { travRoot });
+  size_t Janosh::recurseDirectory(Record& dir, PrintVisitor* vis, Value::Type rootType, ostream& out) {
+    JANOSH_TRACE( { dir });
 
     size_t cnt = 0;
     std::stack<std::pair<const Component, const Value::Type> > hierachy;
-    Record rec(travRoot);
-
+    Path travRoot = dir.path();
     Path last;
+    Record rec(dir);
     do {
       rec.readValue();
       const Path& path = rec.path();
@@ -376,7 +378,7 @@ namespace janosh {
       const Component& parentName = parent.name();
 
       if (!hierachy.empty()) {
-        if (!travRoot.isAncestorOf(path)) {
+        if (!travRoot.above(path)) {
           break;
         }
 
@@ -478,7 +480,7 @@ namespace janosh {
     }
     changeContainerSize(target.parent(), 1);
     announceOperation(target.path().pretty(), "A" + lexical_cast<string>(size), Tracker::WRITE);
-    return Record::db.add(target.path(), "A" + lexical_cast<string>(size)) ? 1 : 0;
+    return Record::getDB()->add(target.path(), "A" + lexical_cast<string>(size)) ? 1 : 0;
   }
 
   /**
@@ -504,7 +506,7 @@ namespace janosh {
       changeContainerSize(target.parent(), 1);
 
     announceOperation(target.path().pretty(), "O" + lexical_cast<string>(size), Tracker::WRITE);
-    return Record::db.add(target.path(), "O" + lexical_cast<string>(size)) ? 1 : 0;
+    return Record::getDB()->add(target.path(), "O" + lexical_cast<string>(size)) ? 1 : 0;
   }
 
 
@@ -545,7 +547,7 @@ namespace janosh {
     }
 
     announceOperation(dest.path().pretty(), value.makeDBString(), Tracker::WRITE);
-    if(Record::db.add(dest.path(), value.makeDBString())) {
+    if(Record::getDB()->add(dest.path(), value.makeDBString())) {
 //      if(!dest.path().isRoot())
         changeContainerSize(dest.parent(), 1);
       return 1;
@@ -573,7 +575,7 @@ namespace janosh {
     }
 
     announceOperation(dest.path().pretty(),value.makeDBString(), Tracker::WRITE);
-    return Record::db.replace(dest.path(), value.makeDBString());
+    return Record::getDB()->replace(dest.path(), value.makeDBString());
   }
 
 
@@ -624,7 +626,7 @@ namespace janosh {
 
       } else {
         announceOperation(dest.path().pretty(), src.value().makeDBString(), Tracker::WRITE);
-        r = Record::db.replace(dest.path(), src.value().makeDBString());
+        r = Record::getDB()->replace(dest.path(), src.value().makeDBString());
       }
     }
 
@@ -682,7 +684,7 @@ namespace janosh {
         dest = target;
       } else {
         announceOperation(dest.path().pretty(), src.value().makeDBString(), Tracker::WRITE);
-        r = Record::db.replace(dest.path(), src.value().makeDBString());
+        r = Record::getDB()->replace(dest.path(), src.value().makeDBString());
       }
     }
     remove(src);
@@ -804,14 +806,19 @@ namespace janosh {
    * @return number of total records printed.
    */
   size_t Janosh::dump(std::ostream& out) {
-    kc::DB::Cursor* cur = Record::db.cursor();
-    string key,value;
-    cur->jump();
+    janosh::Cursor* cur = Record::getDB()->cursor();
     size_t cnt = 0;
 
-    while(cur->get(&key, &value, true)) {
-      out << "path:" << Path(key).pretty() <<  " value:" << value << '\n';
-      ++cnt;
+    try {
+      string key,value;
+      cur->jump();
+
+      while(cur->get(&key, &value, NULL, true)) {
+        out << "path:" << Path(key).pretty() <<  " value:" << value << '\n';
+        ++cnt;
+      }
+    } catch (janosh_exception& ex) {
+      printException(ex);
     }
     delete cur;
     return cnt;
@@ -822,13 +829,13 @@ namespace janosh {
    * @return number of total records hashed.
    */
   size_t Janosh::hash(std::ostream& out) {
-    kc::DB::Cursor* cur = Record::db.cursor();
+    janosh::Cursor* cur = Record::getDB()->cursor();
     string key,value;
     cur->jump();
     size_t cnt = 0;
     boost::hash<string> hasher;
     size_t h = 0;
-    while(cur->get(&key, &value, true)) {
+    while(cur->get(&key, &value, NULL, true)) {
       h = hasher(lexical_cast<string>(h) + key + value);
       ++cnt;
     }
@@ -842,8 +849,8 @@ namespace janosh {
    * @return 1 on success, 0 on fail
    */
   size_t Janosh::truncate() {
-    if(Record::db.clear())
-      return Record::db.add("/!", "O" + lexical_cast<string>(0)) ? 1 : 0;
+    if(Record::getDB()->clear())
+      return Record::getDB()->add("/!", "O" + lexical_cast<string>(0)) ? 1 : 0;
     else
       return false;
   }
@@ -881,7 +888,7 @@ namespace janosh {
 
     for(; begin != end; ++begin) {
       announceOperation(dest.path().withChild(s + cnt).pretty(), (*begin).makeDBString(), Tracker::WRITE);
-      if(!Record::db.add(dest.path().withChild(s + cnt), (*begin).makeDBString())) {
+      if(!Record::getDB()->add(dest.path().withChild(s + cnt), (*begin).makeDBString())) {
         throw janosh_exception() << record_info({"Failed to add target", dest});
       }
       ++cnt;
@@ -945,7 +952,7 @@ namespace janosh {
           Path target = dest.path().withChild(s + cnt);
           announceOperation(target.pretty(), src.value().makeDBString(), Tracker::WRITE);
 
-          if(!Record::db.add(
+          if(!Record::getDB()->add(
               target,
               src.value().makeDBString()
           )) {
@@ -954,7 +961,7 @@ namespace janosh {
         } else if(dest.isObject()) {
           Path target = dest.path().withChild(src.path().name());
           announceOperation(target.pretty(), src.value().makeDBString(), Tracker::WRITE);
-          if(!Record::db.add(
+          if(!Record::getDB()->add(
               target,
               src.value().makeDBString()
           )) {
@@ -1095,7 +1102,7 @@ namespace janosh {
   size_t Janosh::patch(const Path& path, const Value& value) {
     announceOperation(path.pretty(), value.makeDBString(), Tracker::WRITE);
     if(value.getType() == Value::Object || value.getType() == Value::Array){
- //     return Record::db.set(path, value.makeDBString()) ? 1 : 0;
+ //     return Record::getDB()->set(path, value.makeDBString()) ? 1 : 0;
       return 1;
     }
     else
@@ -1130,7 +1137,7 @@ namespace janosh {
     path.pop();
 
     for(js::Pair& p : obj) {
-      path.pushMember(p.name_);
+      path.pushMember(escape_json(p.name_));
       cnt+=patch(p.value_, path);
       path.pop();
       ++cnt;
@@ -1176,7 +1183,7 @@ namespace janosh {
 
   size_t Janosh::load(const Path& path, const Value& value) {
     announceOperation(path.pretty(), value.makeDBString(), Tracker::WRITE);
-    return Record::db.set(path, value.makeDBString()) ? 1 : 0;
+    return Record::getDB()->set(path, value.makeDBString()) ? 1 : 0;
   }
 
   size_t Janosh::load(js::Value& v, Path& path) {
@@ -1249,7 +1256,8 @@ namespace janosh {
   Janosh* Janosh::instance_ = NULL;
 }
 
-kyotocabinet::TreeDB janosh::Record::db;
+std::mutex janosh::Record::dbMutex;
+std::map<std::thread::id,kyototycoon::RemoteDB*> janosh::Record::db;
 
 void printCommands() {
     std::cerr
@@ -1378,7 +1386,7 @@ int main(int argc, char** argv) {
       Logger::setDBLogging(dblog);
       Tracker::setPrintDirective(printDirective);
       Janosh* instance = Janosh::getInstance();
-      instance->open(false);
+      //instance->open(false);
       if(luafile.empty()) {
         TcpServer* server = TcpServer::getInstance(instance->settings_.maxThreads);
         server->open(instance->settings_.port);
