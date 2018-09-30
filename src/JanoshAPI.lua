@@ -566,9 +566,9 @@ end
 function JanoshClass.publish(self, ...)
   local arg =  {...} 
   if #arg == 1 then
-	janosh_request({"publish",arg[1],"W", ""});
+	self:request({"publish",arg[1],"W", ""});
   elseif #arg == 3 then
-	janosh_request({"publish",arg[1],arg[2],arg[3]});
+	self:request({"publish",arg[1],arg[2],arg[3]});
   elseif #arg == 4 then
 	self:wsSend(arg[1], JSON:encode({arg[2],arg[3],arg[4]}));
   else
