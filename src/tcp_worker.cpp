@@ -13,12 +13,14 @@
 
 namespace janosh {
 
-TcpWorker::TcpWorker(int maxThreads, zmq::context_t* context) :
+TcpWorker::TcpWorker(int maxThreads, zmq::context_t* context, string dbhost, int dbport) :
     JanoshThread("TcpWorker"),
     janosh_(new Janosh()),
     threadSema_(new Semaphore(maxThreads)),
     context_(context),
-    socket_(*context_, ZMQ_REP) {
+    socket_(*context_, ZMQ_REP),
+    dbhost_(dbhost),
+    dbport_(dbport) {
   socket_.connect("inproc://workers");
 }
 
@@ -59,7 +61,7 @@ string reconstructCommandLine(Request& req) {
 }
 
 void TcpWorker::run() {
-  Record::makeDB();
+  Record::makeDB(dbhost_, dbport_);
 
   std::shared_ptr<zmq::message_t> request(new zmq::message_t());
   while (true) {

@@ -20,7 +20,7 @@ TcpClient::~TcpClient() {
     this->close();
 }
 
-void TcpClient::connect(string host, int port) {
+void TcpClient::connect(string url) {
 
   try {
     sock_ = zmq::socket_t(context_, ZMQ_REQ);
@@ -28,9 +28,7 @@ void TcpClient::connect(string host, int port) {
     context_ = zmq::context_t(1);
     sock_ = zmq::socket_t(context_, ZMQ_REQ);
   }
-//  sock_.connect(("tcp://" + host + ":" + std::to_string(port)).c_str());
-  sock_.connect("ipc:///tmp/janosh");
-
+  sock_.connect(url.c_str());
 }
 
 bool endsWith(const std::string &mainStr, const std::string &toMatch)

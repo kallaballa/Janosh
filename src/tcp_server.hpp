@@ -10,6 +10,7 @@
 
 #include "format.hpp"
 #include <zmq.hpp>
+#include <string>
 
 
 namespace janosh {
@@ -21,19 +22,20 @@ class TcpServer {
   zmq::context_t context_;
   zmq::socket_t clients_;
   zmq::socket_t workers_;
-
-  TcpServer(int maxThreads);
+  std::string dbhost_;
+  int dbport_;
+  TcpServer(int maxThreads, std::string dbhost, int dbport);
 
 public:
 	virtual ~TcpServer();
 	bool isOpen();
-  void open(int port);
+  void open(std::string url);
 	void close();
 	bool run();
 
-	static TcpServer* getInstance(int maxThreads) {
+	static TcpServer* getInstance(int maxThreads, std::string dbhost, int dbport) {
 	  if(instance_ == NULL)
-	    instance_ = new TcpServer(maxThreads);
+	    instance_ = new TcpServer(maxThreads, dbhost, dbport);
 	  return instance_;
 	}
 };

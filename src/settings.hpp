@@ -26,7 +26,6 @@ public:
   fs::path janoshFile;
   fs::path databaseFile;
   fs::path logFile;
-  int port;
   int maxThreads;
 
   Settings();

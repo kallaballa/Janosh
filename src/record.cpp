@@ -64,11 +64,11 @@ namespace janosh {
     return Record::db[std::this_thread::get_id()];
   }
 
-  void Record::makeDB() {
+  void Record::makeDB(string host, int port) {
     std::unique_lock<std::mutex> lock(dbMutex);
     if(Record::db.find(std::this_thread::get_id()) == Record::db.end()) {
       Record::db[std::this_thread::get_id()] = new kyototycoon::RemoteDB();
-      Record::db[std::this_thread::get_id()]->open();
+      Record::db[std::this_thread::get_id()]->open(host,port);
     }
   }
 

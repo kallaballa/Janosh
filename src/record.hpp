@@ -31,7 +31,7 @@ namespace janosh {
     Record();
 
     static kyototycoon::RemoteDB* getDB();
-    static void makeDB();
+    static void makeDB(string host, int port);
     static void destroyAllDB();
     janosh::Cursor* getCursorPtr();
     const Value::Type getType()  const;

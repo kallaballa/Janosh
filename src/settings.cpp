@@ -47,12 +47,6 @@ Settings::Settings() {
          error(this->janoshFile.string(), "No database file defined");
        }
 
-       if(find(jObj, "port", v)) {
-         this->port = std::stoi(v.get_str());
-       } else {
-         error(this->janoshFile.string(), "port definition not found");
-       }
-
        if(find(jObj, "maxThreads", v)) {
             this->maxThreads = std::stoi(v.get_str());
        } else {

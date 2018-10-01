@@ -1,5 +1,4 @@
 {
   "database" : "janosh.db",
-  "port": "22222",
   "maxThreads": "100"
 }
