@@ -1292,7 +1292,9 @@ int main(int argc, char** argv) {
     string luafile;
     vector<string> arguments;
     vector<string> defines;
-
+    string host;
+    size_t port;
+    string url;
     int trackingLevel = 0;
 
     po::options_description genericDesc("Options");
@@ -1301,6 +1303,9 @@ int main(int argc, char** argv) {
       ("daemon,d", "Run in daemon mode")
       ("luafile,f", po::value<string>(&luafile), "Run the lua script file")
       ("define,D", po::value<vector<string>>(&defines), "Define a macro for use in lua scripts. The format of the argument is key=value")
+      ("host,H", po::value<string>(&host), "The host of the kyototycoon instance")
+      ("port,P", po::value<size_t>(&port), "The port of the kyototycoon instance")
+      ("url,U", po::value<string>(&url), "The zmq url to either bind or connect to.")
       ("json,j", "Produce json output")
       ("tx,x", "Guard the operation with a transaction")
       ("raw,r", "Produce raw output")
@@ -1384,10 +1389,10 @@ int main(int argc, char** argv) {
       Logger::setDBLogging(dblog);
       Tracker::setPrintDirective(printDirective);
       Janosh* instance = new Janosh();
-      //instance->open(false);
+
       if(luafile.empty()) {
-        TcpServer* server = TcpServer::getInstance(instance->settings_.maxThreads);
-        server->open(instance->settings_.port);
+        TcpServer* server = TcpServer::getInstance(instance->settings_.maxThreads, host, port);
+        server->open(url);
         while (server->run()) {
         }
       } else {
@@ -1419,7 +1424,7 @@ int main(int argc, char** argv) {
         }
         Request req(f, command, typedArgs, execTriggers, verbose, doTransaction, get_parent_info(), "");
         TcpClient client;
-        client.connect("localhost", s.port);
+        client.connect(url);
 
         int rc = client.run(req, std::cout);
         client.close();
@@ -1429,7 +1434,7 @@ int main(int argc, char** argv) {
         TcpClient client;
 
         lua::LuaScript::init([&](){
-          client.connect("localhost", s.port);
+          client.connect(url);
         },[&](Request& req){
           std::stringstream ss;
           int rc = client.run(req, ss);
