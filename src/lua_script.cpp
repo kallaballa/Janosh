@@ -288,6 +288,33 @@ static int l_wsreceive(lua_State* L) {
   return 2;
 }
 
+static int l_wsWaitRegister(lua_State* L) {
+  const RegisterMessage& message = WebsocketServer::getInstance()->waitForRegister();
+
+  lua_pushinteger(L, (long)std::get<0>(message));
+  lua_pushstring(L, std::get<1>(message).c_str());
+  lua_pushstring(L, std::get<2>(message).c_str());
+  lua_pushstring(L, std::get<3>(message).c_str());
+
+  return 4;
+}
+
+static int l_wsAccept(lua_State* L) {
+  connection_hdl h = (connection_hdl)lua_tointeger(L, -4);
+  string user = lua_tostring(L, -3);
+  string pass = lua_tostring(L, -2);
+  string userdata = lua_tostring(L, -1);
+
+  WebsocketServer::getInstance()->accept(h, user, pass, userdata);
+  return 0;
+}
+
+static int l_wsReject(lua_State* L) {
+  connection_hdl h = (connection_hdl)lua_tointeger(L, -2);
+  string reason = lua_tostring(L, -1);
+  WebsocketServer::getInstance()->reject(h, reason);
+  return 0;
+}
 static int l_wssend(lua_State* L) {
   string message = lua_tostring( L, -1 );
   size_t handle = lua_tointeger( L, -2);
@@ -498,6 +525,13 @@ static void install_janosh_functions(lua_State* L, bool first) {
   lua_setglobal(L, "janosh_wsbroadcast");
   lua_pushcfunction(L, l_wsreceive);
   lua_setglobal(L, "janosh_wsreceive");
+  lua_pushcfunction(L, l_wsWaitRegister);
+  lua_setglobal(L, "janosh_wswaitregister");
+  lua_pushcfunction(L, l_wsAccept);
+  lua_setglobal(L, "janosh_wsaccept");
+  lua_pushcfunction(L, l_wsReject);
+  lua_setglobal(L, "janosh_wsreject");
+
   lua_pushcfunction(L, l_wssend);
   lua_setglobal(L, "janosh_wssend");
 

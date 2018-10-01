@@ -286,21 +286,21 @@ void WebsocketServer::Authenticator::destroyLuaHandle(connection_hdl c) {
 //    destroySession(conSkeyMap[c]);
 }
 
-WebsocketServer::WebsocketServer(const std::string passwdFile) : m_server(), auth(passwdFile), messageSema(10) {
+WebsocketServer::WebsocketServer(const std::string passwdFile) : server_(), auth_(passwdFile), receiveLimit(10) {
   if(passwdFile.empty()) {
-    this->doAuthenticate = false;
+    this->doAuthenticate_ = false;
   } else {
-    this->doAuthenticate = true;
-    auth.readAuthData(passwdFile);
+    this->doAuthenticate_ = true;
+    auth_.readAuthData(passwdFile);
   }
-  m_server.onConnection([=](uWS::WebSocket<uWS::SERVER> *ws, uWS::HttpRequest req) {
+  server_.onConnection([=](uWS::WebSocket<uWS::SERVER> *ws, uWS::HttpRequest req) {
       this->on_open(ws);
   });
 
-  m_server.onDisconnection([=](uWS::WebSocket<SERVER> *ws, int code, char *message, size_t length) {
+  server_.onDisconnection([=](uWS::WebSocket<SERVER> *ws, int code, char *message, size_t length) {
       this->on_close(ws);
   });
-  m_server.onMessage([=](WebSocket<SERVER> *ws, char *message, size_t length, OpCode opCode){
+  server_.onMessage([=](WebSocket<SERVER> *ws, char *message, size_t length, OpCode opCode){
     this->on_message(ws, message, length, opCode);
   });
 
@@ -319,10 +319,10 @@ void WebsocketServer::run(uint16_t port) {
   LOG_DEBUG_STR("Websocket: Listen");
 
   // listen on specified port
-  if (m_server.listen(port, nullptr, uS::ListenOptions::REUSE_PORT)) {
+  if (server_.listen(port, nullptr, uS::ListenOptions::REUSE_PORT)) {
     try {
       LOG_DEBUG_STR("Websocket: Run");
-      m_server.run();
+      server_.run();
       LOG_DEBUG_STR("Websocket: End");
     } catch (const std::exception & e) {
       throw e;
@@ -334,10 +334,10 @@ void WebsocketServer::run(uint16_t port) {
 }
 
 string WebsocketServer::loginUser(const connection_hdl h, const std::string& sessionKey) {
-  if(!auth.hasSession(sessionKey)) {
+  if(!auth_.hasSession(sessionKey)) {
     return "session-invalid";
   } else {
-    auth.remapSession(h,sessionKey);
+    auth_.remapSession(h,sessionKey);
     return "session-success:" + sessionKey;
   }
 }
@@ -346,10 +346,10 @@ string WebsocketServer::loginUser(const connection_hdl h, const std::string& use
   if(username.find(' ') < username.size() || password.find(' ') < password.size())
     return "login-invalid";
 
-  if(!auth.hasUsername(username)) {
+  if(!auth_.hasUsername(username)) {
     return "login-notfound";
   } else {
-    string sessionKey = auth.createSession(h, username, password);
+    string sessionKey = auth_.createSession(h, username, password);
     if(!sessionKey.empty()) {
       return "login-success:" + sessionKey;
     } else {
@@ -358,23 +358,26 @@ string WebsocketServer::loginUser(const connection_hdl h, const std::string& use
   }
 }
 
-string WebsocketServer::registerUser(const connection_hdl h, const std::string& username, const std::string& password, const std::string& userdata) {
-  if(username.find(' ') < username.size() || password.find(' ') < password.size())
-    return "register-invalid";
+void WebsocketServer::registerUser(const connection_hdl h, const std::string& username, const std::string& password, const std::string& userdata) {
+  validationQueue_.push(std::make_tuple(h, username, password, userdata));
+}
 
-  if(!auth.hasUsername(username)) {
-    string sessionKey = auth.createUser(h, username, password, userdata);
-    if(!sessionKey.empty())
-      return "register-success:" + sessionKey;
-    else
-      return "register-failed";
+void WebsocketServer::accept(const connection_hdl h, const std::string& username, const std::string& password, const std::string& userdata) {
+  if(!auth_.hasUsername(username)) {
+    string sessionKey = auth_.createUser(h, username, password, userdata);
+    this->send(auth_.getLuaHandle(h), "register-success:" + sessionKey);
   } else {
-    return "register-duplicate";
+    this->send(auth_.getLuaHandle(h), "register-duplicate");
   }
 }
+
+void WebsocketServer::reject(const connection_hdl h, const string& reason) {
+  this->send(auth_.getLuaHandle(h), "register-failed:" + reason);
+}
+
 bool WebsocketServer::logoutUser(const string& sessionKey) {
-  if(auth.hasSession(sessionKey)) {
-    auth.destroySession(sessionKey);
+  if(auth_.hasSession(sessionKey)) {
+    auth_.destroySession(sessionKey);
     return true;
   } else {
     return false;
@@ -383,13 +386,13 @@ bool WebsocketServer::logoutUser(const string& sessionKey) {
 
 void WebsocketServer::on_open(uWS::WebSocket<uWS::SERVER> *ws) {
   LOG_DEBUG_STR("Websocket: Open");
-  m_actions.push(action(SUBSCRIBE, connection_hdl(ws)));
+  actionQueue_.push(Action(SUBSCRIBE, connection_hdl(ws)));
   LOG_DEBUG_STR("Websocket: Open end");
 }
 
 void WebsocketServer::on_close(uWS::WebSocket<uWS::SERVER> *ws) {
   LOG_DEBUG_STR("Websocket: Close");
-  m_actions.push(action(UNSUBSCRIBE, connection_hdl(ws)));
+  actionQueue_.push(Action(UNSUBSCRIBE, connection_hdl(ws)));
   LOG_DEBUG_STR("Websocket: Close end");
 }
 
@@ -400,14 +403,14 @@ void WebsocketServer::on_message(WebSocket<SERVER> *ws, char *message, size_t le
   for(size_t i = 0; i < length; ++i) {
     payload.push_back(message[i]);
   }
-  if((doAuthenticate && auth.hasConnectionHandle(ws)) || !doAuthenticate) {
+  if((doAuthenticate_ && auth_.hasConnectionHandle(ws)) || !doAuthenticate_) {
     std::stringstream ss(payload);
     std::vector<string> tokens;
     string token;
     while(std::getline(ss, token)) {
         tokens.push_back(token);
     }
-    if(tokens.size() == 2 && tokens[0] == "logout" && auth.hasSession(tokens[1])) {
+    if(tokens.size() == 2 && tokens[0] == "logout" && auth_.hasSession(tokens[1])) {
       LOG_DEBUG_STR("Websocket: on message logout");
 
       bool success = logoutUser(tokens[1]);
@@ -417,14 +420,14 @@ void WebsocketServer::on_message(WebSocket<SERVER> *ws, char *message, size_t le
       else
         response = "logout-nosession";
 
-      this->send(auth.getLuaHandle(ws), response);
+      this->send(auth_.getLuaHandle(ws), response);
     } else if(tokens.size() > 1 && (tokens[0] == "register" || tokens[0] == "login")) {
       LOG_DEBUG_STR("Websocket: on message ignore");
       //register or login no existing connection. ignore
     } else {
       LOG_DEBUG_STR("Websocket: on message push");
-      messageSema.wait();
-      m_receive.push(std::make_pair(auth.getLuaHandle(ws), payload));
+      receiveLimit.wait();
+      receiveQueue_.push(std::make_pair(auth_.getLuaHandle(ws), payload));
     }
   } else {
     LOG_DEBUG_STR("Websocket: on message auth");
@@ -437,16 +440,16 @@ void WebsocketServer::on_message(WebSocket<SERVER> *ws, char *message, size_t le
     }
 
     if(tokens.size() == 4 && tokens[0] == "register") {
-      string response = registerUser(ws, tokens[1], tokens[2], tokens[3]);
-      this->send(auth.getLuaHandle(ws), response);
+      registerUser(ws, tokens[1], tokens[2], tokens[3]);
+      //response is sent by either accept or reject
     } else if(tokens.size() == 3 && tokens[0] == "login") {
       string response = loginUser(ws, tokens[1], tokens[2]);
-      this->send(auth.getLuaHandle(ws), response);
+      this->send(auth_.getLuaHandle(ws), response);
     } else if(tokens.size() == 2 && tokens[0] == "login") {
       string response = loginUser(ws, tokens[1]);
-      this->send(auth.getLuaHandle(ws), response);
+      this->send(auth_.getLuaHandle(ws), response);
     } else
-      this->send(auth.getLuaHandle(ws), "auth");
+      this->send(auth_.getLuaHandle(ws), "auth");
   }
 
 
@@ -457,21 +460,21 @@ void WebsocketServer::process_messages() {
   while (1) {
     try {
       LOG_DEBUG_STR("Websocket: Process action pop");
-      action a = m_actions.pop();
+      Action a = actionQueue_.pop();
 
       if (a.type == SUBSCRIBE) {
-        unique_lock<mutex> con_lock(m_connection_lock);
-        m_connections.insert(a.hdl);
-        auth.createLuaHandle(a.hdl);
+        unique_lock<mutex> con_lock(connectionLock_);
+        connectionList_.insert(a.hdl);
+        auth_.createLuaHandle(a.hdl);
       } else if (a.type == UNSUBSCRIBE) {
-        unique_lock<mutex> con_lock(m_connection_lock);
-        m_connections.erase(a.hdl);
-        auth.destroyLuaHandle(a.hdl);
+        unique_lock<mutex> con_lock(connectionLock_);
+        connectionList_.erase(a.hdl);
+        auth_.destroyLuaHandle(a.hdl);
       } else if (a.type == MESSAGE) {
         con_list::iterator it;
         a.hdl->send(a.msg.c_str(), a.msg.size(), OpCode::TEXT);
       } else if(a.type == BROADCAST) {
-        m_server.getDefaultGroup<uWS::SERVER>().broadcast(a.msg.c_str(), a.msg.size(), OpCode::TEXT);
+        server_.getDefaultGroup<uWS::SERVER>().broadcast(a.msg.c_str(), a.msg.size(), OpCode::TEXT);
       } else {
         assert(false);
       }
@@ -488,7 +491,7 @@ void WebsocketServer::process_messages() {
 }
 
 string WebsocketServer::getUserData(size_t luahandle) {
-  string userdata = auth.getUserData(luahandle);
+  string userdata = auth_.getUserData(luahandle);
   if(userdata.empty())
     return "invalid";
   else
@@ -496,7 +499,7 @@ string WebsocketServer::getUserData(size_t luahandle) {
 }
 
 string WebsocketServer::getUserName(size_t luahandle) {
-  string username = auth.getUserName(luahandle);
+  string username = auth_.getUserName(luahandle);
   if(username.empty())
     return "invalid";
   else
@@ -504,32 +507,42 @@ string WebsocketServer::getUserName(size_t luahandle) {
 }
 
 std::vector<size_t> WebsocketServer::getHandles(const string& username) {
-  return auth.getHandles(username);
+  return auth_.getHandles(username);
 }
 
 void WebsocketServer::broadcast(const std::string& s) {
   LOG_DEBUG_STR("Websocket: broadcast");
-  m_actions.push(action(BROADCAST, s));
+  actionQueue_.push(Action(BROADCAST, s));
   LOG_DEBUG_STR("Websocket: broadcast end");
 }
 
-std::pair<size_t, std::string> WebsocketServer::receive() {
+LuaMessage WebsocketServer::receive() {
   LOG_DEBUG_STR("Websocket: receive");
 
-  lua_message msg;
-  m_receive.pop(msg);
-  messageSema.notify();
+  LuaMessage msg;
+  receiveQueue_.pop(msg);
+  receiveLimit.notify();
 
   LOG_DEBUG_STR("Websocket: receive end");
   return msg;
 }
 
+RegisterMessage WebsocketServer::waitForRegister() {
+  LOG_DEBUG_STR("Websocket: waitForRegister");
+
+  RegisterMessage msg;
+  validationQueue_.pop(msg);
+
+  LOG_DEBUG_STR("Websocket: waitForRegister end");
+  return msg;
+}
+
 void WebsocketServer::send(size_t luahandle, const std::string& message) {
   LOG_DEBUG_STR("Websocket: Send");
-  unique_lock<mutex> con_lock(m_connection_lock);
+  unique_lock<mutex> con_lock(connectionLock_);
   LOG_DEBUG_STR("Websocket: Send release");
   try {
-    connection_hdl c = auth.getConnectionHandle(luahandle);
+    connection_hdl c = auth_.getConnectionHandle(luahandle);
     LOG_DEBUG_MSG("Websocket: Payload", message);
     c->send(message.c_str(), message.size(),OpCode::TEXT);
   } catch (janosh_exception& ex) {
@@ -539,15 +552,15 @@ void WebsocketServer::send(size_t luahandle, const std::string& message) {
 }
 
 void WebsocketServer::init(const int port, const string passwdFile) {
-  assert(server_instance == NULL);
-  server_instance = new WebsocketServer(passwdFile);
+  assert(server_instance_ == NULL);
+  server_instance_ = new WebsocketServer(passwdFile);
   std::thread maint([=](){
     janosh::Logger::getInstance().registerThread("Websocket-RunLoop");
-    server_instance->run(port);
+    server_instance_->run(port);
   });
   std::thread t([=]() {
     janosh::Logger::getInstance().registerThread("Websocket-ProcessMessages");
-    server_instance->process_messages();
+    server_instance_->process_messages();
   });
 
   t.detach();
@@ -555,11 +568,11 @@ void WebsocketServer::init(const int port, const string passwdFile) {
 }
 
 WebsocketServer* WebsocketServer::getInstance() {
-  assert(server_instance != NULL);
-  return server_instance;
+  assert(server_instance_ != NULL);
+  return server_instance_;
 }
 
-WebsocketServer* WebsocketServer::server_instance = NULL;
+WebsocketServer* WebsocketServer::server_instance_ = NULL;
 }
 }
 

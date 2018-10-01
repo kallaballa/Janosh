@@ -32,11 +32,11 @@ enum action_type {
 
 typedef WebSocket<SERVER>* connection_hdl;
 
-struct action {
-  action(action_type t, connection_hdl h) :
+struct Action {
+  Action(action_type t, connection_hdl h) :
       type(t), hdl(h) {
   }
-  action(action_type t, std::string m) :
+  Action(action_type t, std::string m) :
       type(t), hdl(NULL), msg(m) {
   }
 
@@ -45,7 +45,8 @@ struct action {
   std::string msg;
 };
 
-typedef std::pair<size_t, std::string> lua_message;
+typedef std::pair<size_t, std::string> LuaMessage;
+typedef std::tuple<connection_hdl, string, string,string> RegisterMessage;
 
 struct Credentials {
   std::string hash;
@@ -98,7 +99,9 @@ private:
   ~WebsocketServer();
   string loginUser(const connection_hdl hdl, const std::string& sessionKey);
   string loginUser(const connection_hdl hdl, const std::string& username, const std::string& password);
-  string registerUser(const connection_hdl hdl, const std::string& username, const std::string& password, const std::string& userdata);
+  void registerUser(const connection_hdl hdl, const std::string& username, const std::string& password, const std::string& userdata);
+
+
   bool logoutUser(const string& sessionKey);
 
   void run(uint16_t port);
@@ -107,13 +110,16 @@ private:
   void on_message(WebSocket<SERVER> *ws, char *message, size_t length, OpCode opCode);
   void process_messages();
 public:
+  void accept(const connection_hdl h, const std::string& username, const std::string& password, const std::string& userdata);
+  void reject(const connection_hdl h, const string& reason);
   string getUserData(size_t luahandle);
   string getUserName(size_t luahandle);
   std::vector<size_t> getHandles(const string& username);
   size_t getHandle(string username);
 
   void broadcast(const std::string& s);
-  std::pair<size_t, std::string> receive();
+  LuaMessage receive();
+  RegisterMessage waitForRegister();
   void send(size_t luahandle, const std::string& message);
 
   static void init(const int port, const string passwdFile = "");
@@ -121,18 +127,20 @@ public:
 private:
   typedef std::set<connection_hdl> con_list;
 
-  Hub m_server;
-  con_list m_connections;
-  Queue<action> m_actions;
+  Hub server_;
+  mutex connectionLock_;
+  con_list connectionList_;
 
-  mutex m_connection_lock;
-  static WebsocketServer* server_instance;
+  Queue<Action> actionQueue_;
+  Queue<LuaMessage> receiveQueue_;
+  Queue<RegisterMessage> validationQueue_;
 
-  Queue<lua_message> m_receive;
 
-  bool doAuthenticate = false;
-  Authenticator auth;
-  Semaphore messageSema;
+  bool doAuthenticate_ = false;
+  Authenticator auth_;
+  Semaphore receiveLimit;
+
+  static WebsocketServer* server_instance_;
 };
 
 }

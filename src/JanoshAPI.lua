@@ -8,6 +8,25 @@ local bit = require "bit"
 local template = require "resty.template"
 io = require "io"
 
+if _VERSION=="Lua 5.1" then
+  local xp = xpcall
+  xpcall = function(f, err, ...)
+    local a = { n = select("#", ...), ...}
+    return xp(function(...) return f(unpack(a,1,a.n)) end, err)
+  end
+end
+
+-- error handler to attach stacktrack to error message
+local ehandler = function(err)
+  return debug.traceback(tostring(err))
+end
+
+-- patch global pcall to attach stacktrace to the error. 
+pcall = function(fn, ...)
+  return xpcall(fn, ehandler, ...)
+end
+
+
 local JanoshClass = {} -- the table representing the class, which will double as the metatable for the instances
 JanoshClass.__index = JanoshClass -- failed table lookups on the instances should fallback to the class table, to get methods
 
@@ -685,6 +704,27 @@ function JanoshClass.wsOpen(self, port, passwdFile)
     janosh_wsopen(port, passwdFile)
   end
 end
+
+function JanoshClass.wsOnRegister(self, callback)
+  lanes.gen("*", function()
+    janosh_register_thread("WsOnRegister")
+    while true do
+      local h,user,pass,userdata = janosh_wswaitregister()
+      status, msg = pcall(callback,user,pass,userdata)
+      if not status then
+        print("Register Validator " .. h .. " failed: ", msg)
+      else
+        if msg == nil then
+	  janosh_wsaccept(h,user,pass,userdata)
+	else
+	  janosh_wsreject(h,msg)
+	end
+      end
+    end
+  end)()
+end
+
+
 
 function JanoshClass.wsOnReceive(self, numThreads, callback) 
   for i=1,numThreads do
