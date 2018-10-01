@@ -64,7 +64,7 @@ bool TcpServer::run() {
     workerVec[i]->runAsynchron();
   }
   try {
-    zmq::proxy(clients_, workers_, NULL);
+    zmq::proxy(static_cast<void*>(clients_), static_cast<void*>(workers_), NULL);
   } catch (janosh_exception& ex) {
     printException(ex);
     //shared->shutdown(0);
