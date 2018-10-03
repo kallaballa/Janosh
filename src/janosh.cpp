@@ -367,8 +367,8 @@ namespace janosh {
     Path travRoot = dir.path();
     Path last;
     Record rec(dir);
+    rec.readValue();
     do {
-      rec.readValue();
       const Path& path = rec.path();
       const Value& value = rec.value();
       const Value::Type& t = rec.getType();

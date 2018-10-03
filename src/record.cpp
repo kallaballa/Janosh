@@ -158,7 +158,7 @@ namespace janosh {
     bool r = getCursorPtr()->step();
     if(r) {
       this->clear();
-      readPath();
+      read();
     }
     return r;
   }
@@ -170,7 +170,7 @@ namespace janosh {
     bool r = getCursorPtr()->step_back();
     if(r) {
       this->clear();
-      readPath();
+      read();
     }
     return r;
   }
@@ -354,11 +354,32 @@ namespace janosh {
     string k;
     bool s = getCursorPtr()->get_key(&k);
     pathObj = k;
+
     return s;
   }
 
   bool Record::read() {
-    return readPath() && readValue();
+    if(!isInitialized())
+             throw record_exception() << path_info({"uninitialized record", this->pathObj});
+
+     string k;
+     string v;
+     bool s = getCursorPtr()->get(&k, &v);
+     pathObj = k;
+     Tracker::getInstancePerThread()->update(path().pretty(), v, Tracker::READ);
+     if(path().isDirectory()) {
+       valueObj = Value(v, true);
+     } else if(path().isWildcard()) {
+       valueObj = Value(v, Value::Range);
+     } else {
+       if(v.at(0) == 'n')
+         valueObj = Value(v.substr(1), Value::Number);
+       if(v.at(0) == 'b')
+         valueObj = Value(v.substr(1), Value::Boolean);
+       if(v.at(0) == 's')
+         valueObj = Value(v.substr(1), Value::String);
+     }
+     return s;
   }
 
   Record& Record::fetch() {
