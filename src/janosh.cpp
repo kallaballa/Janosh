@@ -271,12 +271,12 @@ namespace janosh {
         Path p = rec.path();
         p.pop(false);
         p.pushIndex(dist(mt));
-        Record r(p);
+        Record r = RecordPool::get(p);
         r.fetch();
 
         if(!r.exists())
           p.pushMember(".");
-        return this->get({p}, out);
+        return this->get({RecordPool::get(p)}, out);
     }
   }
 
@@ -442,7 +442,7 @@ namespace janosh {
    */
   Record Janosh::makeTemp(const Value::Type& t) {
     JANOSH_TRACE({},t);
-    Record tmp("/tmp/.");
+    Record tmp = RecordPool::get("/tmp/.");
 
     if(!tmp.fetch().exists()) {
       makeDirectory(tmp, Value::Array, 0);
@@ -450,10 +450,10 @@ namespace janosh {
     }
 
     if(t == Value::String) {
-      tmp = tmp.path().withChild(tmp.getSize());
+      tmp = RecordPool::get(tmp.path().withChild(tmp.getSize()));
       this->add(tmp, Value("", Value::String));
     } else {
-      tmp = tmp.path().withChild(tmp.getSize()).asDirectory();
+      tmp = RecordPool::get(tmp.path().withChild(tmp.getSize()).asDirectory());
       this->makeDirectory(tmp, t, 0);
     }
     return tmp;
@@ -469,7 +469,7 @@ namespace janosh {
   size_t Janosh::makeArray(Record target, size_t size, bool bounds) {
     JANOSH_TRACE({target}, size);
     target.fetch();
-    Record base = Record(target.path().basePath());
+    Record base = RecordPool::get(target.path().basePath());
     base.fetch();
     if(!target.isDirectory() || target.exists() || base.exists()) {
       throw janosh_exception() << record_info({"Invalid target",target});
@@ -492,7 +492,7 @@ namespace janosh {
   size_t Janosh::makeObject(Record target, size_t size) {
     JANOSH_TRACE({target}, size);
     target.fetch();
-    Record base = Record(target.path().basePath());
+    Record base = RecordPool::get(target.path().basePath());
     base.fetch();
     if(!target.isDirectory() || target.exists() || base.exists()) {
       throw janosh_exception() << record_info({"Invalid target",target});
@@ -604,21 +604,21 @@ namespace janosh {
     size_t r;
     if(dest.isDirectory()) {
       if(src.isDirectory()) {
-        target = dest.path();
+        target = RecordPool::get(dest.path());
         remove(dest,false);
         r = this->copy(src,target);
       } else {
-        target = dest.path().basePath();
+        target = RecordPool::get(dest.path().basePath());
         remove(dest, false);
         r = this->copy(src,target);
       }
 
-      dest = Record(target.path());
+      dest = RecordPool::get(target.path());
       dest.fetch();
     } else {
       if(src.isDirectory()) {
-        Record target = dest.path().asDirectory();
-        Record wildcard = src.path().asWildcard();
+        Record target = RecordPool::get(dest.path().asDirectory());
+        Record wildcard = RecordPool::get(src.path().asWildcard());
         remove(dest, false);
         makeDirectory(target, src.getType());
         r = this->append(wildcard, target);
@@ -666,7 +666,7 @@ namespace janosh {
       if(src.isDirectory())
         target = dest;
       else
-        target = dest.path().basePath();
+        target = RecordPool::get(dest.path().basePath());
 
       if(dest.exists())
         remove(dest);
@@ -734,7 +734,7 @@ namespace janosh {
 
     Record parent = rec.parent();
     Path targetPath = rec.path();
-    Record target(targetPath);
+    Record target = RecordPool::get(targetPath);
     parent.fetch();
     target.fetch();
 
@@ -763,7 +763,7 @@ namespace janosh {
 
     if(pack && parent.isArray()) {
       parent.read();
-      Record child = Record(parent.path()).fetch();
+      Record child = RecordPool::get(parent.path()).fetch();
       size_t left = parent.getSize();
       child.step();
       for(size_t i = 0; i < left; ++i) {
@@ -777,11 +777,11 @@ namespace janosh {
           Record indexPos;
 
           if(child.isDirectory()) {
-            indexPos = parent.path().withChild(i).asDirectory();
+            indexPos = RecordPool::get(parent.path().withChild(i).asDirectory());
             copy(child, indexPos);
             remove(child, false);
           } else {
-            indexPos = parent.path().withChild(i);
+            indexPos = RecordPool::get(parent.path().withChild(i));
             copy(child, indexPos);
             announceOperation(child.path().pretty(),"", Tracker::DELETE);
             child.remove();
@@ -928,9 +928,9 @@ namespace janosh {
       if(src.isDirectory()) {
         Record target;
         if(dest.isObject()) {
-          target = dest.path().withChild(src.path().name()).asDirectory();
+          target = RecordPool::get(dest.path().withChild(src.path().name()).asDirectory());
         } else if(dest.isArray()) {
-          target = dest.path().withChild(s + cnt).asDirectory();
+          target = RecordPool::get(dest.path().withChild(s + cnt).asDirectory());
         } else {
           throw janosh_exception() << record_info({"can't append to a value", dest});
         }
@@ -943,7 +943,7 @@ namespace janosh {
           throw janosh_exception() << record_info({"failed to create directory", target});
         }
 
-        Record wildcard = src.path().asWildcard();
+        Record wildcard = RecordPool::get(src.path().asWildcard());
         if(!append(wildcard, target)) {
           throw janosh_exception() << record_info({"failed to append values", target});
         }
@@ -956,7 +956,7 @@ namespace janosh {
               target,
               src.value().makeDBString()
           )) {
-            throw janosh_exception() << record_info({"add failed", target});
+            throw janosh_exception() << record_info({"add failed", RecordPool::get(target)});
           }
         } else if(dest.isObject()) {
           Path target = dest.path().withChild(src.path().name());
@@ -965,7 +965,7 @@ namespace janosh {
               target,
               src.value().makeDBString()
           )) {
-            throw janosh_exception() << record_info({"add failed",target});
+            throw janosh_exception() << record_info({"add failed", RecordPool::get(target)});
           }
         }
       }
@@ -997,7 +997,7 @@ namespace janosh {
 
     if((src.isRange() || src.isDirectory()) && !dest.exists()) {
       makeDirectory(dest, src.getType());
-      Record wildcard = src.path().asWildcard();
+      Record wildcard = RecordPool::get(src.path().asWildcard());
       return this->append(wildcard, dest);
     } else if (src.isValue() && dest.isValue()) {
       return this->set(dest, src.value());
@@ -1040,7 +1040,7 @@ namespace janosh {
 
     if(src.isDirectory()) {
       tmp = makeTemp(src.getType());
-      Record wildcard = src.path().asWildcard();
+      Record wildcard = RecordPool::get(src.path().asWildcard());
       this->append(wildcard, tmp);
     } else {
       tmp = makeTemp(Value::String);
@@ -1066,7 +1066,7 @@ namespace janosh {
 
     tmp.fetch();
     replace(tmp,dest);
-    Record tmpDir("/tmp/.");
+    Record tmpDir = RecordPool::get("/tmp/.");
     remove(tmpDir);
     src = dest;
 
@@ -1106,7 +1106,7 @@ namespace janosh {
       return 1;
     }
     else
-      return this->set(Record(path), value);
+      return this->set(RecordPool::get(path), value);
   }
 
   size_t Janosh::patch(js::Value& v, Path& path) {
@@ -1131,9 +1131,9 @@ namespace janosh {
   size_t Janosh::patch(js::Object& obj, Path& path) {
     size_t cnt = 0;
     path.pushMember(".");
-    Record rec(path);
+    Record rec = RecordPool::get(path);
     if(!rec.fetch().exists())
-      cnt+=this->makeObject(path);
+      cnt+=this->makeObject(RecordPool::get(path));
     path.pop();
 
     for(js::Pair& p : obj) {
@@ -1150,11 +1150,11 @@ namespace janosh {
     size_t cnt = 0;
     int index = 0;
     path.pushMember(".");
-    Record rec(path);
+    Record rec = RecordPool::get(path);
     if(!rec.fetch().exists())
-      cnt+=this->makeArray(path);
+      cnt+=this->makeArray(RecordPool::get(path));
     else
-      index = this->size(path);
+      index = this->size(RecordPool::get(path));
     path.pop();
 
     for(js::Value& v : array){

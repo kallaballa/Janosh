@@ -45,7 +45,7 @@ namespace janosh {
 
   //clone the cursor position not the Cursor*
   Record Record::clone() {
-    return Record(this->path());
+    return RecordPool::get(this->path());
   }
 
   Record::Record(const Path& path) :
@@ -117,6 +117,10 @@ namespace janosh {
 
     this->clear();
     readPath();
+  }
+
+  void Record::setPath(const string& p) {
+    this->pathObj = p;
   }
 
   bool Record::setValue(const string& v) {
@@ -252,7 +256,7 @@ namespace janosh {
   }
 
   Record Record::parent() const {
-    return Record(this->path().parent());
+    return RecordPool::get(this->path().parent());
   }
 
   vector<Record> Record::getParents() const {
@@ -417,5 +421,8 @@ namespace janosh {
 
       return os;
   }
+
+  std::mutex RecordPool::mutex_;
+  std::vector<Record> RecordPool::pool_;
 }
 

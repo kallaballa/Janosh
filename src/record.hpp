@@ -13,22 +13,24 @@
 #include "logger.hpp"
 
 namespace janosh {
-  typedef  std::shared_ptr<janosh::Cursor> Base;
+  class RecordPool;
 
-  class Record : private Base {
+  class Record : public std::shared_ptr<janosh::Cursor> {
+    friend class RecordPool;
     Path pathObj;
     Value valueObj;
     bool doesExist;
     static std::mutex dbMutex;
     void init(Path path);
     static std::map<std::thread::id,kyototycoon::RemoteDB*> db;
-  public:
-
     //exact copy referring to the same Cursor*
-    Record(const Record& other);
     Record(const Path& path);
-    Record clone();
+  public:
+    typedef  std::shared_ptr<janosh::Cursor> Base;
+
     Record();
+    Record(const Record& other);
+    Record clone();
 
     static kyototycoon::RemoteDB* getDB();
     static void makeDB(string host, int port);
@@ -39,6 +41,7 @@ namespace janosh {
     const size_t getIndex() const;
 
     bool get(string& k, string& v);
+    void setPath(const string& p);
     bool setValue(const string& v);
 
     void clear();
@@ -81,5 +84,33 @@ namespace janosh {
   std::ostream& operator<< (std::ostream& os, const janosh::Path& p);
   std::ostream& operator<< (std::ostream& os, const janosh::Value& v);
   std::ostream& operator<< (std::ostream& os, const janosh::Record& r);
+
+  class RecordPool {
+    static std::mutex mutex_;
+    static std::vector<Record> pool_;
+public:
+    static Record get(const string& path) {
+      std::unique_lock<std::mutex>(mutex_);
+      std::cerr << "PoolSize: " << pool_.size() << std::endl;
+      if(pool_.empty()) {
+        Record r(path);
+        pool_.push_back(r);
+        return r;
+      } else {
+        for(auto& r : pool_) {
+          if(static_cast<Record::Base*>(&r)->use_count() == 1) {
+            std::cerr << "PoolReuse" << std::endl;
+
+            r.setPath(path);
+            return r;
+          }
+        }
+
+        Record r(path);
+        pool_.push_back(r);
+        return r;
+      }
+    }
+  };
 }
 #endif

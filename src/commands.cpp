@@ -19,7 +19,7 @@ public:
       std::vector<Record> recs;
       for (size_t i = 0; i < params.size() -1; ++i)  {
         const Value& p = params[i];
-        recs.push_back(Record(p.str()));
+        recs.push_back(RecordPool::get(p.str()));
       }
 
       if (!janosh->filter(recs, params.back().str(), out))
@@ -36,14 +36,14 @@ public:
 
   virtual Result operator()(const std::vector<Value>& params, std::ostream& out) {
     if (params.size() == 1) {
-      Record rec(params[0].str());
+      Record rec = RecordPool::get(params[0].str());
       if(rec.isDirectory()) {
         return {janosh->random(rec, out), "Successful"};
       }
       else
         return {-1, "Expected a directory"};
     } else if(params.size() == 2) {
-      Record rec(params[0].str());
+      Record rec = RecordPool::get(params[0].str());
       if(rec.isDirectory()) {
         return {janosh->random(rec, params[1].str(), out), "Successful"};
       }
@@ -63,7 +63,7 @@ public:
 
   virtual Result operator()(const std::vector<Value>& params, std::ostream& out) {
     if (params.size() == 1) {
-      Record rec(params[0].str());
+      Record rec = RecordPool::get(params[0].str());
       rec.fetch();
       if(rec.exists())
         return {1, "Successful"};
@@ -87,7 +87,7 @@ public:
       for(const Value& p : params) {
         LOG_DEBUG_MSG("Removing", p.str());
 //FIXME use cursors for batch operations
-        Record path(p.str());
+        Record path = RecordPool::get(p.str());
         cnt += janosh->remove(path);
         LOG_DEBUG(cnt);
       }
@@ -178,7 +178,7 @@ public:
     if (params.size() != 1)
       return {-1, "Expected one path"};
 
-    if (janosh->makeArray(Record(params.front().str())))
+    if (janosh->makeArray(RecordPool::get(params.front().str())))
       return {1, "Successful"};
     else
       return {-1, "Failed"};
@@ -195,7 +195,7 @@ public:
     if (params.size() != 1)
       return {-1, "Expected one path"};
 
-    if (janosh->makeObject(Record(params.front().str())))
+    if (janosh->makeObject(RecordPool::get(params.front().str())))
       return {1, "Successful"};
     else
       return {-1, "Failed"};
@@ -253,7 +253,7 @@ public:
       const string path = params.front().str();
 
       for (auto it = params.begin(); it != params.end(); it += 2) {
-        if (!janosh->add(Record((*it).str()), (*(it + 1))))
+        if (!janosh->add(RecordPool::get((*it).str()), (*(it + 1))))
           return {-1, "Failed"};
       }
 
@@ -274,7 +274,7 @@ public:
     } else {
 
       for (auto it = params.begin(); it != params.end(); it += 2) {
-        if (!janosh->replace(Record((*it).str()), (*(it + 1))))
+        if (!janosh->replace(RecordPool::get((*it).str()), (*(it + 1))))
           return {-1, "Failed"};
       }
 
@@ -296,7 +296,7 @@ public:
 
       size_t cnt = 0;
       for (auto it = params.begin(); it != params.end(); it += 2) {
-        cnt += janosh->set(Record((*it).str()), (*(it + 1)));
+        cnt += janosh->set(RecordPool::get((*it).str()), (*(it + 1)));
       }
 
       if (cnt == 0)
@@ -317,8 +317,8 @@ public:
     if (params.size() != 2) {
       return {-1, "Expected two paths"};
     } else {
-      Record src(params.front().str());
-      Record dest(params.back().str());
+      Record src = RecordPool::get(params.front().str());
+      Record dest = RecordPool::get(params.back().str());
       src.fetch();
 
       if (!src.exists())
@@ -343,8 +343,8 @@ public:
     if (params.size() != 2) {
       return {-1, "Expected two paths"};
     } else {
-      Record src(params.front().str());
-      Record dest(params.back().str());
+      Record src = RecordPool::get(params.front().str());
+      Record dest = RecordPool::get(params.back().str());
       src.fetch();
 
       if (!src.exists())
@@ -369,8 +369,8 @@ public:
     if (params.size() != 2) {
       return {-1, "Expected two paths"};
     } else {
-      Record src(params.front().str());
-      Record dest(params.back().str());
+      Record src = RecordPool::get(params.front().str());
+      Record dest = RecordPool::get(params.back().str());
       src.fetch();
 
       if (!src.exists())
@@ -395,7 +395,7 @@ public:
     if (params.size() < 2) {
       return {-1, "Expected a path and a list of values"};
     } else {
-      Record target(params.front().str());
+      Record target = RecordPool::get(params.front().str());
       size_t cnt = janosh->append(params.begin() + 1, params.end(), target);
       return {cnt, "Successful"};
     }
@@ -428,7 +428,7 @@ public:
     if (params.size() != 1) {
       return {-1, "Expected a path"};
     } else {
-      Record p(params.front().str());
+      Record p = RecordPool::get(params.front().str());
       out << janosh->size(p) << '\n';
     }
     return {0, "Successful"};
@@ -447,7 +447,7 @@ public:
     } else {
       std::vector<Record> recs;
       for(const Value& p : params) {
-        recs.push_back(Record(p.str()));
+        recs.push_back(RecordPool::get(p.str()));
       }
 
       if (!janosh->get(recs, out))
