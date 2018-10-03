@@ -4,6 +4,7 @@
 #include "exception.hpp"
 #include "semaphore.hpp"
 
+#include <sys/socket.h>
 #include <fstream>
 #include <cryptopp/base64.h>
 #include <cryptopp/hex.h>
@@ -16,6 +17,7 @@
 #include <mutex>
 #include <functional>
 #include <thread>
+
 
 
 namespace janosh {
@@ -385,6 +387,8 @@ bool WebsocketServer::logoutUser(const string& sessionKey) {
 }
 
 void WebsocketServer::on_open(uWS::WebSocket<uWS::SERVER> *ws) {
+  int buf = 100;
+  setsockopt(ws->getFd(),SOL_SOCKET, SO_RCVBUF, &buf, sizeof(buf));
   LOG_DEBUG_STR("Websocket: Open");
   actionQueue_.push(Action(SUBSCRIBE, connection_hdl(ws)));
   LOG_DEBUG_STR("Websocket: Open end");
