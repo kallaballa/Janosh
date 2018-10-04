@@ -511,7 +511,7 @@ std::vector<kt::TimedDB*> kt_run(int argc, const char** argv) {
     if (pldbpath) usage();
     dbpaths.push_back(":");
   }
-  std::vector<kt::TimedDB*> dbs = proc(dbpaths, host, port, tout, thnum, logpath, logkinds,
+  dbs = proc(dbpaths, host, port, tout, thnum, logpath, logkinds,
                     ulogpath, ulim, uasi, sid, omode, asi, ash, bgspath, bgsi, bgscomp,
                     dmn, pidpath, cmdpath, scrpath, mhost, mport, rtspath, riv,
                     plsvpath, plsvex, pldbpath);
@@ -638,7 +638,7 @@ static std::vector<kt::TimedDB*> proc(const std::vector<std::string>& dbpaths,
     ulogdbs = new DBUpdateLogger[dbnum];
   }
 
-  dbs.reserve(dbnum);
+  dbs.resize(dbnum);
   DBLogger dblogger(logger_, logkinds);
 
   std::map<std::string, int32_t> dbmap;
