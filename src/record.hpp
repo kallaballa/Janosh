@@ -2,7 +2,6 @@
 #define _JANOSH_DBPATH_HPP
 
 #include <memory>
-#include <ktremotedb.h>
 #include <string>
 #include <iostream>
 #include <thread>
@@ -20,11 +19,11 @@ namespace janosh {
     Path pathObj;
     Value valueObj;
     bool doesExist;
-    static std::mutex dbMutex;
     void init(Path path);
-    static std::map<std::thread::id,kyototycoon::RemoteDB*> db;
+    static kyototycoon::TimedDB* db;
     //exact copy referring to the same Cursor*
     Record(const Path& path);
+    janosh::Cursor* getCursorPtr();
   public:
     typedef  std::shared_ptr<janosh::Cursor> Base;
 
@@ -32,10 +31,9 @@ namespace janosh {
     Record(const Record& other);
     Record clone();
 
-    static kyototycoon::RemoteDB* getDB();
-    static void makeDB(string host, int port);
-    static void destroyAllDB();
-    janosh::Cursor* getCursorPtr();
+    static kyototycoon::TimedDB* getDB();
+    static void setDB(kyototycoon::TimedDB* db);
+
     const Value::Type getType()  const;
     const size_t getSize() const;
     const size_t getIndex() const;
@@ -90,26 +88,25 @@ namespace janosh {
     static std::vector<Record> pool_;
 public:
     static Record get(const string& path) {
-      std::unique_lock<std::mutex>(mutex_);
-      std::cerr << "PoolSize: " << pool_.size() << std::endl;
-      if(pool_.empty()) {
-        Record r(path);
-        pool_.push_back(r);
-        return r;
-      } else {
-        for(auto& r : pool_) {
-          if(static_cast<Record::Base*>(&r)->use_count() == 1) {
-            std::cerr << "PoolReuse" << std::endl;
-
-            r.setPath(path);
-            return r;
-          }
-        }
-
-        Record r(path);
-        pool_.push_back(r);
-        return r;
-      }
+      //std::unique_lock<std::mutex>(mutex_);
+      return Record(path);
+      //FIXME pool records;
+//      if(pool_.empty()) {
+//        Record r(path);
+//        pool_.push_back(r);
+//        return r;
+//      } else {
+//        for(auto& r : pool_) {
+//          if(static_cast<Record::Base*>(&r)->use_count() == 1) {
+//            r.setPath(path);
+//            return r;
+//          }
+//        }
+//
+//        Record r(path);
+//        pool_.push_back(r);
+//        return r;
+//      }
     }
   };
 }

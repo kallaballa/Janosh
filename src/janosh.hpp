@@ -35,7 +35,7 @@ public:
   ~Janosh();
 
   void setFormat(Format f);
-  void open(bool readOnly);
+  void open(const string& ktdbstring);
   bool isOpen();
   void close();
   bool beginTransaction();

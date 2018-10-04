@@ -3,7 +3,7 @@
 
 #include <string>
 #include <vector>
-#include <ktremotedb.h>
+#include <kttimeddb.h>
 #include "logger.hpp"
 #include "component.hpp"
 
@@ -12,7 +12,7 @@ namespace janosh {
   using std::string;
   using std::vector;
 
-  typedef kyototycoon::RemoteDB::Cursor Cursor;
+  typedef kyototycoon::TimedDB::Cursor Cursor;
 
   class Path {
     string keyStr;

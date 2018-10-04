@@ -28,6 +28,7 @@
 #include "json_spirit/json_spirit.h"
 #include "jsoncons/json.hpp"
 #include "jsoncons_ext/jsonpath/json_query.hpp"
+#include "ktserver.hpp"
 
 using std::string;
 using std::endl;
@@ -79,7 +80,30 @@ namespace janosh {
     return this->format;
   }
 
-  void Janosh::open(bool readOnly=false) {
+// -th 3 -port 1978 -pid kyoto.pid -log ktserver.log -oat -uasi 10 -asi 10 -ash -sid 1001 -ulog ulog -ulim 104857600 'janosh.kct#opts=c#pccap=256m#dfunit=8'
+  void Janosh::open(const string& ktdbstring) {
+    const char * argv[] = {
+        "ktserver",
+        "-th",
+        "3",
+        "-log",
+        "ktserver.log",
+        "-oat",
+        "-uasi",
+        "10",
+        "-asi",
+        "10",
+        "-ash",
+        "-sid",
+        "1001",
+        "-ulog",
+        "ulog",
+        "-ulim",
+        "104857600",
+        ktdbstring.c_str()
+    };
+    std::vector<kt::TimedDB*> dbs = kt_run(18,argv);
+    Record::setDB(dbs[0]);
     // open the database
 //    uint32_t mode;
 //    Record::getDB()->tune_options(kc::TreeDB::TLINEAR);
@@ -105,7 +129,7 @@ namespace janosh {
   void Janosh::close() {
     if(isOpen()) {
       open_ = false;
-      Record::destroyAllDB();
+      kt_cleanup();
     }
   }
 
@@ -247,12 +271,10 @@ namespace janosh {
     if(!rec.exists())
       throw janosh_exception() << record_info( { "Path doesn't exists", rec });
 
-    rec.readValue();
     std::mt19937 mt(rd());
     Path parent = rec.path();
 
     if(rec.isObject()) {
-      rec.read();
       std::uniform_int_distribution<size_t> dist(1, rec.getSize());
       size_t pick = dist(mt);
 
@@ -261,7 +283,6 @@ namespace janosh {
         if (rec.path().parent() != parent) {
           do {
             rec.step();
-            rec.readPath();
           } while (rec.path().parent() != parent);
         }
       }
@@ -276,7 +297,7 @@ namespace janosh {
 
         if(!r.exists())
           p.pushMember(".");
-        return this->get({RecordPool::get(p)}, out);
+        return this->get({r}, out);
     }
   }
 
@@ -367,7 +388,7 @@ namespace janosh {
     Path travRoot = dir.path();
     Path last;
     Record rec(dir);
-    rec.readValue();
+    rec.read();
     do {
       const Path& path = rec.path();
       const Value& value = rec.value();
@@ -1239,7 +1260,7 @@ namespace janosh {
 
   void Janosh::report(ostream& out) {
     std::map<string,string> stat;
-    Record::getDB()->report(&stat);
+    //Record::getDB()->report(&stat);
     for(auto& p : stat) {
       out << p.first << ":" << p.second << std::endl;
     }
@@ -1254,8 +1275,7 @@ namespace janosh {
   }
 }
 
-std::mutex janosh::Record::dbMutex;
-std::map<std::thread::id,kyototycoon::RemoteDB*> janosh::Record::db;
+kyototycoon::TimedDB* janosh::Record::db;
 
 void printCommands() {
     std::cerr
@@ -1389,7 +1409,7 @@ int main(int argc, char** argv) {
       Logger::setDBLogging(dblog);
       Tracker::setPrintDirective(printDirective);
       Janosh* instance = new Janosh();
-
+      instance->open("janosh.kct#opts=c#pccap=256m#dfunit=8");
       if(luafile.empty()) {
         TcpServer* server = TcpServer::getInstance(instance->settings_.maxThreads, host, port);
         server->open(url);

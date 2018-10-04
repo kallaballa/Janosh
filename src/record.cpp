@@ -58,25 +58,12 @@ namespace janosh {
     doesExist(false){
   }
 
-  kyototycoon::RemoteDB* Record::getDB() {
-    std::unique_lock<std::mutex> lock(dbMutex);
-    assert(Record::db.find(std::this_thread::get_id()) != Record::db.end());
-    return Record::db[std::this_thread::get_id()];
+  kyototycoon::TimedDB* Record::getDB() {
+    return Record::db;
   }
 
-  void Record::makeDB(string host, int port) {
-    std::unique_lock<std::mutex> lock(dbMutex);
-    if(Record::db.find(std::this_thread::get_id()) == Record::db.end()) {
-      Record::db[std::this_thread::get_id()] = new kyototycoon::RemoteDB();
-      Record::db[std::this_thread::get_id()]->open(host,port);
-    }
-  }
-
-
-  void Record::destroyAllDB() {
-    std::unique_lock<std::mutex> lock(dbMutex);
-    for(auto& p : Record::db)
-      p.second->close();
+  void Record::setDB(kyototycoon::TimedDB* db) {
+    Record::db = db;
   }
 
   janosh::Cursor* Record::getCursorPtr() {
@@ -121,6 +108,7 @@ namespace janosh {
 
   void Record::setPath(const string& p) {
     this->pathObj = p;
+    this->doesExist = false;
   }
 
   bool Record::setValue(const string& v) {

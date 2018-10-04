@@ -61,8 +61,6 @@ string reconstructCommandLine(Request& req) {
 }
 
 void TcpWorker::run() {
-  Record::makeDB(dbhost_, dbport_);
-
   std::shared_ptr<zmq::message_t> request(new zmq::message_t());
   while (true) {
     try {
