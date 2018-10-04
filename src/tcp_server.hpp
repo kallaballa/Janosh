@@ -22,9 +22,8 @@ class TcpServer {
   zmq::context_t context_;
   zmq::socket_t clients_;
   zmq::socket_t workers_;
-  std::string dbhost_;
-  int dbport_;
-  TcpServer(int maxThreads, std::string dbhost, int dbport);
+
+  TcpServer(int maxThreads);
 
 public:
 	virtual ~TcpServer();
@@ -33,9 +32,9 @@ public:
 	void close();
 	bool run();
 
-	static TcpServer* getInstance(int maxThreads, std::string dbhost, int dbport) {
+	static TcpServer* getInstance(int maxThreads) {
 	  if(instance_ == NULL)
-	    instance_ = new TcpServer(maxThreads, dbhost, dbport);
+	    instance_ = new TcpServer(maxThreads);
 	  return instance_;
 	}
 };

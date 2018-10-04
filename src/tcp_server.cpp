@@ -37,7 +37,7 @@ using std::ostream;
 TcpServer* TcpServer::instance_;
 
 
-TcpServer::TcpServer(int maxThreads, string dbhost, int dbport) : maxThreads_(maxThreads), context_(1), clients_(context_, ZMQ_ROUTER), workers_(context_, ZMQ_DEALER), dbhost_(dbhost), dbport_(dbport) {
+TcpServer::TcpServer(int maxThreads) : maxThreads_(maxThreads), context_(1), clients_(context_, ZMQ_ROUTER), workers_(context_, ZMQ_DEALER) {
   ExitHandler::getInstance()->addExitFunc([&](){this->close();});
 }
 
@@ -60,7 +60,7 @@ bool TcpServer::run() {
   std::vector<TcpWorker*> workerVec;
 
   for(size_t i=0; i < maxThreads_; ++i) {
-    workerVec.push_back(new TcpWorker(maxThreads_,&context_, dbhost_, dbport_));
+    workerVec.push_back(new TcpWorker(maxThreads_,&context_));
     workerVec[i]->runAsynchron();
   }
   try {

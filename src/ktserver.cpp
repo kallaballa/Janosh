@@ -35,7 +35,13 @@ int32_t g_procid;                        // process ID number
 double g_starttime;                      // start time
 bool g_daemon;                           // daemon flag
 kc::Compressor* bgscomp = NULL;
-
+const char* pidpath = NULL;
+OpCount* opcounts;
+std::vector<std::string> dbpaths;
+int32_t dbnum;
+std::vector<kt::TimedDB*> dbs;
+kt::UpdateLogger* ulog = NULL;
+DBUpdateLogger* ulogdbs = NULL;
 
 // function prototypes
 static void usage();
@@ -360,7 +366,7 @@ static void killserver(int signum) {
 // parse arguments of the command
 std::vector<kt::TimedDB*> kt_run(int argc, const char** argv) {
   bool argbrk = false;
-  std::vector<std::string> dbpaths;
+
   const char* host = NULL;
   int32_t port = kt::DEFPORT;
   double tout = DEFTOUT;
@@ -377,7 +383,6 @@ std::vector<kt::TimedDB*> kt_run(int argc, const char** argv) {
   const char* bgspath = NULL;
   double bgsi = DEFBGSI;
   bool dmn = false;
-  const char* pidpath = NULL;
   const char* cmdpath = NULL;
   const char* scrpath = NULL;
   const char* mhost = NULL;
@@ -620,9 +625,8 @@ static std::vector<kt::TimedDB*> proc(const std::vector<std::string>& dbpaths,
   }
 
 
-  int32_t dbnum = dbpaths.size();
-  kt::UpdateLogger* ulog = NULL;
-  DBUpdateLogger* ulogdbs = NULL;
+  dbnum = dbpaths.size();
+
   if (ulogpath) {
     ulog = new kt::UpdateLogger;
     log(Logger::SYSTEM, "opening the update log: path=%s sid=%u", ulogpath, sid);
@@ -633,7 +637,7 @@ static std::vector<kt::TimedDB*> proc(const std::vector<std::string>& dbpaths,
     }
     ulogdbs = new DBUpdateLogger[dbnum];
   }
-  std::vector<kt::TimedDB*> dbs;
+
   dbs.reserve(dbnum);
   DBLogger dblogger(logger_, logkinds);
 
@@ -695,7 +699,7 @@ static std::vector<kt::TimedDB*> proc(const std::vector<std::string>& dbpaths,
     }
   }
 
-  OpCount* opcounts = new OpCount[thnum];
+  opcounts = new OpCount[thnum];
   for (int32_t i = 0; i < thnum; i++) {
     for (int32_t j = 0; j <= CNTMISC; j++) {
       opcounts[i][j] = 0;
@@ -718,35 +722,35 @@ static std::vector<kt::TimedDB*> proc(const std::vector<std::string>& dbpaths,
 bool kt_cleanup() {
   bool err = false;
 //
-    slave->stop();
-    slave->join();
-    logger_->close();
-    delete bgscomp;
+  slave->stop();
+  slave->join();
+  logger_->close();
+  delete bgscomp;
 
-//
-//
-//  if (pidpath) kc::File::remove(pidpath);
-//  delete[] opcounts;
-//
-//  for (int32_t i = 0; i < dbnum; i++) {
-//    const std::string& dbpath = dbpaths[i];
-//    log(Logger::SYSTEM, "closing a database: path=%s", dbpath.c_str());
-//    if (!dbs[i].close()) {
-//      const kc::BasicDB::Error& e = dbs[i].error();
-//      log(Logger::ERROR, "could not close a database file: %s: %s: %s",
-//               dbpath.c_str(), e.name(), e.message());
-//      err = true;
-//    }
-//  }
-//  delete[] dbs;
-//  if (ulog) {
-//    delete[] ulogdbs;
-//    if (!ulog->close()) {
-//      eprintf("%s: closing the update log faild\n", g_progname);
-//      err = true;
-//    }
-//    delete ulog;
-//  }
+  if (pidpath)
+    kc::File::remove(pidpath);
+  delete[] opcounts;
+
+  for (int32_t i = 0; i < dbnum; i++) {
+    const std::string& dbpath = dbpaths[i];
+    log(Logger::SYSTEM, "closing a database: path=%s", dbpath.c_str());
+    if (!dbs[i]->close()) {
+      const kc::BasicDB::Error& e = dbs[i]->error();
+      log(Logger::ERROR, "could not close a database file: %s: %s: %s", dbpath.c_str(), e.name(), e.message());
+      err = true;
+    }
+  }
+  for(auto db : dbs)
+    delete db;
+
+  if (ulog) {
+    delete[] ulogdbs;
+    if (!ulog->close()) {
+      eprintf("%s: closing the update log faild\n", g_progname);
+      err = true;
+    }
+    delete ulog;
+  }
 
 //  log(Logger::SYSTEM, "================ [FINISH]: pid=%d", g_procid);
   return err ? 1 : 0;

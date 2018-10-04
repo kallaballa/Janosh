@@ -103,6 +103,7 @@ namespace janosh {
         ktdbstring.c_str()
     };
     std::vector<kt::TimedDB*> dbs = kt_run(18,argv);
+    assert(dbs.size() == 1);
     Record::setDB(dbs[0]);
     // open the database
 //    uint32_t mode;
@@ -1260,6 +1261,7 @@ namespace janosh {
 
   void Janosh::report(ostream& out) {
     std::map<string,string> stat;
+    assert(false);
     //Record::getDB()->report(&stat);
     for(auto& p : stat) {
       out << p.first << ":" << p.second << std::endl;
@@ -1312,9 +1314,8 @@ int main(int argc, char** argv) {
     string luafile;
     vector<string> arguments;
     vector<string> defines;
-    string host;
-    size_t port;
     string url;
+    string dbstring;
     int trackingLevel = 0;
 
     po::options_description genericDesc("Options");
@@ -1323,8 +1324,7 @@ int main(int argc, char** argv) {
       ("daemon,d", "Run in daemon mode")
       ("luafile,f", po::value<string>(&luafile), "Run the lua script file")
       ("define,D", po::value<vector<string>>(&defines), "Define a macro for use in lua scripts. The format of the argument is key=value")
-      ("host,H", po::value<string>(&host), "The host of the kyototycoon instance")
-      ("port,P", po::value<size_t>(&port), "The port of the kyototycoon instance")
+      ("dbstring,S", po::value<string>(&dbstring), "The kyototycoon db string")
       ("url,U", po::value<string>(&url), "The zmq url to either bind or connect to.")
       ("json,j", "Produce json output")
       ("tx,x", "Guard the operation with a transaction")
@@ -1409,9 +1409,10 @@ int main(int argc, char** argv) {
       Logger::setDBLogging(dblog);
       Tracker::setPrintDirective(printDirective);
       Janosh* instance = new Janosh();
-      instance->open("janosh.kct#opts=c#pccap=256m#dfunit=8");
+      //"janosh.kct#opts=c#pccap=256m#dfunit=8"
+      instance->open(dbstring);
       if(luafile.empty()) {
-        TcpServer* server = TcpServer::getInstance(instance->settings_.maxThreads, host, port);
+        TcpServer* server = TcpServer::getInstance(instance->settings_.maxThreads);
         server->open(url);
         while (server->run()) {
         }

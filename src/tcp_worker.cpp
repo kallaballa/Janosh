@@ -13,14 +13,12 @@
 
 namespace janosh {
 
-TcpWorker::TcpWorker(int maxThreads, zmq::context_t* context, string dbhost, int dbport) :
+TcpWorker::TcpWorker(int maxThreads, zmq::context_t* context) :
     JanoshThread("TcpWorker"),
     janosh_(new Janosh()),
     threadSema_(new Semaphore(maxThreads)),
     context_(context),
-    socket_(*context_, ZMQ_REP),
-    dbhost_(dbhost),
-    dbport_(dbport) {
+    socket_(*context_, ZMQ_REP) {
   socket_.connect("inproc://workers");
 }
 
