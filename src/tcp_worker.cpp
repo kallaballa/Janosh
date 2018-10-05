@@ -74,6 +74,7 @@ void TcpWorker::run() {
     }
     string requestData;
     requestData.assign((const char*)request->data(), request->size());
+    LOG_DEBUG_STR(requestData);
     if(requestData == "begin") {
       LOG_DEBUG_STR("Begin transaction");
       bool begin = janosh_->beginTransaction();
