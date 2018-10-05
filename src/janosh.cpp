@@ -142,15 +142,15 @@ namespace janosh {
   }
 
   bool Janosh::beginTransaction() {
-    return true;// Record::getDB()->begin_transaction();
+    return Record::getDB()->begin_transaction();
   }
 
   bool Janosh::beginTransactionTry() {
-    return true;// Record::getDB()->begin_transaction_try();
+    return Record::getDB()->begin_transaction_try();
   }
 
   void Janosh::endTransaction(bool commit) {
-   // Record::getDB()->end_transaction(commit);
+    Record::getDB()->end_transaction(commit);
   }
 
   void Janosh::publish(const string& key, const string& op, const char* value) {
@@ -1266,14 +1266,6 @@ namespace janosh {
     return cnt;
   }
 
-  void Janosh::report(ostream& out) {
-    std::map<string,string> stat;
-    assert(false);
-    //Record::getDB()->report(&stat);
-    for(auto& p : stat) {
-      out << p.first << ":" << p.second << std::endl;
-    }
-  }
   bool Janosh::boundsCheck(Record p) {
     Record parent = p.parent();
 
@@ -1460,21 +1452,21 @@ int main(int argc, char** argv) {
         client.connect(connectUrl);
 
         int rc = client.run(req, std::cout);
-        client.close();
+        client.close(rc == 0);
         return rc;
       } else {
         Settings s;
         TcpClient client;
 
         lua::LuaScript::init([&](){
-          client.connect(bindUrl);
+          client.connect(connectUrl);
         },[&](Request& req){
           std::stringstream ss;
           int rc = client.run(req, ss);
           return std::make_pair(rc, ss.str());
-        },[&](){
+        },[&](bool commit){
           try {
-          client.close();
+          client.close(commit);
           } catch (std::exception& ex) {
             LOG_DEBUG_MSG("client.close() threw: ",ex.what());
           }

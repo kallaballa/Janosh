@@ -18,10 +18,9 @@ class TcpClient {
 
 public:
 	TcpClient();
-	virtual ~TcpClient();
 	void connect(string url);
 	int run(Request& req, std::ostream& out);
-	void close();
+	void close(bool commit);
 };
 
 } /* namespace janosh */

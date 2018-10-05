@@ -22,14 +22,7 @@ void DatabaseThread::run() {
 
   try {
     setResult(false);
-    bool begin = true;
 
-    if(!req_.doTransaction_) {
-      LOG_DEBUG_STR("Disabling transactions");
-    }
-    if(req_.doTransaction_)
-      begin = janosh_->beginTransaction();
-    assert(begin);
 
     if (!req_.command_.empty()) {
       LOG_DEBUG_MSG("Execute command", req_.command_);

@@ -61,6 +61,7 @@ string reconstructCommandLine(Request& req) {
 
 void TcpWorker::run() {
   std::shared_ptr<zmq::message_t> request(new zmq::message_t());
+
   while (true) {
     try {
       socket_.recv(request.get());
@@ -69,6 +70,25 @@ void TcpWorker::run() {
       LOG_DEBUG_STR("End of request chain");
       setResult(false);
       return;
+    }
+    string requestData;
+    requestData.assign((const char*)request->data(), request->size());
+    if(requestData == "begin") {
+      bool begin = janosh_->beginTransaction();
+      assert(begin);
+      string reply = "done";
+      socket_.send(reply.data(), reply.size());
+      continue;
+    } else if(requestData == "commit") {
+      janosh_->endTransaction(true);
+      string reply = "done";
+      socket_.send(reply.data(), reply.size());
+      continue;
+    } else if(requestData == "abort") {
+      janosh_->endTransaction(false);
+      string reply = "done";
+      socket_.send(reply.data(), reply.size());
+      continue;
     }
 
     std::ostringstream sso;

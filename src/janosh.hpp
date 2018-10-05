@@ -76,7 +76,6 @@ public:
 
   size_t dump(ostream& out);
   size_t hash(ostream& out);
-  void report(ostream& out);
   size_t truncate();
 
 private:

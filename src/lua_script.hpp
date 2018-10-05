@@ -19,7 +19,7 @@ class LuaScript {
 public:
   LuaScript(std::function<void()> openCallback,
         std::function<std::pair<int,string>(janosh::Request&)> requestCallback,
-        std::function<void()> closeCallback, lua_State* l = NULL);
+        std::function<void(bool)> closeCallback, lua_State* l = NULL);
     ~LuaScript();
 
     void defineMacros(const std::vector<std::pair<string,string>>& macros);
@@ -29,13 +29,13 @@ public:
     void run();
     void clean();
     void performOpen(const string& strID, bool lockRequest = true);
-    void performClose(bool lockRequest = true);
+    void performClose(bool lockRequest, bool commit);
     void printTransactions(std::ostream& os);
     std::pair<int, string>  performRequest(janosh::Request req, bool doTransaction);
 
     static void init(std::function<void()> openCallback,
         std::function<std::pair<int,string>(janosh::Request&)> requestCallback,
-        std::function<void()> closeCallback) {
+        std::function<void(bool)> closeCallback) {
       assert(instance_ == NULL);
       instance_ = new LuaScript(openCallback,requestCallback,closeCallback);
     }
@@ -47,7 +47,7 @@ public:
     }
     std::function<void()> openCallback_;
     std::function<std::pair<int,string>(janosh::Request&)> requestCallback_;
-    std::function<void()> closeCallback_;
+    std::function<void(bool)> closeCallback_;
     lua_State* L;
 private:
     static LuaScript* instance_;

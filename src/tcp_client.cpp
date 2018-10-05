@@ -17,9 +17,6 @@ TcpClient::TcpClient() :
     sock_(context_, ZMQ_REQ) {
 }
 
-TcpClient::~TcpClient() {
-    this->close();
-}
 
 void TcpClient::connect(string url) {
 
@@ -30,6 +27,13 @@ void TcpClient::connect(string url) {
     sock_ = zmq::socket_t(context_, ZMQ_REQ);
   }
   sock_.connect(url.c_str());
+  string begin="begin";
+  zmq::message_t reply;
+  sock_.send(begin.data(), begin.size());
+  sock_.recv(&reply);
+  string strReply;
+  strReply.assign((const char*)reply.data(), reply.size());
+  assert(strReply == "done");
 }
 
 bool endsWith(const std::string &mainStr, const std::string &toMatch)
@@ -79,8 +83,17 @@ int TcpClient::run(Request& req, std::ostream& out) {
   return returnCode;
 }
 
-void TcpClient::close() {
+void TcpClient::close(bool commit) {
     LOG_DEBUG_STR("Closing socket");
+    string message="commit";
+    if(!commit)
+      message="abort";
+    zmq::message_t reply;
+    sock_.send(message.data(), message.size());
+    sock_.recv(&reply);
+    string strReply;
+    strReply.assign((const char*)reply.data(), reply.size());
+    assert(strReply == "done");
     sock_.close();
 }
 } /* namespace janosh */

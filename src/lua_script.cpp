@@ -388,7 +388,8 @@ static int l_open(lua_State* L) {
 }
 
 static int l_close(lua_State* L) {
-  LuaScript::getInstance()->performClose();
+  bool commit = lua_toboolean(L, -1);
+  LuaScript::getInstance()->performClose(true,commit);
   return 0;
 }
 
@@ -596,7 +597,7 @@ void printTransactionsHandler(int signum) {
 
 LuaScript::LuaScript(std::function<void()> openCallback,
     std::function<std::pair<int,string>(janosh::Request&)> requestCallback,
-    std::function<void()> closeCallback, lua_State* l) : openCallback_(openCallback), requestCallback_(requestCallback), closeCallback_(closeCallback) {
+    std::function<void(bool)> closeCallback, lua_State* l) : openCallback_(openCallback), requestCallback_(requestCallback), closeCallback_(closeCallback) {
   if(l == NULL) {
     L = luaL_newstate();
     install_janosh_functions(L, true);
@@ -706,7 +707,7 @@ void LuaScript::performOpen(const string& strID, bool lockRequest) {
   }
 }
 
-void LuaScript::performClose(bool lockRequest) {
+void LuaScript::performClose(bool lockRequest, bool commit) {
   if(lockRequest) {
     std::unique_lock<std::mutex> lock(open_lock_);
 #ifdef __JANOSH_DEBUG_QUEUE__
@@ -715,7 +716,7 @@ void LuaScript::performClose(bool lockRequest) {
     if(!isOpen)
       throw janosh_exception() << string_info({"Attempt to close and request that isn't open"});
 
-    closeCallback_();
+    closeCallback_(commit);
     isOpen = false;
     if(!open_queue_.empty())
       open_queue_.pop_front();
@@ -732,7 +733,7 @@ void LuaScript::performClose(bool lockRequest) {
 #endif
     if(!isOpen)
       throw janosh_exception() << string_info({"Attempt to close and request that isn't open"});
-    closeCallback_();
+    closeCallback_(commit);
     isOpen = false;
 #ifdef __JANOSH_DEBUG_QUEUE__
     std::cerr << "### closeend: " << std::this_thread::get_id() << std::endl;
@@ -750,7 +751,7 @@ std::pair<int, string> LuaScript::performRequest(janosh::Request req, bool doTra
     performOpen(req.info_, false);
     req.doTransaction_ = doTransaction;
     auto result = requestCallback_(req);
-    performClose(false);
+    performClose(false, result.first == 0);
 #ifdef __JANOSH_DEBUG_QUEUE__
     std::cerr << " ### reqend: " << std::this_thread::get_id() << std::endl;
 #endif
