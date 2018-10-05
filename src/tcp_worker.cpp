@@ -80,6 +80,7 @@ void TcpWorker::run() {
       assert(begin);
       string reply = "done";
       socket_.send(reply.data(), reply.size());
+      LOG_DEBUG_STR("Begin end");
       continue;
     } else if(requestData == "commit") {
       LOG_DEBUG_STR("Commit transaction");
