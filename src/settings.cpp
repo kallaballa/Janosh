@@ -28,7 +28,6 @@ Settings::Settings() {
    }
 
    this->janoshFile = fs::path(dir.string() + "janosh.json");
-   this->logFile = fs::path(dir.string() + "janosh.log");
 
    if(!fs::exists(janoshFile)) {
      error("janosh configuration not found: ", janoshFile);
@@ -40,12 +39,6 @@ Settings::Settings() {
        js::read(is,janoshConf);
        js::Object jObj = janoshConf.get_obj();
        js::Value v;
-
-       if(find(jObj, "database", v)) {
-         this->databaseFile = fs::path(v.get_str());
-       } else {
-         error(this->janoshFile.string(), "No database file defined");
-       }
 
        if(find(jObj, "maxThreads", v)) {
             this->maxThreads = std::stoi(v.get_str());

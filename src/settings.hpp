@@ -24,8 +24,6 @@ using std::string;
 class Settings {
 public:
   fs::path janoshFile;
-  fs::path databaseFile;
-  fs::path logFile;
   int maxThreads;
   string dbString;
   string ktopts;
