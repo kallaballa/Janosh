@@ -393,9 +393,9 @@ static int l_close(lua_State* L) {
 }
 
 static int l_mouse_move(lua_State* L) {
+#ifndef JANOSH_NO_XDO
   float y = boost::lexical_cast<float>(lua_tostring( L, -1 ));
   float x = boost::lexical_cast<float>(lua_tostring( L, -2));
-#ifndef JANOSH_NO_XDO
   auto size = XDO::getInstance()->getScreenSize();
   XDO::getInstance()->mouseMove(x * size.first,y * size.second);
 #else
@@ -406,9 +406,9 @@ static int l_mouse_move(lua_State* L) {
 }
 
 static int l_mouse_move_rel(lua_State* L) {
+#ifndef JANOSH_NO_XDO
   int y = lua_tointeger( L, -1 );
   int x = lua_tointeger( L, -2);
-#ifndef JANOSH_NO_XDO
   XDO::getInstance()->mouseMoveRelative(x,y);
 #else
   LOG_DEBUG_STR("Compiled without XDO support");
@@ -418,8 +418,8 @@ static int l_mouse_move_rel(lua_State* L) {
 }
 
 static int l_mouse_down(lua_State* L) {
-  size_t button = lua_tointeger( L, -1);
 #ifndef JANOSH_NO_XDO
+  size_t button = lua_tointeger( L, -1);
   XDO::getInstance()->mouseDown(button);
 #else
   LOG_DEBUG_STR("Compiled without xdo support");
@@ -429,8 +429,8 @@ static int l_mouse_down(lua_State* L) {
 }
 
 static int l_mouse_up(lua_State* L) {
-  size_t button = lua_tointeger( L, -1);
 #ifndef JANOSH_NO_XDO
+  size_t button = lua_tointeger( L, -1);
   XDO::getInstance()->mouseUp(button);
 #else
   LOG_DEBUG_STR("Compiled without XDO support");
@@ -440,9 +440,8 @@ static int l_mouse_up(lua_State* L) {
 }
 
 static int l_key_down(lua_State* L) {
-  string keySym = lua_tostring( L, -1);
-
 #ifndef JANOSH_NO_XDO
+  string keySym = lua_tostring( L, -1);
   XDO::getInstance()->keyDown(keySym);
 #else
   LOG_DEBUG_STR("Compiled without XDO support");
@@ -452,8 +451,8 @@ static int l_key_down(lua_State* L) {
 }
 
 static int l_key_up(lua_State* L) {
-  string keySym = lua_tostring( L, -1);
 #ifndef JANOSH_NO_XDO
+  string keySym = lua_tostring( L, -1);
   XDO::getInstance()->keyUp(keySym);
 #else
   LOG_DEBUG_STR("Compiled without XDO support");
@@ -463,8 +462,8 @@ static int l_key_up(lua_State* L) {
 }
 
 static int l_key_type(lua_State* L) {
-  string keySym = lua_tostring( L, -1);
 #ifndef JANOSH_NO_XDO
+  string keySym = lua_tostring( L, -1);
   XDO::getInstance()->keyType(keySym);
 #else
   LOG_DEBUG_STR("Compiled without XDO support");
