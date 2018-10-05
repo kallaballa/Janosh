@@ -387,8 +387,8 @@ bool WebsocketServer::logoutUser(const string& sessionKey) {
 }
 
 void WebsocketServer::on_open(uWS::WebSocket<uWS::SERVER> *ws) {
-//  int buf = 50;
-//  setsockopt(ws->getFd(),SOL_SOCKET, SO_RCVBUF, &buf, sizeof(buf));
+  int buf = 50;
+  setsockopt(ws->getFd(),SOL_SOCKET, SO_RCVBUF, &buf, sizeof(buf));
   LOG_DEBUG_STR("Websocket: Open");
   actionQueue_.push(Action(SUBSCRIBE, connection_hdl(ws)));
   LOG_DEBUG_STR("Websocket: Open end");
