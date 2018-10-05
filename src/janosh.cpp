@@ -81,29 +81,31 @@ namespace janosh {
   }
 
 // -th 3 -port 1978 -pid kyoto.pid -log ktserver.log -oat -uasi 10 -asi 10 -ash -sid 1001 -ulog ulog -ulim 104857600 'janosh.kct#opts=c#pccap=256m#dfunit=8'
-  void Janosh::open(const string& ktdbstring) {
-    const char * argv[] = {
-        "ktserver",
-        "-th",
-        "3",
-        "-log",
-        "ktserver.log",
-        "-oat",
-        "-uasi",
-        "10",
-        "-asi",
-        "10",
-        "-ash",
-        "-sid",
-        "1001",
-        "-ulog",
-        "ulog",
-        "-ulim",
-        "104857600",
-        ktdbstring.c_str()
-    };
-    std::vector<kt::TimedDB*> dbs = kt_run(18,argv);
-    std::cerr << dbs.size() << std::endl;
+  void Janosh::open(const string& ktdbstring, const string& ktopts, size_t threads) {
+    using namespace std;
+    using namespace boost;
+    std::vector<string> vopts;
+    vopts.push_back("ktserver");
+    vopts.push_back("-th");
+    vopts.push_back(std::to_string(threads));
+
+    escaped_list_separator<char> sep('\\', ' ', '\"');
+    tokenizer<escaped_list_separator<char> > tok(ktopts, sep);
+    for (tokenizer<escaped_list_separator<char> >::iterator beg = tok.begin(); beg != tok.end(); ++beg) {
+      vopts.push_back(*beg);
+    }
+
+    vopts.push_back(ktdbstring);
+
+    std::vector<char*> cstrings;
+    cstrings.reserve(vopts.size());
+
+    for (auto& s : vopts)
+      cstrings.push_back(static_cast<char*>(&s[0]));
+
+    char ** argv = cstrings.data();
+
+    std::vector<kt::TimedDB*> dbs = kt_run(cstrings.size(),argv);
     assert(dbs.size() == 1);
     Record::setDB(dbs[0]);
     // open the database
@@ -1317,6 +1319,7 @@ int main(int argc, char** argv) {
     vector<string> defines;
     string url;
     string dbstring;
+    string ktopts = "-pid kyoto.pid -log ktserver.log -oat -uasi 10 -asi 10 -ash -sid 1001 -ulog ulog -ulim 104857600";
     int trackingLevel = 0;
 
     po::options_description genericDesc("Options");
@@ -1326,6 +1329,7 @@ int main(int argc, char** argv) {
       ("luafile,f", po::value<string>(&luafile), "Run the lua script file")
       ("define,D", po::value<vector<string>>(&defines), "Define a macro for use in lua scripts. The format of the argument is key=value")
       ("dbstring,S", po::value<string>(&dbstring), "The kyototycoon db string")
+      ("ktopts,O", po::value<string>(&ktopts), "The kyototycoon command line options. Do not include -th because it is set based on number of janosh threads.")
       ("url,U", po::value<string>(&url), "The zmq url to either bind or connect to.")
       ("json,j", "Produce json output")
       ("tx,x", "Guard the operation with a transaction")
@@ -1410,8 +1414,7 @@ int main(int argc, char** argv) {
       Logger::setDBLogging(dblog);
       Tracker::setPrintDirective(printDirective);
       Janosh* instance = new Janosh();
-      //"janosh.kct#opts=c#pccap=256m#dfunit=8"
-      instance->open(dbstring);
+      instance->open(dbstring,ktopts, instance->settings_.maxThreads);
       if(luafile.empty()) {
         TcpServer* server = TcpServer::getInstance(instance->settings_.maxThreads);
         server->open(url);
@@ -1476,14 +1479,16 @@ int main(int argc, char** argv) {
           char_separator<char> ssep("=", 0, boost::keep_empty_tokens);
           tokenizer<char_separator<char> > tok(s, ssep);
           size_t cnt = 0;
+          std::vector<string> tokens;
           for(const auto& t : tok) {
+            tokens.push_back(t);
             ++cnt;
           }
 
           if(cnt == 1) {
-            macros.push_back(std::make_pair(*tok.begin(), "1"));
+            macros.push_back(std::make_pair(tokens[0], "1"));
           } else if (cnt == 2) {
-            macros.push_back(std::make_pair(*tok.begin(), *(++tok.begin())));
+            macros.push_back(std::make_pair(tokens[0], tokens[1]));
           } else {
             LOG_FATAL_MSG("Malformed define", s);
           }

@@ -364,7 +364,7 @@ static void killserver(int signum) {
 
 
 // parse arguments of the command
-std::vector<kt::TimedDB*> kt_run(int argc, const char** argv) {
+std::vector<kt::TimedDB*> kt_run(int argc, char** argv) {
   bool argbrk = false;
 
   const char* host = NULL;
@@ -623,7 +623,6 @@ static std::vector<kt::TimedDB*> proc(const std::vector<std::string>& dbpaths,
       return {};
     }
   }
-
 
   dbnum = dbpaths.size();
 

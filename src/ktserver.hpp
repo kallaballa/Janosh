@@ -13,7 +13,7 @@
 
 namespace kt = kyototycoon;
 
-std::vector<kt::TimedDB*> kt_run(int argc, const char** argv);
+std::vector<kt::TimedDB*> kt_run(int argc, char** argv);
 bool kt_cleanup();
 
 #endif /* SRC_KTSERVER_HPP_ */
