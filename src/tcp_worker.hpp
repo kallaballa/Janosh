@@ -14,11 +14,10 @@ class TcpWorker : public JanoshThread {
   shared_ptr<Semaphore> threadSema_;
   zmq::context_t* context_;
   zmq::socket_t socket_;
-  std::mutex* transactionMutex_;
   Request readRequest();
 
 public:
-  explicit TcpWorker(std::mutex* transactionMutex, int maxThreads, zmq::context_t* context);
+  explicit TcpWorker(int maxThreads, zmq::context_t* context);
   void run();
   bool connected();
 };

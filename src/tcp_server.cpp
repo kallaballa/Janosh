@@ -60,7 +60,7 @@ bool TcpServer::run() {
   std::vector<TcpWorker*> workerVec;
 
   for(size_t i=0; i < (size_t)maxThreads_; ++i) {
-    workerVec.push_back(new TcpWorker(&transactionMutex_, maxThreads_,&context_));
+    workerVec.push_back(new TcpWorker(maxThreads_,&context_));
     workerVec[i]->runAsynchron();
   }
   try {

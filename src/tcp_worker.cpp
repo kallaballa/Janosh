@@ -13,13 +13,12 @@
 
 namespace janosh {
 
-TcpWorker::TcpWorker(std::mutex* transactionMutex, int maxThreads, zmq::context_t* context) :
+TcpWorker::TcpWorker(int maxThreads, zmq::context_t* context) :
     JanoshThread("TcpWorker"),
     janosh_(new Janosh()),
     threadSema_(new Semaphore(maxThreads)),
     context_(context),
-    socket_(*context_, ZMQ_REP),
-    transactionMutex_(transactionMutex) {
+    socket_(*context_, ZMQ_REP) {
   socket_.connect("inproc://workers");
 }
 
@@ -73,29 +72,27 @@ void TcpWorker::run() {
       setResult(false);
       return;
     }
+    bool begin = janosh_->beginTransaction();
+    assert(begin);
     string requestData;
     requestData.assign((const char*)request->data(), request->size());
     LOG_DEBUG_STR(requestData);
     if(requestData == "begin") {
-      std::unique_lock<std::mutex> lock(*transactionMutex_);
       LOG_DEBUG_STR("Begin transaction");
       string reply = "done";
       socket_.send(reply.data(), reply.size());
-      bool begin = janosh_->beginTransaction();
-      assert(begin);
+
+
       LOG_DEBUG_STR("Begin end");
       continue;
     } else if(requestData == "commit") {
-      std::unique_lock<std::mutex> lock(*transactionMutex_);
       LOG_DEBUG_STR("Commit transaction");
-      janosh_->endTransaction(true);
       string reply = "done";
       socket_.send(reply.data(), reply.size());
       continue;
     } else if(requestData == "abort") {
-      std::unique_lock<std::mutex> lock(*transactionMutex_);
       LOG_DEBUG_STR("Abort transaction");
-      janosh_->endTransaction(false);
+//      janosh_->endTransaction(false);
       string reply = "done";
       socket_.send(reply.data(), reply.size());
       continue;
@@ -136,11 +133,13 @@ void TcpWorker::run() {
       }
       socket_.send(sso.str().c_str(), sso.str().size(), 0);
       setResult(true);
+      janosh_->endTransaction(true);
     } catch (std::exception& ex) {
       janosh::printException(ex);
       setResult(false);
       sso << "__JANOSH_EOF\n" << std::to_string(1) << '\n';
       socket_.send(sso.str().c_str(), sso.str().size(), 0);
+      janosh_->endTransaction(false);
     }
   }
 }
