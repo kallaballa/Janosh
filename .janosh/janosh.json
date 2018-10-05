@@ -1,6 +1,4 @@
 {
-  "database" : "janosh.db",
-  "port": "22222",
   "maxThreads": "8",
   "dbstring": "janosh.kct#opts=c#pccap=256m#dfunit=8",
   "bindUrl": "ipc:///tmp/janosh"  
