@@ -27,6 +27,10 @@ public:
   fs::path databaseFile;
   fs::path logFile;
   int maxThreads;
+  string dbString;
+  string ktopts;
+  string bindUrl;
+  string connectUrl;
 
   Settings();
   template<typename T> void error(const string& msg, T t, int exitcode=1) {

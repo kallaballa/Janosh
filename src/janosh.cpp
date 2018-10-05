@@ -1313,13 +1313,16 @@ namespace po = boost::program_options;
 
 int main(int argc, char** argv) {
   try {
+    Janosh* instance = new Janosh();
     string command;
     string luafile;
     vector<string> arguments;
     vector<string> defines;
-    string url;
-    string dbstring;
-    string ktopts = "-pid kyoto.pid -log ktserver.log -oat -uasi 10 -asi 10 -ash -sid 1001 -ulog ulog -ulim 104857600";
+    string bindUrl = instance->settings_.bindUrl;
+    string connectUrl = instance->settings_.connectUrl;
+    string dbstring = instance->settings_.dbString;
+    string ktopts = instance->settings_.ktopts;
+    int maxThreads = instance->settings_.maxThreads;
     int trackingLevel = 0;
 
     po::options_description genericDesc("Options");
@@ -1330,7 +1333,9 @@ int main(int argc, char** argv) {
       ("define,D", po::value<vector<string>>(&defines), "Define a macro for use in lua scripts. The format of the argument is key=value")
       ("dbstring,S", po::value<string>(&dbstring), "The kyototycoon db string")
       ("ktopts,O", po::value<string>(&ktopts), "The kyototycoon command line options. Do not include -th because it is set based on number of janosh threads.")
-      ("url,U", po::value<string>(&url), "The zmq url to either bind or connect to.")
+      ("bind,B", po::value<string>(&bindUrl), "The zmq url to bind to.")
+      ("connect,C", po::value<string>(&connectUrl), "The zmq url to connect to.")
+      ("maxthreads,M", po::value<int>(&maxThreads), "The maximum number of janosh threads. should be a maximum of half the cpu cores")
       ("json,j", "Produce json output")
       ("tx,x", "Guard the operation with a transaction")
       ("raw,r", "Produce raw output")
@@ -1413,11 +1418,10 @@ int main(int argc, char** argv) {
       Logger::setTracing(tracing);
       Logger::setDBLogging(dblog);
       Tracker::setPrintDirective(printDirective);
-      Janosh* instance = new Janosh();
-      instance->open(dbstring,ktopts, instance->settings_.maxThreads);
+      instance->open(dbstring,ktopts, maxThreads);
       if(luafile.empty()) {
-        TcpServer* server = TcpServer::getInstance(instance->settings_.maxThreads);
-        server->open(url);
+        TcpServer* server = TcpServer::getInstance(maxThreads);
+        server->open(bindUrl);
         while (server->run()) {
         }
       } else {
@@ -1449,7 +1453,7 @@ int main(int argc, char** argv) {
         }
         Request req(f, command, typedArgs, execTriggers, verbose, doTransaction, get_parent_info(), "");
         TcpClient client;
-        client.connect(url);
+        client.connect(connectUrl);
 
         int rc = client.run(req, std::cout);
         client.close();
@@ -1459,7 +1463,7 @@ int main(int argc, char** argv) {
         TcpClient client;
 
         lua::LuaScript::init([&](){
-          client.connect(url);
+          client.connect(bindUrl);
         },[&](Request& req){
           std::stringstream ss;
           int rc = client.run(req, ss);

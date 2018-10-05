@@ -52,6 +52,22 @@ Settings::Settings() {
        } else {
          error(this->janoshFile.string(), "maxThreads definition not found");
        }
+
+       if(find(jObj, "dbstring", v)) {
+            this->dbString = v.get_str();
+       }
+
+       if(find(jObj, "ktopts", v)) {
+            this->ktopts = v.get_str();
+       }
+
+       if(find(jObj, "bindUrl", v)) {
+            this->bindUrl = v.get_str();
+       }
+
+       if(find(jObj, "connectUrl", v)) {
+            this->connectUrl = v.get_str();
+       }
      } catch (exception& e) {
        error("Unable to load janosh configuration", e.what());
      }
