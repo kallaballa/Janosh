@@ -64,7 +64,9 @@ void TcpWorker::run() {
 
   while (true) {
     try {
+      LOG_DEBUG_STR("Recv start");
       socket_.recv(request.get());
+      LOG_DEBUG_STR("Recv end");
     } catch (std::exception& ex) {
       printException(ex);
       LOG_DEBUG_STR("End of request chain");
