@@ -76,10 +76,10 @@ void TcpWorker::run() {
     try {
       Request req;
       std::stringstream response_stream;
-      string requestData;
-      requestData.assign((const char*)request->data(), request->size());
-      string decompressed = decompress_string(requestData);
-      response_stream.write((char*) decompressed.data(), decompressed.size());
+//      string requestData;
+//      requestData.assign((const char*)request->data(), request->size());
+//      string decompressed = decompress_string(requestData);
+      response_stream.write((char*) request->data(), request->size());
       read_request(req, response_stream);
 
       LOG_DEBUG_MSG("ppid", req.pinfo_.pid_);
@@ -107,8 +107,8 @@ void TcpWorker::run() {
       } else {
         sso << "__JANOSH_EOF\n" << std::to_string(0) << '\n';
       }
-      string compressed = compress_string(sso.str());
-      socket_.send(compressed.c_str(), compressed.size(), 0);
+//      string compressed = compress_string(sso.str());
+      socket_.send(sso.str().c_str(), sso.str().size(), 0);
       setResult(true);
     } catch (std::exception& ex) {
       janosh::printException(ex);
