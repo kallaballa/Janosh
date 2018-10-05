@@ -1,8 +1,8 @@
 {
-  "maxThreads": "8",
+  "maxThreads": "3",
   "dbstring": "janosh.kct#opts=c#pccap=256m#dfunit=8",
-  "bindUrl": "ipc:///tmp/janosh"  
-  "connectUrl": "ipc:///tmp/janosh"
+  "bindUrl": "ipc:///tmp/janosh",  
+  "connectUrl": "ipc:///tmp/janosh",
   "ktopts": "-pid kyoto.pid -log ktserver.log -oat -uasi 10 -asi 10 -ash -sid 1001 -ulog ulog -ulim 104857600"
   
 }
