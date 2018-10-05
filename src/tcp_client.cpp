@@ -18,7 +18,6 @@ TcpClient::TcpClient() :
 
 
 void TcpClient::connect(string url) {
-
   try {
     sock_ = zmq::socket_t(context_, ZMQ_REQ);
   } catch (...) {

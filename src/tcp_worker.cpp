@@ -60,7 +60,7 @@ string reconstructCommandLine(Request& req) {
 
 void TcpWorker::run() {
   std::shared_ptr<zmq::message_t> request(new zmq::message_t());
-
+  bool transaction = false;
   while (true) {
     try {
       LOG_DEBUG_STR("Recv start");
@@ -72,8 +72,6 @@ void TcpWorker::run() {
       setResult(false);
       return;
     }
-    bool begin = janosh_->beginTransaction();
-    assert(begin);
     string requestData;
     requestData.assign((const char*)request->data(), request->size());
     LOG_DEBUG_STR(requestData);
@@ -81,20 +79,21 @@ void TcpWorker::run() {
       LOG_DEBUG_STR("Begin transaction");
       string reply = "done";
       socket_.send(reply.data(), reply.size());
-
-
+      transaction = janosh_->beginTransaction();
+      assert(transaction);
       LOG_DEBUG_STR("Begin end");
       continue;
     } else if(requestData == "commit") {
       LOG_DEBUG_STR("Commit transaction");
       string reply = "done";
       socket_.send(reply.data(), reply.size());
+      janosh_->endTransaction(true);
       continue;
     } else if(requestData == "abort") {
       LOG_DEBUG_STR("Abort transaction");
-//      janosh_->endTransaction(false);
       string reply = "done";
       socket_.send(reply.data(), reply.size());
+      janosh_->endTransaction(false);
       continue;
     }
 
@@ -133,13 +132,13 @@ void TcpWorker::run() {
       }
       socket_.send(sso.str().c_str(), sso.str().size(), 0);
       setResult(true);
-      janosh_->endTransaction(true);
     } catch (std::exception& ex) {
       janosh::printException(ex);
       setResult(false);
       sso << "__JANOSH_EOF\n" << std::to_string(1) << '\n';
+      if(transaction)
+        janosh_->endTransaction(false);
       socket_.send(sso.str().c_str(), sso.str().size(), 0);
-      janosh_->endTransaction(false);
     }
   }
 }
