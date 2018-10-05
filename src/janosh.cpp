@@ -84,6 +84,7 @@ namespace janosh {
   void Janosh::open(const string& ktdbstring, const string& ktopts, size_t threads) {
     using namespace std;
     using namespace boost;
+    std::cerr << ktopts << std::endl;
     std::vector<string> vopts;
     vopts.push_back("ktserver");
     vopts.push_back("-th");
@@ -97,6 +98,9 @@ namespace janosh {
 
     vopts.push_back(ktdbstring);
 
+    for(auto& o: vopts) {
+      std::cerr << o << std::endl;
+    }
     std::vector<char*> cstrings;
     cstrings.reserve(vopts.size());
 
