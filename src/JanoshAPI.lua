@@ -542,8 +542,8 @@ function JanoshClass.open(self, strID)
   janosh_open(strID)
 end
 
-function JanoshClass.close(self)
-  janosh_close()
+function JanoshClass.close(self, commit)
+  janosh_close(commit)
 end
 
 function count(base, pattern)
@@ -560,7 +560,7 @@ function JanoshClass.transaction(self, fn)
     print("Transaction failed: " .. msg)
   end
 
-  self:close()
+  self:close(status)
 end
 
 function JanoshClass.hasSubscription(self, keyprefix) 
