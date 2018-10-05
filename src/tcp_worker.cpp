@@ -10,7 +10,6 @@
 #include "database_thread.hpp"
 #include "tracker.hpp"
 #include "record.hpp"
-#include "compress.hpp"
 
 namespace janosh {
 
@@ -77,8 +76,7 @@ void TcpWorker::run() {
     requestData.assign((const char*)request->data(), request->size());
     if(requestData == "begin") {
       LOG_DEBUG_STR("Begin transaction");
-
-      bool begin = janosh_->beginTransaction();
+//      bool begin = janosh_->beginTransaction();
       assert(begin);
       string reply = "done";
       socket_.send(reply.data(), reply.size());
@@ -86,13 +84,13 @@ void TcpWorker::run() {
       continue;
     } else if(requestData == "commit") {
       LOG_DEBUG_STR("Commit transaction");
-      janosh_->endTransaction(true);
+//      janosh_->endTransaction(true);
       string reply = "done";
       socket_.send(reply.data(), reply.size());
       continue;
     } else if(requestData == "abort") {
       LOG_DEBUG_STR("Abort transaction");
-      janosh_->endTransaction(false);
+//      janosh_->endTransaction(false);
       string reply = "done";
       socket_.send(reply.data(), reply.size());
       continue;
@@ -103,9 +101,6 @@ void TcpWorker::run() {
     try {
       Request req;
       std::stringstream response_stream;
-//      string requestData;
-//      requestData.assign((const char*)request->data(), request->size());
-//      string decompressed = decompress_string(requestData);
       response_stream.write((char*) request->data(), request->size());
       read_request(req, response_stream);
 
@@ -134,15 +129,13 @@ void TcpWorker::run() {
       } else {
         sso << "__JANOSH_EOF\n" << std::to_string(0) << '\n';
       }
-//      string compressed = compress_string(sso.str());
       socket_.send(sso.str().c_str(), sso.str().size(), 0);
       setResult(true);
     } catch (std::exception& ex) {
       janosh::printException(ex);
       setResult(false);
       sso << "__JANOSH_EOF\n" << std::to_string(1) << '\n';
-      string compressed = compress_string(sso.str());
-      socket_.send(compressed.c_str(), compressed.size(), 0);
+      socket_.send(sso.str().c_str(), sso.str().size(), 0);
     }
   }
 }
