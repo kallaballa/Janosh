@@ -76,21 +76,21 @@ void TcpWorker::run() {
     requestData.assign((const char*)request->data(), request->size());
     if(requestData == "begin") {
       LOG_DEBUG_STR("Begin transaction");
-//      bool begin = janosh_->beginTransaction();
-//      assert(begin);
+      bool begin = janosh_->beginTransaction();
+      assert(begin);
       string reply = "done";
       socket_.send(reply.data(), reply.size());
       LOG_DEBUG_STR("Begin end");
       continue;
     } else if(requestData == "commit") {
       LOG_DEBUG_STR("Commit transaction");
-//      janosh_->endTransaction(true);
+      janosh_->endTransaction(true);
       string reply = "done";
       socket_.send(reply.data(), reply.size());
       continue;
     } else if(requestData == "abort") {
       LOG_DEBUG_STR("Abort transaction");
-//      janosh_->endTransaction(false);
+      janosh_->endTransaction(false);
       string reply = "done";
       socket_.send(reply.data(), reply.size());
       continue;
