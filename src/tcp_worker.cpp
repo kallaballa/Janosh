@@ -85,17 +85,17 @@ void TcpWorker::run() {
       continue;
     } else if(requestData == "commit") {
       LOG_DEBUG_STR("Commit transaction");
-      assert(transaction);
       string reply = "done";
       socket_.send(reply.data(), reply.size());
-      janosh_->endTransaction(true);
+      if(transaction)
+        janosh_->endTransaction(true);
       continue;
     } else if(requestData == "abort") {
       LOG_DEBUG_STR("Abort transaction");
-      assert(transaction);
       string reply = "done";
       socket_.send(reply.data(), reply.size());
-      janosh_->endTransaction(false);
+      if(transaction)
+        janosh_->endTransaction(false);
       continue;
     }
 
