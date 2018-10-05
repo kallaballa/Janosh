@@ -11,6 +11,7 @@
 #include "format.hpp"
 #include <zmq.hpp>
 #include <string>
+#include <mutex>
 
 
 namespace janosh {
@@ -22,6 +23,7 @@ class TcpServer {
   zmq::context_t context_;
   zmq::socket_t clients_;
   zmq::socket_t workers_;
+  std::mutex transactionMutex_;
 
   TcpServer(int maxThreads);
 
