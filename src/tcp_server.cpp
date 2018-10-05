@@ -59,7 +59,7 @@ void TcpServer::close() {
 bool TcpServer::run() {
   std::vector<TcpWorker*> workerVec;
 
-  for(size_t i=0; i < maxThreads_; ++i) {
+  for(size_t i=0; i < (size_t)maxThreads_; ++i) {
     workerVec.push_back(new TcpWorker(maxThreads_,&context_));
     workerVec[i]->runAsynchron();
   }
@@ -74,7 +74,7 @@ bool TcpServer::run() {
   } catch (...) {
     //shared->shutdown(0);
   }
-  for(size_t i=0; i < maxThreads_; ++i) {
+  for(size_t i=0; i < (size_t)maxThreads_; ++i) {
     delete workerVec[i];
   }
 

@@ -8,6 +8,7 @@
 #include <iostream>
 #include "tcp_client.hpp"
 #include "logger.hpp"
+#include "compress.hpp"
 
 namespace janosh {
 
@@ -45,11 +46,15 @@ int TcpClient::run(Request& req, std::ostream& out) {
   try {
     std::ostringstream request_stream;
     write_request(req, request_stream);
-    sock_.send(request_stream.str().c_str(), request_stream.str().size(), 0);
+    string compressed = compress_string(request_stream.str());
+    sock_.send(compressed.c_str(), compressed.size(), 0);
     zmq::message_t reply;
     sock_.recv(&reply);
+    string replyData;
+    replyData.assign((const char*)reply.data(), reply.size());
+    string decompressed = decompress_string(replyData);
     std::stringstream response_stream;
-    response_stream.write((char*)reply.data(), reply.size());
+    response_stream.write((char*)decompressed.data(), decompressed.size());
     string line;
     while (response_stream) {
       std::getline(response_stream, line);
