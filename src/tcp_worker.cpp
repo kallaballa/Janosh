@@ -77,10 +77,10 @@ void TcpWorker::run() {
     LOG_DEBUG_STR(requestData);
     if(requestData == "begin") {
       LOG_DEBUG_STR("Begin transaction");
-      bool begin = janosh_->beginTransaction();
-      assert(begin);
       string reply = "done";
       socket_.send(reply.data(), reply.size());
+      bool begin = janosh_->beginTransaction();
+      assert(begin);
       LOG_DEBUG_STR("Begin end");
       continue;
     } else if(requestData == "commit") {
