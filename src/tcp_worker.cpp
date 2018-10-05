@@ -38,9 +38,6 @@ string reconstructCommandLine(Request& req) {
   if(req.runTriggers_)
      cmdline += "-t ";
 
-  if(req.doTransaction_)
-     cmdline += "-x ";
-
    cmdline += (req.command_ + " ");
 
    if(!req.vecArgs_.empty()) {

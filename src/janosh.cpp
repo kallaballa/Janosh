@@ -1328,7 +1328,6 @@ int main(int argc, char** argv) {
       ("connect,C", po::value<string>(&connectUrl), "The zmq url to connect to.")
       ("maxthreads,M", po::value<int>(&maxThreads), "The maximum number of janosh threads. should be a maximum of half the cpu cores")
       ("json,j", "Produce json output")
-      ("tx,x", "Guard the operation with a transaction")
       ("raw,r", "Produce raw output")
       ("bash,b", "Produce bash output")
       ("triggers,t", "Execute triggers")
@@ -1357,7 +1356,6 @@ int main(int argc, char** argv) {
     po::notify(vm);
 
     janosh::Format f = janosh::Bash;
-    bool doTransaction = false;
     bool execTriggers = vm.count("triggers");
     bool verbose = vm.count("verbose");
     bool daemon = vm.count("daemon");
@@ -1389,8 +1387,6 @@ int main(int argc, char** argv) {
     else if(vm.count("raw"))
       f = janosh::Raw;
 
-    if(vm.count("tx"))
-      doTransaction = true;
 
     if(vm.count("daemon") && (vm.count("define") || vm.count("bash") || vm.count("raw") || vm.count("json") || execTriggers)) {
       LOG_FATAL_STR("Incompatible option(s) conflicting with daemon mode detected");
@@ -1442,7 +1438,7 @@ int main(int argc, char** argv) {
             }
           }
         }
-        Request req(f, command, typedArgs, execTriggers, verbose, doTransaction, get_parent_info(), "");
+        Request req(f, command, typedArgs, execTriggers, verbose, get_parent_info(), "");
         TcpClient client;
         client.connect(connectUrl);
 

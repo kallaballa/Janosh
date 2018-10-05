@@ -191,7 +191,7 @@ static janosh::Request make_request(lua_State* L, bool trigger = false) {
     }
   }
 
-  return Request(janosh::Format::Json, command, typedArgs, trigger, false, false, get_parent_info(), info);
+  return Request(janosh::Format::Json, command, typedArgs, trigger, false, get_parent_info(), info);
 }
 
 //static janosh::Request make_request(string command, lua_State* L, bool trigger = false) {
@@ -355,7 +355,7 @@ static int l_epoch(lua_State* L) {
 }
 
 static int l_request(lua_State* L) {
-  auto result = LuaScript::getInstance()->performRequest(make_request(L), false);
+  auto result = LuaScript::getInstance()->performRequest(make_request(L));
 
   lua_pushnumber(L, result.first);
   lua_pushstring(L, result.second.c_str());
@@ -364,7 +364,7 @@ static int l_request(lua_State* L) {
 }
 
 static int l_request_trigger(lua_State* L) {
-  auto result = LuaScript::getInstance()->performRequest(make_request(L, true),false);
+  auto result = LuaScript::getInstance()->performRequest(make_request(L, true));
 
   lua_pushnumber(L, result.first);
   lua_pushstring(L, result.second.c_str());
@@ -374,8 +374,8 @@ static int l_request_trigger(lua_State* L) {
 
 static int l_raw(lua_State* L) {
   string key = lua_tostring(L, -1);
-  Request req(janosh::Format::Raw, "get", {{key, Value::String}}, false, false, false, get_parent_info(), "");
-  auto result = LuaScript::getInstance()->performRequest(req, false);
+  Request req(janosh::Format::Raw, "get", {{key, Value::String}}, false, false, get_parent_info(), "");
+  auto result = LuaScript::getInstance()->performRequest(req);
   lua_pushnumber(L, result.first);
   lua_pushstring(L, result.second.c_str());
   return 2;
@@ -742,14 +742,13 @@ void LuaScript::performClose(bool lockRequest, bool commit) {
 
 }
 
-std::pair<int, string> LuaScript::performRequest(janosh::Request req, bool doTransaction) {
+std::pair<int, string> LuaScript::performRequest(janosh::Request req) {
   std::unique_lock<std::mutex> lock(open_lock_);
 #ifdef __JANOSH_DEBUG_QUEUE__
   std::cerr << " ### req: " << std::this_thread::get_id() << std::endl;
 #endif
    if(!isOpen) {
     performOpen(req.info_, false);
-    req.doTransaction_ = doTransaction;
     auto result = requestCallback_(req);
     performClose(false, result.first == 0);
 #ifdef __JANOSH_DEBUG_QUEUE__
@@ -757,7 +756,6 @@ std::pair<int, string> LuaScript::performRequest(janosh::Request req, bool doTra
 #endif
     return result;
   } else {
-    req.doTransaction_ = true;
     auto result = requestCallback_(req);
 #ifdef __JANOSH_DEBUG_QUEUE__
     std::cerr << " ### reqend: " << std::this_thread::get_id() << std::endl;
