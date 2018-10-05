@@ -77,7 +77,7 @@ void TcpWorker::run() {
     requestData.assign((const char*)request->data(), request->size());
     LOG_DEBUG_STR(requestData);
     if(requestData == "begin") {
-      std::unique_lock<std::mutex>(*transactionMutex_);
+      std::unique_lock<std::mutex> lock(*transactionMutex_);
       LOG_DEBUG_STR("Begin transaction");
       string reply = "done";
       socket_.send(reply.data(), reply.size());
@@ -86,14 +86,14 @@ void TcpWorker::run() {
       LOG_DEBUG_STR("Begin end");
       continue;
     } else if(requestData == "commit") {
-      std::unique_lock<std::mutex>(*transactionMutex_);
+      std::unique_lock<std::mutex> lock(*transactionMutex_);
       LOG_DEBUG_STR("Commit transaction");
       janosh_->endTransaction(true);
       string reply = "done";
       socket_.send(reply.data(), reply.size());
       continue;
     } else if(requestData == "abort") {
-      std::unique_lock<std::mutex>(*transactionMutex_);
+      std::unique_lock<std::mutex> lock(*transactionMutex_);
       LOG_DEBUG_STR("Abort transaction");
       janosh_->endTransaction(false);
       string reply = "done";
