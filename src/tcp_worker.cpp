@@ -60,6 +60,7 @@ void TcpWorker::run() {
   zmq::message_t request;
   zmq::message_t copied_id;
   zmq::message_t copied_request;
+  zmq::message_t transaction_id;
   bool transaction = false;
   while (true) {
     try {
@@ -71,20 +72,27 @@ void TcpWorker::run() {
       setResult(false);
       return;
     }
+    string strIdentity;
+    strIdentity.assign((const char*)identity.data(), identity.size());
     string requestData;
     requestData.assign((const char*)request.data(), request.size());
     if(requestData == "begin") {
-      LOG_DEBUG_STR("Begin transaction");
+      LOG_DEBUG_MSG("Begin transaction", strIdentity);
       string reply = "done";
       copied_id.copy(&identity);
+      transaction_id.copy(&identity);
       socket_.send(copied_id, ZMQ_SNDMORE);
       socket_.send(reply.data(), reply.size());
       transaction = janosh_->beginTransaction();
       assert(transaction);
-      LOG_DEBUG_STR("Begin end");
+      LOG_DEBUG_MSG("Begin end", strIdentity);
       continue;
     } else if(requestData == "commit") {
-      LOG_DEBUG_STR("Commit transaction");
+      LOG_DEBUG_MSG("Commit transaction", strIdentity);
+      string strTransaction;
+      strTransaction.assign((const char*)transaction_id.data(), transaction_id.size());
+      assert(strIdentity == strTransaction);
+
       string reply = "done";
       copied_id.copy(&identity);
       socket_.send(copied_id, ZMQ_SNDMORE);
@@ -93,7 +101,11 @@ void TcpWorker::run() {
       janosh_->endTransaction(true);
       continue;
     } else if(requestData == "abort") {
-      LOG_DEBUG_STR("Abort transaction");
+      LOG_DEBUG_MSG("Abort transaction", strIdentity);
+      string strTransaction;
+      strTransaction.assign((const char*)transaction_id.data(), transaction_id.size());
+      assert(strIdentity == strTransaction);
+
       string reply = "done";
       copied_id.copy(&identity);
       socket_.send(copied_id, ZMQ_SNDMORE);
