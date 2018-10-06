@@ -8,6 +8,8 @@
 #include <iostream>
 #include "tcp_client.hpp"
 #include "logger.hpp"
+#include <cryptopp/hex.h>
+#include <cryptopp/sha.h>
 
 namespace janosh {
 
