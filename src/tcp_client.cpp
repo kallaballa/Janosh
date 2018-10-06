@@ -19,12 +19,37 @@ TcpClient::TcpClient() :
 TcpClient::~TcpClient() {
 }
 
+std::string make_sessionkey() {
+  std::mt19937 rng;
+  rng.seed(std::random_device()());
+  std::uniform_real_distribution<double> dist(0.0,1.0);
+
+  string strRng = std::to_string(dist(rng));
+  CryptoPP::SHA256 hash;
+  byte digest[CryptoPP::SHA256::DIGESTSIZE];
+  std::string output;
+
+  hash.CalculateDigest(digest,(const byte *)strRng.c_str(),strRng.size());
+
+  CryptoPP::HexEncoder encoder;
+  CryptoPP::StringSink *SS = new CryptoPP::StringSink(output);
+  encoder.Attach(SS);
+  encoder.Put(digest,sizeof(digest));
+  encoder.MessageEnd();
+
+  return output;
+}
+
 void TcpClient::connect(string url) {
   try {
     sock_ = zmq::socket_t(context_, ZMQ_DEALER);
+    string identity = make_sessionkey();
+    sock_.setsockopt(ZMQ_IDENTITY, identity.data(), identity.size());
   } catch (...) {
     context_ = zmq::context_t(1);
     sock_ = zmq::socket_t(context_, ZMQ_DEALER);
+    string identity = make_sessionkey();
+    sock_.setsockopt(ZMQ_IDENTITY, identity.data(), identity.size());
   }
   sock_.connect(url.c_str());
   string begin="begin";
