@@ -8,36 +8,39 @@
 #include <iostream>
 #include "tcp_client.hpp"
 #include "logger.hpp"
+#include "zmq_addon.hpp"
 
 namespace janosh {
 
 TcpClient::TcpClient() :
     context_(1),
-    sock_(context_, ZMQ_REQ) {
+    sock_(context_, ZMQ_DEALER) {
 }
 
 TcpClient::~TcpClient() {
 }
 
+static size_t idcnt = 0;
 void TcpClient::connect(string url) {
-
   try {
-    sock_ = zmq::socket_t(context_, ZMQ_REQ);
+    sock_ = zmq::socket_t(context_, ZMQ_DEALER);
+    string identity = std::to_string(idcnt);
+    sock_.setsockopt(ZMQ_IDENTITY, identity.data(), identity.size());
   } catch (...) {
     context_ = zmq::context_t(1);
-    sock_ = zmq::socket_t(context_, ZMQ_REQ);
+    sock_ = zmq::socket_t(context_, ZMQ_DEALER);
+    string identity = std::to_string(idcnt);
+    sock_.setsockopt(ZMQ_IDENTITY, identity.data(), identity.size());
   }
+  ++idcnt;
   sock_.connect(url.c_str());
-  LOG_DEBUG_STR("Connect start");
-  sock_.connect(url.c_str());
-  string begin="b";
+  string begin="begin";
   zmq::message_t reply;
   sock_.send(begin.data(), begin.size());
   sock_.recv(&reply);
   string strReply;
   strReply.assign((const char*)reply.data(), reply.size());
-  assert(strReply == "k");
-  LOG_DEBUG_STR("Connect end");
+  assert(strReply == "done");
 }
 
 bool endsWith(const std::string &mainStr, const std::string &toMatch)
@@ -55,10 +58,12 @@ int TcpClient::run(Request& req, std::ostream& out) {
     std::ostringstream request_stream;
     write_request(req, request_stream);
     sock_.send(request_stream.str().c_str(), request_stream.str().size(), 0);
+
     zmq::message_t reply;
     sock_.recv(&reply);
     std::stringstream response_stream;
     response_stream.write((char*)reply.data(), reply.size());
+
     string line;
     while (response_stream) {
       std::getline(response_stream, line);
@@ -85,16 +90,15 @@ int TcpClient::run(Request& req, std::ostream& out) {
 
 void TcpClient::close(bool commit) {
     LOG_DEBUG_STR("Closing socket");
-    string message="c";
+    string message="commit";
     if(!commit)
-      message="a";
+      message="abort";
     zmq::message_t reply;
     sock_.send(message.data(), message.size());
     sock_.recv(&reply);
     string strReply;
     strReply.assign((const char*)reply.data(), reply.size());
-    assert(strReply == "k");
-
+    assert(strReply == "done");
     sock_.close();
 }
 } /* namespace janosh */
