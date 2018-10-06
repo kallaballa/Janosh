@@ -20,19 +20,13 @@ TcpClient::TcpClient() :
 TcpClient::~TcpClient() {
 }
 
-static size_t idcnt = 0;
 void TcpClient::connect(string url) {
   try {
     sock_ = zmq::socket_t(context_, ZMQ_DEALER);
-    string identity = std::to_string(idcnt);
-    sock_.setsockopt(ZMQ_IDENTITY, identity.data(), identity.size());
   } catch (...) {
     context_ = zmq::context_t(1);
     sock_ = zmq::socket_t(context_, ZMQ_DEALER);
-    string identity = std::to_string(idcnt);
-    sock_.setsockopt(ZMQ_IDENTITY, identity.data(), identity.size());
   }
-  ++idcnt;
   sock_.connect(url.c_str());
   string begin="begin";
   zmq::message_t reply;
