@@ -22,8 +22,6 @@ void DatabaseThread::run() {
 
   try {
     setResult(false);
-
-
     if (!req_.command_.empty()) {
       LOG_DEBUG_MSG("Execute command", req_.command_);
       Command* cmd = janosh_->cm_[req_.command_];
@@ -42,16 +40,10 @@ void DatabaseThread::run() {
     } else {
       throw janosh_exception() << msg_info("missing command");
     }
-    if(req_.doTransaction_)
-      janosh_->endTransaction(true);
   } catch (janosh_exception& ex) {
-    if(req_.doTransaction_)
-      janosh_->endTransaction(false);
     printException(ex);
     return;
   } catch (std::exception& ex) {
-    if(req_.doTransaction_)
-      janosh_->endTransaction(false);
     printException(ex);
     return;
   }

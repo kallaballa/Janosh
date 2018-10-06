@@ -60,39 +60,40 @@ void TcpWorker::run() {
   bool transaction = false;
   while (true) {
     try {
-      LOG_DEBUG_STR("Recv start");
       socket_.recv(request.get());
-      LOG_DEBUG_STR("Recv end");
     } catch (std::exception& ex) {
       printException(ex);
       LOG_DEBUG_STR("End of request chain");
       setResult(false);
       return;
     }
+
     string requestData;
     requestData.assign((const char*)request->data(), request->size());
     LOG_DEBUG_STR(requestData);
-    if(requestData == "begin") {
+    if(requestData == "b") {
       LOG_DEBUG_STR("Begin transaction");
-      string reply = "done";
+      string reply = "k";
       socket_.send(reply.data(), reply.size());
       transaction = janosh_->beginTransaction();
       assert(transaction);
       LOG_DEBUG_STR("Begin end");
       continue;
-    } else if(requestData == "commit") {
+    } else if(requestData == "c") {
       LOG_DEBUG_STR("Commit transaction");
-      string reply = "done";
+      string reply = "k";
       socket_.send(reply.data(), reply.size());
-      if(transaction)
-        janosh_->endTransaction(true);
+      assert(transaction);
+      janosh_->endTransaction(true);
+      transaction = false;
       continue;
-    } else if(requestData == "abort") {
+    } else if(requestData == "a") {
       LOG_DEBUG_STR("Abort transaction");
-      string reply = "done";
+      string reply = "k";
       socket_.send(reply.data(), reply.size());
-      if(transaction)
-        janosh_->endTransaction(false);
+      assert(transaction);
+      janosh_->endTransaction(false);
+      transaction = false;
       continue;
     }
 
@@ -134,9 +135,10 @@ void TcpWorker::run() {
     } catch (std::exception& ex) {
       janosh::printException(ex);
       setResult(false);
-      sso << "__JANOSH_EOF\n" << std::to_string(1) << '\n';
       if(transaction)
         janosh_->endTransaction(false);
+      transaction = false;
+      sso << "__JANOSH_EOF\n" << std::to_string(1) << '\n';
       socket_.send(sso.str().c_str(), sso.str().size(), 0);
     }
   }
