@@ -8,7 +8,6 @@
 #include <iostream>
 #include "tcp_client.hpp"
 #include "logger.hpp"
-#include "zmq_addon.hpp"
 
 namespace janosh {
 
