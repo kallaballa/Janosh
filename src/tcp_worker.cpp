@@ -85,7 +85,7 @@ void TcpWorker::run() {
   string strSep;
   while (true) {
     try {
-
+      LOG_DEBUG_STR("RECEIVE START");
       socket_.recv(&otherID);
       copied_otherId.copy(&otherID);
 
@@ -100,11 +100,14 @@ void TcpWorker::run() {
       std::cerr << strSep << std::endl;
 
       socket_.recv(&request);
+      LOG_DEBUG_STR("RECEIVE END");
       if(!getCurrentTransactionID().empty() && strIdentity != getCurrentTransactionID()) {
         LOG_DEBUG_STR("WAIT");
         transactionBarrier_.wait();
         LOG_DEBUG_STR("RESUME");
       }
+
+
     } catch (std::exception& ex) {
       printException(ex);
       LOG_DEBUG_STR("End of request chain");
