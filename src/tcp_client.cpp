@@ -21,17 +21,21 @@ TcpClient::~TcpClient() {
 
 void TcpClient::connect(string url) {
   sock_.connect(url.c_str());
+  send("begin");
+  string msg;
+  receive(msg);
+  assert(msg == "bok");
 }
 
 void TcpClient::send(const string& msg) {
-  size_t len = msg.size();
+  uint64_t len = msg.size();
   sock_.snd((char*) &len, sizeof(len));
   sock_.snd(msg.c_str(), msg.size());
 }
 
 
 void TcpClient::receive(string& msg) {
-  size_t len;
+  uint64_t len;
   sock_.rcv((char*) &len, sizeof(len));
   msg.resize(len);
   sock_ >> msg;
@@ -82,6 +86,16 @@ int TcpClient::run(Request& req, std::ostream& out) {
 
 void TcpClient::close(bool commit) {
     LOG_DEBUG_STR("Closing socket");
+    if(commit)
+      send("commit");
+    else
+      send("abort");
+    string msg;
+    receive(msg);
+    if(commit)
+      assert(msg == "cok");
+    else
+      assert(msg == "aok");
     sock_.destroy();
 }
 } /* namespace janosh */
