@@ -18,7 +18,7 @@ TcpWorker::TcpWorker(int maxThreads, zmq::context_t* context) :
     janosh_(new Janosh()),
     threadSema_(new Semaphore(maxThreads)),
     context_(context),
-    socket_(*context_, ZMQ_DEALER) {
+    socket_(*context_, ZMQ_ROUTER) {
   socket_.connect("inproc://workers");
 }
 
@@ -57,15 +57,21 @@ string reconstructCommandLine(Request& req) {
 
 void TcpWorker::run() {
   zmq::message_t identity;
+  zmq::message_t sep;
   zmq::message_t request;
   zmq::message_t copied_id;
-  zmq::message_t copied_request;
+  zmq::message_t copied_sep;
   zmq::message_t transaction_id;
   bool transaction = false;
   string strIdentity;
   while (true) {
     try {
       socket_.recv(&identity);
+      copied_id.copy(&identity);
+
+      socket_.recv(&sep);
+      copied_sep.copy(&sep);
+
       socket_.recv(&request);
     } catch (std::exception& ex) {
       printException(ex);
@@ -73,15 +79,15 @@ void TcpWorker::run() {
       setResult(false);
       return;
     }
-    strIdentity.assign((const char*)identity.data(), identity.size());
+//    strIdentity.assign((const char*)identity.data(), identity.size());
     string requestData;
     requestData.assign((const char*)request.data(), request.size());
     if(requestData == "begin") {
       LOG_DEBUG_MSG("Begin transaction", strIdentity);
       string reply = "done";
-      copied_id.copy(&identity);
       transaction_id.copy(&identity);
       socket_.send(copied_id, ZMQ_SNDMORE);
+      socket_.send(copied_sep, ZMQ_SNDMORE);
       socket_.send(reply.data(), reply.size());
       transaction = janosh_->beginTransaction();
       assert(transaction);
@@ -89,25 +95,18 @@ void TcpWorker::run() {
       continue;
     } else if(requestData == "commit") {
       LOG_DEBUG_MSG("Commit transaction", strIdentity);
-      string strTransaction;
-      strTransaction.assign((const char*)transaction_id.data(), transaction_id.size());
-      assert(strIdentity == strTransaction);
 
       string reply = "done";
-      copied_id.copy(&identity);
       socket_.send(copied_id, ZMQ_SNDMORE);
+      socket_.send(copied_sep, ZMQ_SNDMORE);
       socket_.send(reply.data(), reply.size());
       janosh_->endTransaction(true);
       continue;
     } else if(requestData == "abort") {
       LOG_DEBUG_MSG("Abort transaction", strIdentity);
-      string strTransaction;
-      strTransaction.assign((const char*)transaction_id.data(), transaction_id.size());
-      assert(strIdentity == strTransaction);
-
       string reply = "done";
-      copied_id.copy(&identity);
       socket_.send(copied_id, ZMQ_SNDMORE);
+      socket_.send(copied_sep, ZMQ_SNDMORE);
       socket_.send(reply.data(), reply.size());
       janosh_->endTransaction(false);
       continue;
@@ -146,8 +145,8 @@ void TcpWorker::run() {
       } else {
         sso << "__JANOSH_EOF\n" << std::to_string(0) << '\n';
       }
-      copied_id.copy(&identity);
       socket_.send(copied_id, ZMQ_SNDMORE);
+      socket_.send(copied_sep, ZMQ_SNDMORE);
       socket_.send(sso.str().c_str(), sso.str().size(), 0);
       setResult(true);
     } catch (std::exception& ex) {
@@ -156,8 +155,8 @@ void TcpWorker::run() {
       if(transaction)
         janosh_->endTransaction(false);
       sso << "__JANOSH_EOF\n" << std::to_string(1) << '\n';
-      copied_id.copy(&identity);
       socket_.send(copied_id, ZMQ_SNDMORE);
+      socket_.send(copied_sep, ZMQ_SNDMORE);
       socket_.send(sso.str().c_str(), sso.str().size(), 0);
     }
   }
