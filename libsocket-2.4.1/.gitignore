@@ -1,0 +1,8 @@
+*.o
+a.out
+*.so*
+cl
+srv
+*.swp
+*.a
+*.kdev4
