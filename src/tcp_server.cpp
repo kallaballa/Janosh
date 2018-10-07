@@ -59,8 +59,16 @@ bool TcpServer::run() {
     threadLimit_.wait();
     ls::unix_stream_client* client;
     client = clients_.accept();
-    TcpWorker* worker = new TcpWorker(threadLimit_,*client);
-    worker->runAsynchron();
+
+    std::thread t([=](){
+      Logger::registerThread("TcpWorker");
+      TcpWorker worker(*client);
+      worker.runSynchron();
+      threadLimit_.notify();
+      Logger::removeThread();
+    });
+
+    t.detach();
   }
 
   return true;

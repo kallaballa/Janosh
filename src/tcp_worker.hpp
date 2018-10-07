@@ -14,12 +14,11 @@ namespace ls = libsocket;
 
 class TcpWorker : public JanoshThread {
   shared_ptr<Janosh> janosh_;
-  Semaphore& threadLimit_;
   ls::unix_stream_client& socket_;
   Request readRequest();
 
 public:
-  explicit TcpWorker(Semaphore& threadLimit, ls::unix_stream_client& socket);
+  explicit TcpWorker(ls::unix_stream_client& socket);
   void send(const string& msg);
   void receive(string& msg);
   void run();

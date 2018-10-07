@@ -14,10 +14,9 @@
 
 namespace janosh {
 
-TcpWorker::TcpWorker(Semaphore& threadLimit, ls::unix_stream_client& socket) :
+TcpWorker::TcpWorker(ls::unix_stream_client& socket) :
     JanoshThread("TcpWorker"),
     janosh_(new Janosh()),
-    threadLimit_(threadLimit),
     socket_(socket) {
 }
 
@@ -78,11 +77,9 @@ void TcpWorker::run() {
       printException(ex);
       LOG_DEBUG_STR("End of request chain");
       setResult(false);
-      threadLimit_.notify();
       return;
     }
     if(request.empty()) {
-      threadLimit_.notify();
       return;
     }
     std::ostringstream sso;
@@ -128,6 +125,5 @@ void TcpWorker::run() {
       this->send(sso.str());
     }
   }
-  threadLimit_.notify();
 }
 } /* namespace janosh */
