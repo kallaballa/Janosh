@@ -16,7 +16,7 @@ namespace janosh {
 
 TcpClient::TcpClient() :
     context_(1),
-    sock_(context_, ZMQ_DEALER) {
+    sock_(context_, ZMQ_REQ) {
 }
 
 TcpClient::~TcpClient() {

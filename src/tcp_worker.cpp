@@ -62,6 +62,7 @@ void TcpWorker::run() {
   zmq::message_t copied_request;
   zmq::message_t transaction_id;
   bool transaction = false;
+  string strIdentity;
   while (true) {
     try {
       socket_.recv(&identity);
@@ -72,7 +73,6 @@ void TcpWorker::run() {
       setResult(false);
       return;
     }
-    string strIdentity;
     strIdentity.assign((const char*)identity.data(), identity.size());
     string requestData;
     requestData.assign((const char*)request.data(), request.size());
@@ -97,7 +97,6 @@ void TcpWorker::run() {
       copied_id.copy(&identity);
       socket_.send(copied_id, ZMQ_SNDMORE);
       socket_.send(reply.data(), reply.size());
-      assert(transaction);
       janosh_->endTransaction(true);
       continue;
     } else if(requestData == "abort") {
@@ -110,7 +109,6 @@ void TcpWorker::run() {
       copied_id.copy(&identity);
       socket_.send(copied_id, ZMQ_SNDMORE);
       socket_.send(reply.data(), reply.size());
-      assert(transaction);
       janosh_->endTransaction(false);
       continue;
     }
