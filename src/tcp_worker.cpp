@@ -10,22 +10,15 @@
 #include "database_thread.hpp"
 #include "tracker.hpp"
 #include "record.hpp"
+#include "compress.hpp"
 
 namespace janosh {
-std::mutex TcpWorker::tidMutex_;
-std::string TcpWorker::ctid_;
 
-static int workers = 0;
-TcpWorker::TcpWorker(int maxThreads, zmq::context_t* context) :
+TcpWorker::TcpWorker(Semaphore& threadLimit, ls::unix_stream_client& socket) :
     JanoshThread("TcpWorker"),
     janosh_(new Janosh()),
-    threadSema_(new Semaphore(maxThreads)),
-    context_(context),
-    socket_(*context_, ZMQ_ROUTER) {
-  socket_.connect("inproc://workers");
-  string id = "workers" + std::to_string(workers++);
-  socket_.setsockopt(ZMQ_IDENTITY, id.data(), id.size());
-
+    threadLimit_(threadLimit),
+    socket_(socket) {
 }
 
 string reconstructCommandLine(Request& req) {
@@ -61,169 +54,80 @@ string reconstructCommandLine(Request& req) {
   return cmdline;
 }
 
-void TcpWorker::setCurrentTransactionID(const string& tid) {
-  std::unique_lock<std::mutex>(tidMutex_);
-  ctid_ = tid;
+
+void TcpWorker::send(const string& msg) {
+  size_t len = msg.size();
+  socket_.snd((char*) &len, sizeof(len));
+  socket_.snd(msg.c_str(), msg.size());
 }
 
-string TcpWorker::getCurrentTransactionID() {
-  std::unique_lock<std::mutex>(tidMutex_);
-  return ctid_;
+
+void TcpWorker::receive(string& msg) {
+  size_t len;
+  socket_.rcv((char*) &len, sizeof(len));
+  msg.resize(len);
+  socket_ >> msg;
 }
 
-void TcpWorker::process(string otherID, string id, string request, bool transaction) {
-  string requestData;
-  zmq::message_t sep;
-   requestData.assign((const char*)request.data(), request.size());
-   if(requestData == "begin") {
-     LOG_DEBUG_MSG("Begin transaction", id);
-     string reply = "done";
-     socket_.send(otherID.data(), otherID.size(), ZMQ_SNDMORE);
-     socket_.send(id.data(), id.size(), ZMQ_SNDMORE);
-     socket_.send(sep, ZMQ_SNDMORE);
-     socket_.send(reply.data(), reply.size());
-     transaction = janosh_->beginTransaction();
-     assert(transaction);
-     setCurrentTransactionID(id);
-     LOG_DEBUG_MSG("Begin end", id);
-     return;
-   } else if(requestData == "commit") {
-     LOG_DEBUG_MSG("Commit transaction", id);
-
-     string reply = "done";
-     socket_.send(otherID.data(), otherID.size(), ZMQ_SNDMORE);
-     socket_.send(id.data(), id.size(), ZMQ_SNDMORE);
-     socket_.send(sep, ZMQ_SNDMORE);
-     socket_.send(reply.data(), reply.size());
-     janosh_->endTransaction(true);
-     setCurrentTransactionID("");
-     MessageQueue::Item i = {"","",""};
-     while(true) {
-       i = msgQueue_.pop();
-       if(!i.id.empty())
-         process(i.otherid, i.id, i.request, transaction);
-       else
-         break;
-     }
-     return;
-   } else if(requestData == "abort") {
-     LOG_DEBUG_MSG("Abort transaction", id);
-     string reply = "done";
-     socket_.send(otherID.data(), otherID.size(), ZMQ_SNDMORE);
-     socket_.send(id.data(), id.size(), ZMQ_SNDMORE);
-     socket_.send(sep, ZMQ_SNDMORE);
-     socket_.send(reply.data(), reply.size());
-     janosh_->endTransaction(false);
-     setCurrentTransactionID("");
-     MessageQueue::Item i = {"","",""};
-     while(true) {
-       i = msgQueue_.pop();
-       if(!i.id.empty())
-         process(i.otherid, i.id, i.request, transaction);
-       else
-         break;
-     }
-     return;
-   }
-
-  std::ostringstream sso;
-  bool result = false;
-  try {
-    Request req;
-    std::stringstream response_stream;
-    response_stream.write((char*) request.data(), request.size());
-    read_request(req, response_stream);
-
-    LOG_DEBUG_MSG("ppid", req.pinfo_.pid_);
-    LOG_DEBUG_MSG("cmdline", req.pinfo_.cmdline_);
-    LOG_INFO_STR(reconstructCommandLine(req));
-
-    janosh_->setFormat(req.format_);
-
-    if (!req.command_.empty()) {
-      if (req.command_ == "trigger") {
-        req.command_ = "set";
-        req.runTriggers_ = true;
-      }
-
-      Tracker::setDoPublish(req.runTriggers_);
-      JanoshThreadPtr dt(new DatabaseThread(janosh_,req, sso));
-      dt->runSynchron();
-      result = dt->result();
-
-      sso << "__JANOSH_EOF\n" << std::to_string(result ? 0 : 1) << '\n';
-
-      if (!result) {
-        setResult(false);
-      }
-    } else {
-      sso << "__JANOSH_EOF\n" << std::to_string(0) << '\n';
-    }
-    socket_.send(otherID.data(), otherID.size(), ZMQ_SNDMORE);
-    socket_.send(id.data(), id.size(), ZMQ_SNDMORE);
-    socket_.send(sep.data(), sep.size(), ZMQ_SNDMORE);
-    socket_.send(sso.str().c_str(), sso.str().size(), 0);
-    setResult(true);
-  } catch (std::exception& ex) {
-    janosh::printException(ex);
-    setResult(false);
-    if(transaction)
-      janosh_->endTransaction(false);
-    sso << "__JANOSH_EOF\n" << std::to_string(1) << '\n';
-    socket_.send(otherID.data(), otherID.size(), ZMQ_SNDMORE);
-    socket_.send(id.data(), id.size(), ZMQ_SNDMORE);
-    socket_.send(sep.data(), sep.size(), ZMQ_SNDMORE);
-    socket_.send(sso.str().c_str(), sso.str().size(), 0);
-  }
-}
 void TcpWorker::run() {
-  zmq::message_t identity;
-  zmq::message_t otherID;
-  zmq::message_t sep;
-  zmq::message_t request;
-  zmq::message_t copied_id;
-  zmq::message_t copied_otherId;
-  zmq::message_t transaction_id;
-  bool transaction = false;
-  string strOtherID;
-  string strIdentity;
-  string strRequest;
-
-  string strSep;
+  string request;
   while (true) {
     try {
-      LOG_DEBUG_STR("RECEIVE START");
-      socket_.recv(&otherID);
-      copied_otherId.copy(&otherID);
-      strOtherID.assign((const char*)otherID.data(), otherID.size());
-      std::cerr << strOtherID << std::endl;
-
-      socket_.recv(&identity);
-      copied_id.copy(&identity);
-      strIdentity.assign((const char*)identity.data(), identity.size());
-      std::cerr << strIdentity << std::endl;
-
-      socket_.recv(&sep);
-
-      socket_.recv(&request);
-      strRequest.assign((const char*)request.data(), request.size());
-      std::cerr << strRequest << std::endl;
-      LOG_DEBUG_STR("RECEIVE END");
-      if(!getCurrentTransactionID().empty() && strIdentity != getCurrentTransactionID()) {
-        LOG_DEBUG_STR("PUSH");
-        msgQueue_.push(strOtherID, strIdentity, strRequest);
-        continue;
-      }
-
+      this->receive(request);
     } catch (std::exception& ex) {
       printException(ex);
       LOG_DEBUG_STR("End of request chain");
       setResult(false);
+      threadLimit_.notify();
       return;
     }
+    if(request.empty()) {
+      threadLimit_.notify();
+      return;
+    }
+    std::ostringstream sso;
+    bool result = false;
+    try {
+      Request req;
+      std::stringstream response_stream;
+      response_stream.write((char*) request.data(), request.size());
+      read_request(req, response_stream);
 
+      LOG_DEBUG_MSG("ppid", req.pinfo_.pid_);
+      LOG_DEBUG_MSG("cmdline", req.pinfo_.cmdline_);
+      LOG_INFO_STR(reconstructCommandLine(req));
 
-    process(strOtherID, strIdentity, strRequest, transaction);
+      janosh_->setFormat(req.format_);
+
+      if (!req.command_.empty()) {
+        if (req.command_ == "trigger") {
+          req.command_ = "set";
+          req.runTriggers_ = true;
+        }
+
+        Tracker::setDoPublish(req.runTriggers_);
+        JanoshThreadPtr dt(new DatabaseThread(janosh_,req, sso));
+        dt->runSynchron();
+        result = dt->result();
+
+        sso << "__JANOSH_EOF\n" << std::to_string(result ? 0 : 1) << '\n';
+
+        if (!result) {
+          setResult(false);
+        }
+      } else {
+        sso << "__JANOSH_EOF\n" << std::to_string(0) << '\n';
+      }
+//      string compressed = compress_string(sso.str());
+      this->send(sso.str());
+      setResult(true);
+    } catch (std::exception& ex) {
+      janosh::printException(ex);
+      setResult(false);
+      sso << "__JANOSH_EOF\n" << std::to_string(1) << '\n';
+      this->send(sso.str());
+    }
   }
+  threadLimit_.notify();
 }
 } /* namespace janosh */

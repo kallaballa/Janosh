@@ -2,24 +2,30 @@
 #ifndef TCPCLIENT_H_
 #define TCPCLIENT_H_
 
-#include <string>
-#include <vector>
-#include <zmq.hpp>
 #include "format.hpp"
 #include "request.hpp"
+#include <string>
+#include <vector>
+#include <libsocket/unixclientstream.hpp>
+#include <libsocket/exception.hpp>
+
 
 namespace janosh {
+
+namespace ls = libsocket;
 using std::string;
 using std::vector;
 
 class TcpClient {
-  zmq::context_t context_;
-  zmq::socket_t sock_;
+  ls::unix_stream_client sock_;
+  std::string rcvBuffer_;
 
 public:
 	TcpClient();
 	virtual ~TcpClient();
 	void connect(string url);
+	void send(const string& msg);
+	void receive(string& msg);
 	int run(Request& req, std::ostream& out);
 	void close(bool commit);
 };

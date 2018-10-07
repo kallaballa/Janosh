@@ -37,13 +37,12 @@ using std::ostream;
 TcpServer* TcpServer::instance_;
 
 
-TcpServer::TcpServer(int maxThreads) : maxThreads_(maxThreads), context_(1), clients_(context_, ZMQ_ROUTER), workers_(context_, ZMQ_DEALER) {
+TcpServer::TcpServer(int maxThreads) : maxThreads_(maxThreads), threadLimit_(maxThreads) {
   ExitHandler::getInstance()->addExitFunc([&](){this->close();});
 }
 
 void TcpServer::open(string url) {
-  clients_.bind(url.c_str());
-  workers_.bind ("inproc://workers");
+  clients_.setup(url.c_str());
 }
 
 TcpServer::~TcpServer() {
@@ -52,30 +51,16 @@ TcpServer::~TcpServer() {
 
 
 void TcpServer::close() {
-  clients_.close();
-  //sock_.shutdown(0);
+  clients_.destroy();
 }
 
 bool TcpServer::run() {
-  std::vector<TcpWorker*> workerVec;
-
-  for(size_t i=0; i < (size_t)maxThreads_; ++i) {
-    workerVec.push_back(new TcpWorker(maxThreads_,&context_));
-    workerVec[i]->runAsynchron();
-  }
-  try {
-    zmq::proxy(static_cast<void*>(clients_), static_cast<void*>(workers_), nullptr);
-  } catch (janosh_exception& ex) {
-    printException(ex);
-    //shared->shutdown(0);
-  } catch (std::exception& ex) {
-    printException(ex);
-    //shared->shutdown(0);
-  } catch (...) {
-    //shared->shutdown(0);
-  }
-  for(size_t i=0; i < (size_t)maxThreads_; ++i) {
-    delete workerVec[i];
+  while(true) {
+    threadLimit_.wait();
+    ls::unix_stream_client* client;
+    client = clients_.accept();
+    TcpWorker* worker = new TcpWorker(threadLimit_,*client);
+    worker->runAsynchron();
   }
 
   return true;

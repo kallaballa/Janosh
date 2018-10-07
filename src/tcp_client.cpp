@@ -7,61 +7,34 @@
 
 #include <iostream>
 #include "tcp_client.hpp"
-#include <random>
 #include "logger.hpp"
-#include <cryptopp/hex.h>
-#include <cryptopp/sha.h>
+#include "compress.hpp"
+
 
 namespace janosh {
 
-TcpClient::TcpClient() :
-    context_(1),
-    sock_(context_, ZMQ_REQ) {
+TcpClient::TcpClient() {
 }
 
 TcpClient::~TcpClient() {
 }
 
-std::string make_sessionkey() {
-  std::mt19937 rng;
-  rng.seed(std::random_device()());
-  std::uniform_real_distribution<double> dist(0.0,1.0);
-
-  string strRng = std::to_string(dist(rng));
-  CryptoPP::SHA256 hash;
-  byte digest[CryptoPP::SHA256::DIGESTSIZE];
-  std::string output;
-
-  hash.CalculateDigest(digest,(const byte *)strRng.c_str(),strRng.size());
-
-  CryptoPP::HexEncoder encoder;
-  CryptoPP::StringSink *SS = new CryptoPP::StringSink(output);
-  encoder.Attach(SS);
-  encoder.Put(digest,sizeof(digest));
-  encoder.MessageEnd();
-
-  return output;
+void TcpClient::connect(string url) {
+  sock_.connect(url.c_str());
 }
 
-void TcpClient::connect(string url) {
-  try {
-    sock_ = zmq::socket_t(context_, ZMQ_REQ);
-    string identity = make_sessionkey();
-    sock_.setsockopt(ZMQ_IDENTITY, identity.data(), identity.size());
-  } catch (...) {
-    context_ = zmq::context_t(1);
-    sock_ = zmq::socket_t(context_, ZMQ_REQ);
-    string identity = make_sessionkey();
-    sock_.setsockopt(ZMQ_IDENTITY, identity.data(), identity.size());
-  }
-  sock_.connect(url.c_str());
-  string begin="begin";
-  zmq::message_t reply;
-  sock_.send(begin.data(), begin.size());
-  sock_.recv(&reply);
-  string strReply;
-  strReply.assign((const char*)reply.data(), reply.size());
-  assert(strReply == "done");
+void TcpClient::send(const string& msg) {
+  size_t len = msg.size();
+  sock_.snd((char*) &len, sizeof(len));
+  sock_.snd(msg.c_str(), msg.size());
+}
+
+
+void TcpClient::receive(string& msg) {
+  size_t len;
+  sock_.rcv((char*) &len, sizeof(len));
+  msg.resize(len);
+  sock_ >> msg;
 }
 
 bool endsWith(const std::string &mainStr, const std::string &toMatch)
@@ -78,13 +51,11 @@ int TcpClient::run(Request& req, std::ostream& out) {
   try {
     std::ostringstream request_stream;
     write_request(req, request_stream);
-    sock_.send(request_stream.str().c_str(), request_stream.str().size(), 0);
+    this->send(request_stream.str());
+    this->receive(rcvBuffer_);
 
-    zmq::message_t reply;
-    sock_.recv(&reply);
     std::stringstream response_stream;
-    response_stream.write((char*)reply.data(), reply.size());
-
+    response_stream.write((char*)rcvBuffer_.data(), rcvBuffer_.size());
     string line;
     while (response_stream) {
       std::getline(response_stream, line);
@@ -111,15 +82,6 @@ int TcpClient::run(Request& req, std::ostream& out) {
 
 void TcpClient::close(bool commit) {
     LOG_DEBUG_STR("Closing socket");
-    string message="commit";
-    if(!commit)
-      message="abort";
-    zmq::message_t reply;
-    sock_.send(message.data(), message.size());
-    sock_.recv(&reply);
-    string strReply;
-    strReply.assign((const char*)reply.data(), reply.size());
-    assert(strReply == "done");
-    sock_.close();
+    sock_.destroy();
 }
 } /* namespace janosh */

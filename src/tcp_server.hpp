@@ -9,23 +9,24 @@
 #define TCPSERVER_H_
 
 #include "format.hpp"
-#include <zmq.hpp>
+#include "semaphore.hpp"
 #include <string>
-
+#include <libsocket/unixserverstream.hpp>
+#include <libsocket/exception.hpp>
 
 namespace janosh {
-
+namespace ls = libsocket;
 
 class TcpServer {
   static TcpServer* instance_;
   int maxThreads_;
-  zmq::context_t context_;
-  zmq::socket_t clients_;
-  zmq::socket_t workers_;
+  ls::unix_stream_server clients_;
 
   TcpServer(int maxThreads);
 
 public:
+  Semaphore threadLimit_;
+
 	virtual ~TcpServer();
 	bool isOpen();
   void open(std::string url);
