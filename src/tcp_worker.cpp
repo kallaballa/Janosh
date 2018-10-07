@@ -55,14 +55,14 @@ string reconstructCommandLine(Request& req) {
 
 
 void TcpWorker::send(const string& msg) {
-  size_t len = msg.size();
+  uint64_t len = msg.size();
   socket_.snd((char*) &len, sizeof(len));
   socket_.snd(msg.c_str(), msg.size());
 }
 
 
 void TcpWorker::receive(string& msg) {
-  size_t len;
+  uint64_t len;
   socket_.rcv((char*) &len, sizeof(len));
   msg.resize(len);
   socket_ >> msg;
@@ -81,6 +81,23 @@ void TcpWorker::run() {
     }
     if(request.empty()) {
       return;
+    }
+
+    if(request == "begin") {
+      LOG_DEBUG_STR("Transaction begin");
+      janosh_->beginTransaction();
+      send("bok");
+      continue;
+    } else if(request == "commit") {
+      LOG_DEBUG_STR("Transaction commit");
+      janosh_->endTransaction(true);
+      send("cok");
+      continue;
+    } else if(request == "abort") {
+      LOG_DEBUG_STR("Transaction about");
+      janosh_->endTransaction(false);
+      send("aok");
+      continue;
     }
     std::ostringstream sso;
     bool result = false;
