@@ -45,12 +45,12 @@ std::string make_sessionkey() {
 
 void TcpClient::connect(string url) {
   try {
-    sock_ = zmq::socket_t(context_, ZMQ_DEALER);
+    sock_ = zmq::socket_t(context_, ZMQ_REQ);
     string identity = make_sessionkey();
     sock_.setsockopt(ZMQ_IDENTITY, identity.data(), identity.size());
   } catch (...) {
     context_ = zmq::context_t(1);
-    sock_ = zmq::socket_t(context_, ZMQ_DEALER);
+    sock_ = zmq::socket_t(context_, ZMQ_REQ);
     string identity = make_sessionkey();
     sock_.setsockopt(ZMQ_IDENTITY, identity.data(), identity.size());
   }
