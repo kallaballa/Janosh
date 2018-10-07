@@ -72,7 +72,60 @@ string TcpWorker::getCurrentTransactionID() {
 }
 
 void TcpWorker::process(string otherID, string id, string request, bool transaction) {
+  string requestData;
   zmq::message_t sep;
+   requestData.assign((const char*)request.data(), request.size());
+   if(requestData == "begin") {
+     LOG_DEBUG_MSG("Begin transaction", id);
+     string reply = "done";
+     socket_.send(otherID.data(), otherID.size(), ZMQ_SNDMORE);
+     socket_.send(id.data(), id.size(), ZMQ_SNDMORE);
+     socket_.send(sep, ZMQ_SNDMORE);
+     socket_.send(reply.data(), reply.size());
+     transaction = janosh_->beginTransaction();
+     assert(transaction);
+     setCurrentTransactionID(strIdentity);
+     LOG_DEBUG_MSG("Begin end", strIdentity);
+     continue;
+   } else if(requestData == "commit") {
+     LOG_DEBUG_MSG("Commit transaction", id);
+
+     string reply = "done";
+     socket_.send(otherID.data(), otherID.size(), ZMQ_SNDMORE);
+     socket_.send(id.data(), id.size(), ZMQ_SNDMORE);
+     socket_.send(sep, ZMQ_SNDMORE);
+     socket_.send(reply.data(), reply.size());
+     janosh_->endTransaction(true);
+     setCurrentTransactionID("");
+     MessageQueue::Item i = {"","",""};
+     while(true) {
+       i = msgQueue_.pop();
+       if(!i.id.empty())
+         process(i.otherid, i.id, i.request, transaction);
+       else
+         break;
+     }
+     continue;
+   } else if(requestData == "abort") {
+     LOG_DEBUG_MSG("Abort transaction", id);
+     string reply = "done";
+     socket_.send(otherID.data(), otherID.size(), ZMQ_SNDMORE);
+     socket_.send(id.data(), id.size(), ZMQ_SNDMORE);
+     socket_.send(sep, ZMQ_SNDMORE);
+     socket_.send(reply.data(), reply.size());
+     janosh_->endTransaction(false);
+     setCurrentTransactionID("");
+     MessageQueue::Item i = {"","",""};
+     while(true) {
+       i = msgQueue_.pop();
+       if(!i.id.empty())
+         process(i.otherid, i.id, i.request, transaction);
+       else
+         break;
+     }
+     continue;
+   }
+
   std::ostringstream sso;
   bool result = false;
   try {
@@ -168,59 +221,7 @@ void TcpWorker::run() {
       setResult(false);
       return;
     }
-    string requestData;
-    requestData.assign((const char*)request.data(), request.size());
-    if(requestData == "begin") {
-      LOG_DEBUG_MSG("Begin transaction", strIdentity);
-      string reply = "done";
-      transaction_id.copy(&identity);
-      socket_.send(copied_otherId, ZMQ_SNDMORE);
-      socket_.send(copied_id, ZMQ_SNDMORE);
-      socket_.send(sep, ZMQ_SNDMORE);
-      socket_.send(reply.data(), reply.size());
-      transaction = janosh_->beginTransaction();
-      assert(transaction);
-      setCurrentTransactionID(strIdentity);
-      LOG_DEBUG_MSG("Begin end", strIdentity);
-      continue;
-    } else if(requestData == "commit") {
-      LOG_DEBUG_MSG("Commit transaction", strIdentity);
 
-      string reply = "done";
-      socket_.send(copied_otherId, ZMQ_SNDMORE);
-      socket_.send(copied_id, ZMQ_SNDMORE);
-      socket_.send(sep, ZMQ_SNDMORE);
-      socket_.send(reply.data(), reply.size());
-      janosh_->endTransaction(true);
-      setCurrentTransactionID("");
-      MessageQueue::Item i = {"","",""};
-      while(true) {
-        i = msgQueue_.pop();
-        if(!i.id.empty())
-          process(i.otherid, i.id, i.request, transaction);
-        else
-          break;
-      }
-      continue;
-    } else if(requestData == "abort") {
-      LOG_DEBUG_MSG("Abort transaction", strIdentity);
-      string reply = "done";
-      socket_.send(copied_otherId, ZMQ_SNDMORE);
-      socket_.send(copied_id, ZMQ_SNDMORE);
-      socket_.send(sep, ZMQ_SNDMORE);
-      socket_.send(reply.data(), reply.size());
-      janosh_->endTransaction(false);
-      setCurrentTransactionID("");
-      MessageQueue::Item i = {"","",""};
-      while(true) {
-        i = msgQueue_.pop();
-        if(!i.id.empty())
-          process(i.otherid, i.id, i.request, transaction);
-        else
-          break;
-      }
-      continue;
-    }
 
     process(strOtherID, strIdentity, strRequest, transaction);
   }
