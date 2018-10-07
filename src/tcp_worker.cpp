@@ -84,9 +84,9 @@ void TcpWorker::process(string otherID, string id, string request, bool transact
      socket_.send(reply.data(), reply.size());
      transaction = janosh_->beginTransaction();
      assert(transaction);
-     setCurrentTransactionID(strIdentity);
-     LOG_DEBUG_MSG("Begin end", strIdentity);
-     continue;
+     setCurrentTransactionID(id);
+     LOG_DEBUG_MSG("Begin end", id);
+     return;
    } else if(requestData == "commit") {
      LOG_DEBUG_MSG("Commit transaction", id);
 
@@ -105,7 +105,7 @@ void TcpWorker::process(string otherID, string id, string request, bool transact
        else
          break;
      }
-     continue;
+     return;
    } else if(requestData == "abort") {
      LOG_DEBUG_MSG("Abort transaction", id);
      string reply = "done";
@@ -123,7 +123,7 @@ void TcpWorker::process(string otherID, string id, string request, bool transact
        else
          break;
      }
-     continue;
+     return;
    }
 
   std::ostringstream sso;
