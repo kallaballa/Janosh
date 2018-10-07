@@ -56,8 +56,8 @@ namespace janosh {
           s.end(), [](char c) { return !std::isdigit(c); }) == s.end();
   }
 
-  Janosh::Janosh() :
-		settings_(),
+  Janosh::Janosh(Settings& settings) :
+		settings_(settings),
         cm_(makeCommandMap(this)), open_(false) {
  }
 
@@ -1304,7 +1304,8 @@ namespace po = boost::program_options;
 
 int main(int argc, char** argv) {
   try {
-    Janosh* instance = new Janosh();
+    Settings settings;
+    Janosh* instance = new Janosh(settings);
     string command;
     string luafile;
     vector<string> arguments;
@@ -1407,7 +1408,7 @@ int main(int argc, char** argv) {
       Tracker::setPrintDirective(printDirective);
       instance->open(dbstring,ktopts, maxThreads);
       if(luafile.empty()) {
-        TcpServer* server = TcpServer::getInstance(maxThreads);
+        TcpServer* server = TcpServer::getInstance(settings, maxThreads);
         server->open(bindUrl);
         while (server->run()) {
         }

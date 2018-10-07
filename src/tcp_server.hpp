@@ -10,6 +10,7 @@
 
 #include "format.hpp"
 #include "semaphore.hpp"
+#include "settings.hpp"
 #include <string>
 #include <libsocket/unixserverstream.hpp>
 #include <libsocket/exception.hpp>
@@ -21,8 +22,9 @@ class TcpServer {
   static TcpServer* instance_;
   int maxThreads_;
   ls::unix_stream_server clients_;
+  Settings& settings_;
 
-  TcpServer(int maxThreads);
+  TcpServer(Settings& settings, int maxThreads);
 
 public:
   Semaphore threadLimit_;
@@ -33,9 +35,9 @@ public:
 	void close();
 	bool run();
 
-	static TcpServer* getInstance(int maxThreads) {
+	static TcpServer* getInstance(Settings& settings, int maxThreads) {
 	  if(instance_ == NULL)
-	    instance_ = new TcpServer(maxThreads);
+	    instance_ = new TcpServer(settings, maxThreads);
 	  return instance_;
 	}
 };

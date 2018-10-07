@@ -18,7 +18,7 @@ class TcpWorker : public JanoshThread {
   Request readRequest();
 
 public:
-  explicit TcpWorker(ls::unix_stream_client& socket);
+  explicit TcpWorker(Settings& settings, ls::unix_stream_client& socket);
   void send(const string& msg);
   void receive(string& msg);
   void run();

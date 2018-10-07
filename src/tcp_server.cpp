@@ -37,7 +37,7 @@ using std::ostream;
 TcpServer* TcpServer::instance_;
 
 
-TcpServer::TcpServer(int maxThreads) : maxThreads_(maxThreads), threadLimit_(maxThreads) {
+TcpServer::TcpServer(Settings& settings, int maxThreads) : maxThreads_(maxThreads), threadLimit_(maxThreads), settings_(settings) {
   ExitHandler::getInstance()->addExitFunc([&](){this->close();});
 }
 
@@ -62,7 +62,7 @@ bool TcpServer::run() {
 
     std::thread t([=](){
       Logger::registerThread("TcpWorker");
-      TcpWorker worker(*client);
+      TcpWorker worker(settings_, *client);
       worker.runSynchron();
       threadLimit_.notify();
       Logger::removeThread();

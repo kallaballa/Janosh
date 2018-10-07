@@ -28,10 +28,10 @@ typedef map<const std::string, Command*> CommandMap;
 
 class Janosh {
 public:
-  Settings settings_;
+  Settings& settings_;
   CommandMap cm_;
 
-  Janosh();
+  Janosh(Settings& settings);
   ~Janosh();
 
   void setFormat(Format f);

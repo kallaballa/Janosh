@@ -14,9 +14,9 @@
 
 namespace janosh {
 
-TcpWorker::TcpWorker(ls::unix_stream_client& socket) :
+TcpWorker::TcpWorker(Settings& settings, ls::unix_stream_client& socket) :
     JanoshThread("TcpWorker"),
-    janosh_(new Janosh()),
+    janosh_(new Janosh(settings)),
     socket_(socket) {
 }
 
