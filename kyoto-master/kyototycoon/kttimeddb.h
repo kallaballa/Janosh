@@ -2813,9 +2813,7 @@ class TimedDB {
   /** The expiration cursor lock. */
   kc::SpinLock xlock_;
   /** The internal database. */
-public:
   kc::PolyDB db_;
-private:
   /** The internal meta trigger. */
   TimedMetaTrigger mtrigger_;
   /** The internal update trigger. */
