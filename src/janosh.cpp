@@ -108,6 +108,7 @@ namespace janosh {
     char ** argv = cstrings.data();
 
     std::vector<kt::TimedDB*> dbs = kt_run(cstrings.size(),argv);
+    std::cerr << dbs.size() << std::endl;
     assert(dbs.size() == 1);
     Record::setDB(dbs[0]);
     // open the database
