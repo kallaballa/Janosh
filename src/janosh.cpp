@@ -841,7 +841,7 @@ namespace janosh {
       string key,value;
       cur->jump();
 
-      while(cur->get(&key, &value, true)) {
+      while(cur->get(&key, &value, NULL, true)) {
         out << "path:" << Path(key).pretty() <<  " value:" << value << '\n';
         ++cnt;
       }
@@ -863,7 +863,7 @@ namespace janosh {
     size_t cnt = 0;
     boost::hash<string> hasher;
     size_t h = 0;
-    while(cur->get(&key, &value, true)) {
+    while(cur->get(&key, &value, NULL, true)) {
       h = hasher(lexical_cast<string>(h) + key + value);
       ++cnt;
     }

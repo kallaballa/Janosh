@@ -58,10 +58,10 @@ namespace janosh {
     doesExist(false){
   }
 
-  kyotocabinet::PolyDB* Record::getDB() {
+  kyototycoon::TimedDB* Record::getDB() {
     if(!Record::db)
       throw janosh_exception() << msg_info("DB not initialized");
-    return &Record::db->db_;
+    return Record::db;
   }
 
   void Record::setDB(kyototycoon::TimedDB* db) {

@@ -12,7 +12,7 @@ namespace janosh {
   using std::string;
   using std::vector;
 
-  typedef kyotocabinet::PolyDB::Cursor Cursor;
+  typedef kyototycoon::TimedDB::Cursor Cursor;
 
   class Path {
     string keyStr;

@@ -31,7 +31,7 @@ namespace janosh {
     Record(const Record& other);
     Record clone();
 
-    static kyotocabinet::PolyDB* getDB();
+    static kyototycoon::TimedDB* getDB();
     static void setDB(kyototycoon::TimedDB* db);
 
     const Value::Type getType()  const;
