@@ -726,8 +726,9 @@ bool kt_cleanup() {
   logger_->close();
   delete bgscomp;
 
-  if (pidpath)
-    kc::File::remove(pidpath);
+// FIXME find out why pidpath is an empty string
+//  if (pidpath)
+//    kc::File::remove(pidpath);
   delete[] opcounts;
 
   for (int32_t i = 0; i < dbnum; i++) {

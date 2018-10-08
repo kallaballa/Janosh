@@ -62,6 +62,9 @@ namespace janosh {
  }
 
   Janosh::~Janosh() {
+    for(auto& p: cm_) {
+      delete p.second;
+    }
   }
 
   void announceOperation(const string& str, const string& value, const Tracker::Operation& op) {
@@ -132,6 +135,7 @@ namespace janosh {
   void Janosh::close() {
     if(isOpen()) {
       open_ = false;
+      Record::setDB(nullptr);
       kt_cleanup();
     }
   }

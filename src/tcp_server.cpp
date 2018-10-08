@@ -65,7 +65,7 @@ bool TcpServer::run() {
       TcpWorker worker(settings_, *client);
       worker.runSynchron();
       threadLimit_.notify();
-      client->destroy();
+      delete client;
       Logger::removeThread();
     });
 

@@ -59,6 +59,8 @@ namespace janosh {
   }
 
   kyototycoon::TimedDB* Record::getDB() {
+    if(!Record::db)
+      throw janosh_exception() << msg_info("DB not initialized");
     return Record::db;
   }
 
