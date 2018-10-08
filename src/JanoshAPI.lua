@@ -735,6 +735,7 @@ function JanoshClass.wsOnReceive(self, numThreads, callback)
       status, msg = pcall(callback,handle,message)
       if not status then
         print("Receiver " .. handle .. " failed: ", msg)
+	break;
       end
     end
   end)()
