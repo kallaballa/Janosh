@@ -1,0 +1,2 @@
+/usr/bin/ar qc libsocket_int.a  CMakeFiles/socket_o.dir/inet/libinetsocket.c.o CMakeFiles/socket_o.dir/unix/libunixsocket.c.o
+/usr/bin/ranlib libsocket_int.a
