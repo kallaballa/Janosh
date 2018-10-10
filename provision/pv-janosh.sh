@@ -1,10 +1,13 @@
 #!/bin/bash
 
+set -x
+set -e
+
 CORES="$1"
 SID="$2"
 REPLHOST="$3"
 
-apt-get install vim build-essential g++ libboost-dev libboost-filesystem-dev libboost-system-dev libboost-thread-dev libluajit-5.1-dev cmake libzmq3-dev git-core libcrypto++-dev libboost-program-options-dev luarocks zlib1g-dev sudo libssl1.0-dev psmisc libboost-iostreams-dev cgdb
+apt-get -y install vim build-essential g++ libboost-dev libboost-filesystem-dev libboost-system-dev libboost-thread-dev libluajit-5.1-dev cmake libzmq3-dev git-core libcrypto++-dev libboost-program-options-dev luarocks zlib1g-dev sudo libssl1.0-dev psmisc libboost-iostreams-dev cgdb
 
 git clone https://github.com/kallaballa/kyotocabinet.git
 cd kyotocabinet
@@ -30,6 +33,7 @@ cmake ..
 make -j$CORES
 make install
 mkdir -p /usr/local/lib/lua/5.1/lanes/
+mkdir -p /usr/local/share/lua/5.1/
 cp ../build/core.so /usr/local/lib/lua/5.1/lanes/core.so
 cp ../src/lanes.lua /usr/local/share/lua/5.1/lanes.lua
 cd ../..
@@ -48,7 +52,6 @@ rm master.zip
 cd luajit-rocks-master/luajit-2.0
 mkdir build
 cd build
-make clean
 cmake ..
 make -j$CORES
 make install
@@ -60,7 +63,6 @@ rm master.zip
 cd libsocket-master
 mkdir build
 cd build
-make clean
 cmake ..
 make -j$CORES
 make install
@@ -76,11 +78,11 @@ make -j$CORES
 make install
 cd ..
 
-mkdir ~janosh/.janosh/
+mkdir -p ~janosh/.janosh/
 chown janosh:users ~janosh/.janosh/
 cat > ~janosh/.janosh/janosh.json <<EOJANOSH
 {
-  "maxThreads": "$CORES",
+  "maxThreads": "${CORES}",
   "dbstring": "janosh.kct#opts=c#pccap=256m#dfunit=8",
   "bindUrl": "/tmp/janosh",  
   "connectUrl": "/tmp/janosh",
@@ -107,7 +109,7 @@ EOJANOSHD
 chmod 664 /etc/systemd/system/janoshd.service
 systemctl daemon-reload
 systemctl enable janoshd
-
+systemctl start janoshd
 
 git clone https://github.com/kallaballa/LiebtDichJanosh.git
 mv LiebtDichJanosh /home/janosh/LiebtDichJanosh
@@ -129,7 +131,10 @@ EOJANOSHD
 chmod 664 /etc/systemd/system/janosh-websocket.service
 systemctl daemon-reload
 systemctl enable janosh-websocket
+ln -s /usr/local/lib/libkyoto* /usr/lib/
 
-sudo -u janosh janosh load init.json
+cp init.json /home/janosh/
+sudo -u janosh janosh truncate
+sudo -u janosh janosh load /home/janosh/init.json
 
 
