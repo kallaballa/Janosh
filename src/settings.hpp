@@ -32,7 +32,7 @@ public:
 
   Settings();
   template<typename T> void error(const string& msg, T t, int exitcode=1) {
-    LOG_ERR_MSG(msg, t);
+    std::cerr << "Settings broken:" << msg << std::endl;
     exit(exitcode);
   }
 private:
