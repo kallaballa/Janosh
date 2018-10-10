@@ -236,7 +236,7 @@ class Slave : public kc::Thread {
           lock_.unlock();
         }
         kt::ReplicationClient rc;
-        log(Logger::SYSTEM, "stating replication: host=%s port=%d rts=%llu",
+        log(Logger::SYSTEM, "starting replication: host=%s port=%d rts=%llu",
                    host.c_str(), port, (unsigned long long)rts_);
         if (rc.open(host, port, 60, rts_, sid_)) {
           log(Logger::SYSTEM, "replication started: host=%s port=%d rts=%llu",
