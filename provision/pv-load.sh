@@ -3,7 +3,7 @@
 set -x
 set -e 
 
-apt-get install apache2 vim psmisc net-tools
+apt-get install apache2
 a2enmod proxy_wstunnel
 a2enmod proxy_balancer
 a2enmod lbmethod_byrequests

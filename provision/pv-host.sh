@@ -2,6 +2,8 @@
 
 HOSTNAME="$1"
 
+apt-get -y install nmon cgdb sudo git-core vim psmisc net-tools
+
 echo "$HOSTNAME" > /etc/hostname
 hostname "$HOSTNAME"
 
