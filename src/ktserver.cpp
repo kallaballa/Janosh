@@ -3091,6 +3091,7 @@ static std::vector<kt::TimedDB*> proc(const std::vector<std::string>& dbpaths,
 
 bool kt_cleanup() {
   bool err = false;
+  g_serv->stop();
   if (!g_serv->finish()) err = true;
   serverThread->join();
   slave->stop();
