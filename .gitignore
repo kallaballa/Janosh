@@ -2,4 +2,15 @@
 *.o
 *.gch
 janosh
+.cproject
+.project
+.settings/
+Debug/
+janosh.db
+janosh.kct
+janosh.kct.wal
+ktserver.log
+kyoto.pid
+passwd.txt
+ulog/
 

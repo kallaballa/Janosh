@@ -120,7 +120,7 @@ Description=Janosh Websocket Client
 
 [Service]
 WorkingDirectory=/home/janosh/LiebtDichJanosh/
-ExecStart=/usr/local/bin/janosh -v -f websocket.lua
+ExecStart=/usr/local/bin/janosh -v -D__PORT__=10010 -f websocket.lua
 User=janosh
 Group=users
 
