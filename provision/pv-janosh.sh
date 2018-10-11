@@ -7,7 +7,7 @@ CORES="$1"
 SID="$2"
 REPLHOST="$3"
 
-apt-get -y install vim build-essential g++ libboost-dev libboost-filesystem-dev libboost-system-dev libboost-thread-dev libluajit-5.1-dev cmake libzmq3-dev git-core libcrypto++-dev libboost-program-options-dev luarocks zlib1g-dev sudo libssl1.0-dev psmisc libboost-iostreams-dev cgdb
+apt-get -y install vim build-essential g++ libboost-dev libboost-filesystem-dev libboost-system-dev libboost-thread-dev libluajit-5.1-dev cmake libzmq3-dev libcrypto++-dev libboost-program-options-dev luarocks zlib1g-dev libssl1.0-dev libboost-iostreams-dev
 
 git clone https://github.com/kallaballa/kyotocabinet.git
 cd kyotocabinet
