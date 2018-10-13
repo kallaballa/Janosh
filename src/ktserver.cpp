@@ -305,7 +305,7 @@ class Slave : public kc::Thread {
   void write_rts(kc::File* file, uint64_t rts) {
     char buf[kc::NUMBUFSIZ];
     std::sprintf(buf, "%020llu\n", (unsigned long long)rts);
-    if (!file->write_fast(0, buf, RTSFILESIZ)) {}
+    if (file->write_fast(0, buf, RTSFILESIZ)) {}
       log(Logger::SYSTEM, "writing the time stamp failed: %s", file->error());
   }
   kc::SpinLock lock_;
