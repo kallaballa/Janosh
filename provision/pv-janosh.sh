@@ -98,9 +98,9 @@ Description=Janosh Daemon
 
 [Service]
 WorkingDirectory=/home/janosh
-ExecStart=/usr/local/bin/janosh -dv
+ExecStart=/usr/local/bin/janosh -d
 User=janosh
-Group=users
+Group=janosh
 
 [Install]
 WantedBy=multi-user.target
@@ -122,10 +122,10 @@ Description=Janosh Websocket Client
 WorkingDirectory=/home/janosh/LiebtDichJanosh/
 ExecStart=/usr/local/bin/janosh -v -D__PORT__=10010 -f websocket.lua
 User=janosh
-Group=users
+Group=janosh
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=janoshd.service
 
 EOJANOSHD
 chmod 664 /etc/systemd/system/janosh-websocket.service
