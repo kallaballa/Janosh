@@ -20,7 +20,7 @@ namespace janosh {
     Value valueObj;
     bool doesExist;
     void init(Path path);
-    static kyototycoon::TimedDB* db;
+    static std::map<std::thread::id, kyototycoon::RemoteDB*> db;
     //exact copy referring to the same Cursor*
     Record(const Path& path);
     janosh::Cursor* getCursorPtr();
@@ -31,8 +31,9 @@ namespace janosh {
     Record(const Record& other);
     Record clone();
 
-    static kyototycoon::TimedDB* getDB();
-    static void setDB(kyototycoon::TimedDB* db);
+    static void makeDB(const string& host, const int32_t& port);
+    static kyototycoon::RemoteDB* getDB();
+    static void destroyDB();
 
     const Value::Type getType()  const;
     const size_t getSize() const;

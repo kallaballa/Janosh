@@ -58,14 +58,32 @@ namespace janosh {
     doesExist(false){
   }
 
-  kyototycoon::TimedDB* Record::getDB() {
-    if(!Record::db)
+  void Record::makeDB(const string& host, const int32_t& port) {
+    auto it = Record::db.find(std::this_thread::get_id());
+    if(it != Record::db.end())
+      throw janosh_exception() << msg_info("DB already initialized");
+    kyototycoon::RemoteDB* rdb = new kyototycoon::RemoteDB();
+    rdb->open(host, port);
+    Record::db[std::this_thread::get_id()] = rdb;
+
+  }
+  kyototycoon::RemoteDB* Record::getDB() {
+    auto it = Record::db.find(std::this_thread::get_id());
+    if(it == Record::db.end())
       throw janosh_exception() << msg_info("DB not initialized");
-    return Record::db;
+
+    return (*it).second;
   }
 
-  void Record::setDB(kyototycoon::TimedDB* db) {
-    Record::db = db;
+  void Record::destroyDB() {
+    auto it = Record::db.find(std::this_thread::get_id());
+    if(it == Record::db.end())
+      throw janosh_exception() << msg_info("DB not initialized");
+
+    kyototycoon::RemoteDB* rdb = (*it).second;
+    Record::db.erase(it);
+    rdb->close();
+    delete rdb;
   }
 
   janosh::Cursor* Record::getCursorPtr() {

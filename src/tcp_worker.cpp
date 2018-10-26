@@ -70,6 +70,7 @@ void TcpWorker::receive(string& msg) {
 
 void TcpWorker::run() {
   string request;
+  Record::makeDB("127.0.0.1", 1978);
   while (true) {
     try {
       this->receive(request);
@@ -77,10 +78,10 @@ void TcpWorker::run() {
       printException(ex);
       LOG_DEBUG_STR("End of request chain");
       setResult(false);
-      return;
+      break;
     }
     if(request.empty()) {
-      return;
+      break;
     }
 
     if(request == "begin") {
@@ -142,5 +143,6 @@ void TcpWorker::run() {
       this->send(sso.str());
     }
   }
+  Record::destroyDB();
 }
 } /* namespace janosh */

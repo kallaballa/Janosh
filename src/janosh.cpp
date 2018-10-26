@@ -13,7 +13,6 @@
 #include "exithandler.hpp"
 #include "lua_script.hpp"
 #include "message_queue.hpp"
-#include <ktremotedb.h>
 
 #include <stack>
 #include <thread>
@@ -28,7 +27,7 @@
 #include "json_spirit/json_spirit.h"
 #include "jsoncons/json.hpp"
 #include "jsoncons_ext/jsonpath/json_query.hpp"
-#include "ktserver.hpp"
+#include <ktremotedb.h>
 
 using std::string;
 using std::endl;
@@ -84,47 +83,7 @@ namespace janosh {
   }
 
 // -th 3 -port 1978 -pid kyoto.pid -log ktserver.log -oat -uasi 10 -asi 10 -ash -sid 1001 -ulog ulog -ulim 104857600 'janosh.kct#opts=c#pccap=256m#dfunit=8'
-  void Janosh::open(const string& ktdbstring, const string& ktopts, size_t threads) {
-    using namespace std;
-    using namespace boost;
-    std::vector<string> vopts;
-    vopts.push_back("ktserver");
-    vopts.push_back("-th");
-    vopts.push_back(std::to_string(threads));
-
-    escaped_list_separator<char> sep('\\', ' ', '\"');
-    tokenizer<escaped_list_separator<char> > tok(ktopts, sep);
-    for (tokenizer<escaped_list_separator<char> >::iterator beg = tok.begin(); beg != tok.end(); ++beg) {
-      vopts.push_back(*beg);
-    }
-
-    vopts.push_back(ktdbstring);
-    std::vector<char*> cstrings;
-    cstrings.reserve(vopts.size());
-
-    for (auto& s : vopts)
-      cstrings.push_back(static_cast<char*>(&s[0]));
-
-    char ** argv = cstrings.data();
-
-    std::vector<kt::TimedDB*> dbs = kt_run(cstrings.size(),argv);
-    std::cerr << dbs.size() << std::endl;
-    assert(dbs.size() == 1);
-    Record::setDB(dbs[0]);
-    // open the database
-//    uint32_t mode;
-//    Record::getDB()->tune_options(kc::TreeDB::TLINEAR);
-//    Record::getDB()->tune_buckets(655360);
-//    Record::getDB()->tune_map(6553600000);
-//    Record::getDB()->tune_page_cache(65536000);
-//    if(readOnly)
-//      mode = kyototycoon::PolyDB::OAUTOTRAN | kc::PolyDB::OREADER;
-//    else
-//      mode = kc::PolyDB::OTRYLOCK | kc::PolyDB::OREADER | kc::PolyDB::OWRITER | kc::PolyDB::OCREATE;
-    //settings_.databaseFile.string(),  mode
-//    if(!Record::getDB()->open("localhost")) {
-//			LOG_FATAL_MSG("open error: " + settings_.databaseFile.string(), Record::getDB()->error().message());
-//    }
+  void Janosh::open() {
     ExitHandler::getInstance()->addExitFunc([&](){this->close(); });
     open_ = true;
   }
@@ -136,21 +95,21 @@ namespace janosh {
   void Janosh::close() {
     if(isOpen()) {
       open_ = false;
-      Record::setDB(nullptr);
-      kt_cleanup();
     }
   }
 
   bool Janosh::beginTransaction() {
-    return Record::getDB()->begin_transaction();
+    //return Record::getDB()->begin_transaction();
+    return true;
   }
 
   bool Janosh::beginTransactionTry() {
-    return Record::getDB()->begin_transaction_try();
+    //return Record::getDB()->begin_transaction_try();
+    return true;
   }
 
   void Janosh::endTransaction(bool commit) {
-    Record::getDB()->end_transaction(commit);
+    //Record::getDB()->end_transaction(commit);
   }
 
   void Janosh::publish(const string& key, const string& op, const char* value) {
@@ -1276,7 +1235,7 @@ namespace janosh {
   }
 }
 
-kyototycoon::TimedDB* janosh::Record::db;
+std::map<std::thread::id, kyototycoon::RemoteDB*> janosh::Record::db;
 
 void printCommands() {
     std::cerr
@@ -1411,7 +1370,6 @@ int main(int argc, char** argv) {
       Logger::setTracing(tracing);
       Logger::setDBLogging(dblog);
       Tracker::setPrintDirective(printDirective);
-      instance->open(dbstring,ktopts, maxThreads);
       if(luafile.empty()) {
         TcpServer* server = TcpServer::getInstance(settings, maxThreads);
         server->open(bindUrl);

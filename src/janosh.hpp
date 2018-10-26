@@ -35,7 +35,7 @@ public:
   ~Janosh();
 
   void setFormat(Format f);
-  void open(const string& ktdbstring, const string& ktopts, size_t threads);
+  void open();
   bool isOpen();
   void close();
   bool beginTransaction();
