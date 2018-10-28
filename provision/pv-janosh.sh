@@ -4,10 +4,13 @@ set -x
 set -e
 
 CORES="$1"
-SID="$2"
-REPLHOST="$3"
 
-apt-get -y install vim build-essential g++ libboost-dev libboost-filesystem-dev libboost-system-dev libboost-thread-dev libluajit-5.1-dev cmake libzmq3-dev libcrypto++-dev libboost-program-options-dev luarocks zlib1g-dev libssl1.0-dev libboost-iostreams-dev
+if [ -z "$CORES" ]; then
+  echo "Usage: pv-janosh.sh <NR_OF_CORES>"
+  exit 1
+fi
+
+apt-get -y install vim build-essential g++ libboost-dev libboost-filesystem-dev libboost-system-dev libboost-thread-dev cmake libzmq3-dev libcrypto++-dev libboost-program-options-dev zlib1g-dev libssl1.0-dev libboost-iostreams-dev libreadline-dev unzip
 
 git clone https://github.com/kallaballa/kyotocabinet.git
 cd kyotocabinet
@@ -22,12 +25,24 @@ cd kyototycoon
 make -j$CORES
 make install
 cd ..
+ln -sf /usr/local/lib/libkyoto* /usr/lib/
+
+wget https://github.com/kallaballa/luajit-rocks/archive/master.zip
+unzip master.zip
+rm master.zip
+cd luajit-rocks-master/
+mkdir build
+cd build
+cmake ..
+make -j$CORES
+make install
+cd ../..
 
 wget https://github.com/LuaLanes/lanes/archive/v3.10.1.tar.gz
 tar -xf v3.10.1.tar.gz
 rm v3.10.1.tar.gz
 cd lanes-3.10.1
-mkdir build
+mkdir -p build
 cd build
 cmake ..
 make -j$CORES
@@ -46,22 +61,11 @@ make -j$CORES
 make install
 cd ..
 
-wget https://github.com/kallaballa/luajit-rocks/archive/master.zip
-unzip master.zip
-rm master.zip
-cd luajit-rocks-master/luajit-2.0
-mkdir build
-cd build
-cmake ..
-make -j$CORES
-make install
-cd ../../..
-
 wget https://github.com/kallaballa/libsocket/archive/master.zip
 unzip master.zip
 rm master.zip
 cd libsocket-master
-mkdir build
+mkdir -p build
 cd build
 cmake ..
 make -j$CORES
@@ -78,6 +82,26 @@ make -j$CORES
 make install
 cd ..
 
+cat > /etc/systemd/system/ktserver.service <<EOKTSERVER
+[Unit]
+Description=Kytoto Tycoon Daemon
+
+[Service]
+WorkingDirectory=/home/janosh/
+ExecStart=/usr/local/bin/ktserver -otl -li -pid kyoto.pid -log ktserver.log "janosh.kct#opts=c#pccap=256m#dfunit=8"
+User=janosh
+Group=janosh
+
+[Install]
+WantedBy=multi-user.target
+
+EOKTSERVER
+
+chmod 664 /etc/systemd/system/ktserver.service
+systemctl daemon-reload
+systemctl enable ktserver
+systemctl start ktserver
+
 mkdir -p ~janosh/.janosh/
 chown janosh:users ~janosh/.janosh/
 cat > ~janosh/.janosh/janosh.json <<EOJANOSH
@@ -86,7 +110,7 @@ cat > ~janosh/.janosh/janosh.json <<EOJANOSH
   "dbstring": "janosh.kct#opts=c#pccap=256m#dfunit=8",
   "bindUrl": "/tmp/janosh",  
   "connectUrl": "/tmp/janosh",
-  "ktopts": "-otl -li -pid kyoto.pid -log ktserver.log -sid $SID -port 10001 -ulog ${SID}-ulog -mhost $REPLHOST -mport 10001 -rts ${SID}.rts"
+  "ktopts": "-otl -li -pid kyoto.pid -log ktserver.log -port"
 
 }
 EOJANOSH
@@ -103,7 +127,7 @@ User=janosh
 Group=janosh
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=ktserver.service
 
 EOJANOSHD
 chmod 664 /etc/systemd/system/janoshd.service
@@ -114,7 +138,7 @@ systemctl start janoshd
 git clone https://github.com/kallaballa/LiebtDichJanosh.git
 mv LiebtDichJanosh /home/janosh/LiebtDichJanosh
 
-cat > /etc/systemd/system/janosh-websocket.service <<EOJANOSHD
+cat > /etc/systemd/system/janosh-websocket.service <<EOJANOSWS
 [Unit]
 Description=Janosh Websocket Client
 
@@ -127,11 +151,12 @@ Group=janosh
 [Install]
 WantedBy=janoshd.service
 
-EOJANOSHD
+EOJANOSWS
+
 chmod 664 /etc/systemd/system/janosh-websocket.service
 systemctl daemon-reload
 systemctl enable janosh-websocket
-ln -s /usr/local/lib/libkyoto* /usr/lib/
+systemctl start janosh-websocket
 
 cp init.json /home/janosh/
 sudo -u janosh janosh truncate

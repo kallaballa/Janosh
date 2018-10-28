@@ -1,6 +1,10 @@
 #/bin/bash
 
 HOSTNAME="$1"
+if [ -z "$HOSTNAME" ]; then
+  echo "Usage: pv-host.sh <HOSTNAME>"
+  exit 1
+fi
 
 apt-get -y install nmon cgdb sudo git-core vim psmisc net-tools
 

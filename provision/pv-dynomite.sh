@@ -4,6 +4,10 @@ set -x
 set -e
 
 CORES="$1"
+if [ -z "$CORES" ]; then
+  echo "Usage: pv-janosh.sh <NR_OF_CORES>"
+  exit 1
+fi
 
 apt-get -y install dh-autoreconf libssl-dev
 
