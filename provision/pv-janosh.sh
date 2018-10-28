@@ -36,22 +36,12 @@ cd build
 cmake ..
 make -j$CORES
 make install
-cd ../..
-
-wget https://github.com/LuaLanes/lanes/archive/v3.10.1.tar.gz
-tar -xf v3.10.1.tar.gz
-rm v3.10.1.tar.gz
-cd lanes-3.10.1
-mkdir -p build
-cd build
-cmake ..
+cmake -DWITH_LUA51=ON ..
 make -j$CORES
 make install
-mkdir -p /usr/local/lib/lua/5.1/lanes/
-mkdir -p /usr/local/share/lua/5.1/
-cp ../build/core.so /usr/local/lib/lua/5.1/lanes/core.so
-cp ../src/lanes.lua /usr/local/share/lua/5.1/lanes.lua
 cd ../..
+ln -fs /usr/local/lib/libluajit.so /usr/lib/libluajit.so
+ln -fs /usr/local/lib/liblua.so /usr/lib/liblua.so
 
 wget https://github.com/uNetworking/uWebSockets/archive/v0.14.8.tar.gz
 tar -xf v0.14.8.tar.gz
@@ -72,6 +62,7 @@ make -j$CORES
 make install
 cd ../..
 
+luarocks install lanes
 luarocks install lua-resty-template
 luarocks install luaposix
 luarocks install bitlib
